@@ -1,0 +1,161 @@
+-- =====================================================================
+-- processar_transacao_completa
+-- SECURITY INVOKER: roda sob a RLS do chamador; usuário vem de auth.uid(),
+-- nunca do cliente. Função PL/pgSQL é atômica: qualquer RAISE reverte tudo.
+-- =====================================================================
+create or replace function public.processar_transacao_completa(
+  p_descricao       text,
+  p_valor_total     bigint,             -- centavos
+  p_tipo            text,               -- DESPESA | RECEITA
+  p_forma_pagamento text,               -- CREDITO | DEBITO | PIX | DINHEIRO
+  p_cartao_id       uuid default null,
+  p_data_compra     date default null,  -- default: hoje em America/Sao_Paulo
+  p_num_parcelas    int  default 1
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_user_id       uuid := auth.uid();
+  v_data_compra   date := coalesce(p_data_compra,
+                                   (now() at time zone 'America/Sao_Paulo')::date);
+  v_cartao        public.cartoes_credito%rowtype;
+  v_transacao_id  uuid;
+  v_dia_fech      int;
+  v_primeira_comp date;
+  v_valor_base    bigint;
+  v_resto         bigint;
+  v_criadas       int;
+  v_soma          bigint;
+begin
+  -- ===== Validações =====
+  if v_user_id is null then
+    raise exception 'Não autenticado.';
+  end if;
+  if coalesce(trim(p_descricao), '') = '' then
+    raise exception 'descricao é obrigatória.';
+  end if;
+  if p_valor_total is null or p_valor_total <= 0 then
+    raise exception 'valor_total deve ser positivo, em centavos. Recebido: %', p_valor_total;
+  end if;
+  if p_tipo not in ('DESPESA','RECEITA') then
+    raise exception 'tipo inválido: %', p_tipo;
+  end if;
+  if p_forma_pagamento not in ('CREDITO','DEBITO','PIX','DINHEIRO') then
+    raise exception 'forma_pagamento inválida: %', p_forma_pagamento;
+  end if;
+  if coalesce(p_num_parcelas, 0) < 1 then
+    raise exception 'num_parcelas deve ser >= 1.';
+  end if;
+
+  -- ===== Fluxo não-CREDITO: transação + parcela única (fluxo de caixa) =====
+  if p_forma_pagamento <> 'CREDITO' then
+    if p_num_parcelas <> 1 then
+      raise exception 'Parcelamento só é permitido para CREDITO.';
+    end if;
+
+    insert into public.transacoes_origem
+      (user_id, descricao, valor_total, tipo, forma_pagamento, cartao_id, data_compra, num_parcelas)
+    values
+      (v_user_id, p_descricao, p_valor_total, p_tipo, p_forma_pagamento, null, v_data_compra, 1)
+    returning id into v_transacao_id;
+
+    insert into public.parcelas
+      (user_id, transacao_id, fatura_id, numero, valor, data_competencia)
+    values
+      (v_user_id, v_transacao_id, null, 1, p_valor_total, v_data_compra);
+
+    return jsonb_build_object(
+      'transacao_id', v_transacao_id, 'parcelas_criadas', 1, 'faturas_afetadas', 0);
+  end if;
+
+  -- ===== Fluxo CREDITO =====
+  if p_cartao_id is null then
+    raise exception 'CREDITO exige cartao_id.';
+  end if;
+  if p_num_parcelas > p_valor_total then
+    raise exception 'num_parcelas (%) maior que o valor em centavos (%): haveria parcela de 0.',
+      p_num_parcelas, p_valor_total;
+  end if;
+
+  select * into v_cartao
+  from public.cartoes_credito
+  where id = p_cartao_id and user_id = v_user_id and deleted_at is null;
+  if not found then
+    raise exception 'Cartão % não encontrado para este usuário.', p_cartao_id;
+  end if;
+
+  -- Corte de fechamento: dia efetivo = LEAST(dia, último dia do mês da compra);
+  -- compra em dia >= fechamento entra na competência do mês seguinte.
+  v_dia_fech := least(
+    v_cartao.dia_fechamento,
+    extract(day from (date_trunc('month', v_data_compra) + interval '1 month - 1 day'))::int);
+  if extract(day from v_data_compra)::int >= v_dia_fech then
+    v_primeira_comp := (date_trunc('month', v_data_compra) + interval '1 month')::date;
+  else
+    v_primeira_comp := date_trunc('month', v_data_compra)::date;
+  end if;
+
+  insert into public.transacoes_origem
+    (user_id, descricao, valor_total, tipo, forma_pagamento, cartao_id, data_compra, num_parcelas)
+  values
+    (v_user_id, p_descricao, p_valor_total, p_tipo, 'CREDITO', p_cartao_id, v_data_compra, p_num_parcelas)
+  returning id into v_transacao_id;
+
+  -- Divisão centesimal sem sobras: floor em todas, resto na 1ª parcela.
+  v_valor_base := p_valor_total / p_num_parcelas;
+  v_resto      := p_valor_total - (v_valor_base * p_num_parcelas);
+
+  -- Faturas futuras: idempotente e à prova de corrida (UNIQUE + ON CONFLICT).
+  -- Vencimento no mês seguinte à competência quando dia_vencimento <= dia_fechamento;
+  -- dia clampado ao último dia do mês-alvo (Falha do Dia 31).
+  insert into public.faturas (user_id, cartao_id, competencia, data_vencimento)
+  select v_user_id, v_cartao.id, m.competencia,
+         (m.mes_venc + (least(v_cartao.dia_vencimento,
+              extract(day from (m.mes_venc + interval '1 month - 1 day'))::int) - 1)
+            * interval '1 day')::date
+  from (
+    select c.competencia,
+           case when v_cartao.dia_vencimento <= v_cartao.dia_fechamento
+                then (c.competencia + interval '1 month')::date
+                else c.competencia end as mes_venc
+    from (select (v_primeira_comp + make_interval(months => n - 1))::date as competencia
+          from generate_series(1, p_num_parcelas) as n) c
+  ) m
+  on conflict (cartao_id, competencia) do nothing;
+
+  -- Parcelas (set-based); só entram em fatura ABERTA.
+  insert into public.parcelas
+    (user_id, transacao_id, fatura_id, numero, valor, data_competencia)
+  select v_user_id, v_transacao_id, f.id, s.n,
+         v_valor_base + case when s.n = 1 then v_resto else 0 end,
+         s.competencia
+  from (select n, (v_primeira_comp + make_interval(months => n - 1))::date as competencia
+        from generate_series(1, p_num_parcelas) as n) s
+  join public.faturas f
+    on f.cartao_id = v_cartao.id
+   and f.competencia = s.competencia
+   and f.status = 'ABERTA'
+   and f.deleted_at is null;
+
+  get diagnostics v_criadas = row_count;
+  if v_criadas <> p_num_parcelas then
+    raise exception 'Integridade violada: % de % parcelas criadas (fatura FECHADA/PAGA no intervalo?).',
+      v_criadas, p_num_parcelas;
+  end if;
+
+  -- Invariante de auditoria: SUM(parcelas) = valor_total.
+  select sum(valor) into v_soma
+  from public.parcelas where transacao_id = v_transacao_id;
+  if v_soma is distinct from p_valor_total then
+    raise exception 'Invariante centesimal violada: soma % <> total %.', v_soma, p_valor_total;
+  end if;
+
+  return jsonb_build_object(
+    'transacao_id',     v_transacao_id,
+    'parcelas_criadas', v_criadas,
+    'faturas_afetadas', v_criadas);
+end;
+$$;
