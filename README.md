@@ -15,10 +15,14 @@ fuso de negócio `America/Sao_Paulo`.
 1. Crie um projeto em [supabase.com](https://supabase.com).
 2. No **SQL Editor**, execute na ordem:
    - `supabase/migrations/0001_nucleo_transacional.sql` (tabelas, índices, RLS, cascata de soft delete)
-   - `supabase/migrations/0002_processar_transacao_completa.sql` (motor de parcelamento)
-3. (Opcional) Execute `supabase/tests/verificacao_nucleo.sql` — roda 5 asserts
+   - `supabase/migrations/0002_processar_transacao_completa.sql` (motor de parcelamento + guard de limite)
+   - `supabase/migrations/0003_processar_pagamento_fatura.sql` (colunas de auditoria + máquina de estados de pagamento)
+   - `supabase/migrations/0004_faturas_unique_parcial.sql` (unicidade só entre faturas ativas — soft delete não trava competência)
+3. (Opcional) Execute `supabase/tests/verificacao_nucleo.sql` — roda 9 asserts
    (divisão centesimal, Falha do Dia 31, corte de fechamento, idempotência de
-   faturas, fluxo não-crédito) e termina em `ROLLBACK`, sem persistir nada.
+   faturas, fluxo não-crédito, limite de crédito, pagamento de fatura,
+   repagamento bloqueado, recriação pós soft-delete) e termina em `ROLLBACK`,
+   sem persistir nada.
 4. Copie `.env.example` para `.env.local` e preencha com os valores de
    **Settings → API** do projeto.
 5. Para testar rápido, desative **Confirm email** em Authentication → Providers → Email.
@@ -40,3 +44,9 @@ fuso de negócio `America/Sao_Paulo`.
 - Vencimento cai no mês seguinte à competência quando `dia_vencimento <= dia_fechamento`.
 - Pagamentos não-crédito geram 1 parcela sem fatura (fluxo de caixa unificado).
 - Parcelas só entram em faturas `ABERTA`; faturas são criadas sob demanda com `ON CONFLICT` (à prova de corrida).
+- Limite de crédito: `SUM(parcelas PENDENTES de DESPESA)` + nova compra não pode exceder `limite_total`; cartão é lockado (`FOR UPDATE`) para serializar transações concorrentes. Estouro dispara `FW429`.
+- Pagamento de fatura (`processar_pagamento_fatura`): fatura vira `PAGA` e as parcelas filhas são baixadas em lote com `data_pagamento`; repagamento dispara `FW409`.
+- Erros das RPCs carregam SQLSTATE estável (`FW400/401/404/409/429`) + `hint` com remediação — ver CLAUDE.md.
+
+Após aplicar migrações, regenere `src/lib/database.types.ts`
+(`npx supabase gen types typescript --project-id <id>`).

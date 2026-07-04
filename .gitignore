@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# agent-core (state.json é versionado; artefatos de escrita atômica não)
+memory/*.bak
+memory/*.tmp
+__pycache__/

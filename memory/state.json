@@ -1,0 +1,73 @@
+{
+ "namespaces": {
+  "auditoria": {
+   "commit3_nucleo": {
+    "note": "veredito watchdog commit 3",
+    "updated_at": "2026-07-04T00:21:37+00:00",
+    "v": {
+     "artefatos": "migrations 0002/0003/0004 + verificacao_nucleo.sql + CLAUDE.md",
+     "data": "2026-07-03",
+     "findings_minor": [
+      "CON-02: raises de validacao pre-existentes em 0002 sem errcode FW400/401/404 (so FW429 novo tem). Fix futuro: padronizar + asserts.",
+      "EST-03: p_data_pagamento e data_pagamento sao timestamptz (nao timestamp naive) — decisao aceita, coerente com colunas temporais do schema."
+     ],
+     "iteration": 1,
+     "protocol": "audit-verdict/1.0",
+     "sha256_0002": "9414021d4afa8ba0f56cdb9c8855a482d127920739aff95ca124ec9977da3613",
+     "sha256_0003": "44422567603f0b098f6c14d7470a6a08a0a752ffb0bc1cbee31e4c183518d2f4",
+     "sha256_0004": "a69fc7ecd786e34e23315d3e1b88fc9d3ab8e2c8698188b3082174fd5978e0e6",
+     "verdict": "APROVADO"
+    }
+   }
+  },
+  "regras_negocio": {
+   "codigos_erro_sql": {
+    "note": "protocolo_de_erro na camada SQL",
+    "updated_at": "2026-07-04T00:10:23+00:00",
+    "v": "RAISE com errcode estavel + hint (= error_code + remediation do tool-contract): FW400 input invalido, FW401 nao autenticado, FW404 nao encontrado, FW409 estado conflitante, FW429 limite excedido."
+   },
+   "divisao_centesimal": {
+    "note": "invariante matematica",
+    "updated_at": "2026-07-04T00:10:22+00:00",
+    "v": "Parcela = floor(total/n); resto na 1a parcela. Invariante SUM(parcelas) = valor_total conferida na RPC. Fatura por competencia idempotente via ON CONFLICT."
+   },
+   "escrita_rpc": {
+    "note": "arquitetura de escrita",
+    "updated_at": "2026-07-04T00:10:22+00:00",
+    "v": "Frontend proibido de insert/update relacional direto. Escrita so via RPC atomica: processar_transacao_completa (compra) e processar_pagamento_fatura (pagamento)."
+   },
+   "fechamento_fatura": {
+    "note": "regra de corte + Falha do Dia 31",
+    "updated_at": "2026-07-04T00:10:22+00:00",
+    "v": "Compra dia >= dia_fechamento entra na competencia do mes seguinte. Dia inexistente no mes (31/fev): clampa no ultimo dia, nunca rola. Vencimento no mes seguinte se dia_vencimento <= dia_fechamento."
+   },
+   "limite_credito": {
+    "note": "commit 3 tarefa 2",
+    "updated_at": "2026-07-04T00:10:23+00:00",
+    "v": "Guard na RPC: comprometido = SUM(parcelas PENDENTE ativas de DESPESA do cartao, join via transacoes_origem). comprometido + novo > limite_total => erro FW429. Cartao lockado com FOR UPDATE (anti-corrida). RECEITA nao consome limite."
+   },
+   "maquina_estados_fatura": {
+    "note": "commit 3 tarefa 3 + decisao timestamptz",
+    "updated_at": "2026-07-04T00:21:37+00:00",
+    "v": "processar_pagamento_fatura(fatura_id, data_pagamento timestamptz): fatura != PAGA vira PAGA; parcelas ativas viram PAGA com data_pagamento (timestamptz, decisao auditada EST-03) e updated_at. Fatura ja PAGA => erro FW409. ABERTA pode ser paga (antecipacao). FOR UPDATE serializa repagamento."
+   },
+   "moeda_centavos": {
+    "note": "convencao monetaria inviolavel",
+    "updated_at": "2026-07-04T00:10:22+00:00",
+    "v": "Dinheiro = centavos bigint no DB e RPCs. Decimal/float so na borda da UI (src/lib/money.ts). BRL."
+   },
+   "soft_delete": {
+    "note": "delecao logica",
+    "updated_at": "2026-07-04T00:10:22+00:00",
+    "v": "DELETE fisico proibido. Exclusao = deleted_at. Leituras e indices unicos com WHERE deleted_at IS NULL. Cascata transacao->parcelas via trigger."
+   },
+   "timezone": {
+    "note": "calculos de data",
+    "updated_at": "2026-07-04T00:10:22+00:00",
+    "v": "Fuso de negocio America/Sao_Paulo para data_compra, fechamento e competencia."
+   }
+  }
+ },
+ "protocol": "state-memory/1.0",
+ "updated_at": "2026-07-04T00:21:37+00:00"
+}

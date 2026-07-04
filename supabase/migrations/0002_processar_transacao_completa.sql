@@ -27,6 +27,7 @@ declare
   v_primeira_comp date;
   v_valor_base    bigint;
   v_resto         bigint;
+  v_comprometido  bigint;
   v_criadas       int;
   v_soma          bigint;
 begin
@@ -80,9 +81,12 @@ begin
       p_num_parcelas, p_valor_total;
   end if;
 
+  -- FOR UPDATE serializa transações concorrentes do mesmo cartão: sem o lock,
+  -- duas chamadas simultâneas passariam ambas pelo guard de limite.
   select * into v_cartao
   from public.cartoes_credito
-  where id = p_cartao_id and user_id = v_user_id and deleted_at is null;
+  where id = p_cartao_id and user_id = v_user_id and deleted_at is null
+  for update;
   if not found then
     raise exception 'Cartão % não encontrado para este usuário.', p_cartao_id;
   end if;
@@ -96,6 +100,26 @@ begin
     v_primeira_comp := (date_trunc('month', v_data_compra) + interval '1 month')::date;
   else
     v_primeira_comp := date_trunc('month', v_data_compra)::date;
+  end if;
+
+  -- Guard de limite: comprometido = parcelas PENDENTES ativas de DESPESA do
+  -- cartão (parcelas não têm cartao_id — join via transacoes_origem).
+  -- RECEITA (estorno) não consome limite. Cartão já lockado (FOR UPDATE acima).
+  if p_tipo = 'DESPESA' then
+    select coalesce(sum(p.valor), 0) into v_comprometido
+    from public.parcelas p
+    join public.transacoes_origem t on t.id = p.transacao_id
+    where t.cartao_id = v_cartao.id
+      and t.tipo = 'DESPESA'
+      and t.deleted_at is null
+      and p.status = 'PENDENTE'
+      and p.deleted_at is null;
+    if v_comprometido + p_valor_total > v_cartao.limite_total then
+      raise exception 'Limite de crédito excedido: comprometido % + novo % > limite % (centavos).',
+        v_comprometido, p_valor_total, v_cartao.limite_total
+        using errcode = 'FW429',
+              hint = 'Pague faturas pendentes ou reduza o valor. Não repita a chamada com os mesmos argumentos.';
+    end if;
   end if;
 
   insert into public.transacoes_origem
@@ -124,7 +148,9 @@ begin
     from (select (v_primeira_comp + make_interval(months => n - 1))::date as competencia
           from generate_series(1, p_num_parcelas) as n) c
   ) m
-  on conflict (cartao_id, competencia) do nothing;
+  -- Predicado no árbitro: casa tanto a constraint total antiga quanto o índice
+  -- parcial de 0004 (faturas ativas). Sem ele, a RPC quebra após a migração 0004.
+  on conflict (cartao_id, competencia) where deleted_at is null do nothing;
 
   -- Parcelas (set-based); só entram em fatura ABERTA.
   insert into public.parcelas
