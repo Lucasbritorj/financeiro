@@ -19,6 +19,9 @@ export default async function ProtegidoLayout({
       <header className="border-b border-zinc-200 bg-white">
         <nav className="mx-auto flex max-w-4xl items-center gap-5 px-4 py-3">
           <span className="font-semibold">Financeiro</span>
+          <Link href="/dashboard" className="text-sm hover:underline">
+            Dashboard
+          </Link>
           <Link href="/transacoes" className="text-sm hover:underline">
             Transações
           </Link>

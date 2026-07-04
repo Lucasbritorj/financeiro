@@ -90,6 +90,11 @@
     "updated_at": "2026-07-04T00:10:23+00:00",
     "v": "RAISE com errcode estavel + hint (= error_code + remediation do tool-contract): FW400 input invalido, FW401 nao autenticado, FW404 nao encontrado, FW409 estado conflitante, FW429 limite excedido."
    },
+   "dashboard_premium": {
+    "note": "commit 7 frontend fase 1",
+    "updated_at": "2026-07-04T16:05:21+00:00",
+    "v": "Dashboard /dashboard (commit 7): design system Sovereign Glass com escopo .soberano (abissal #06080A, noise SVG 2%, vidro com glow radial via --mx/--my sem re-render). Numeros SEMPRE com .numero-soberano (Geist Mono ja no projeto + tabular-nums). Grafico = lightweight-charts v5 (chart.addSeries(AreaSeries,...), crosshair Magnet) sobre fluxo acumulado por competencia — SEM candlestick: nao ha dado de mercado, serie real e fluxo de caixa. Framer Motion springs stiffness 300 damping 30. Dados: React Query (chave fluxo-caixa) + canal Realtime em parcelas invalidando cache + refetchInterval 60s como fallback. Agregacao pura em src/lib/fluxo.ts (testada): agregarFluxoMensal + detectarAnomalia (saidas > 1.5x media historica, min 2 meses)."
+   },
    "divisao_centesimal": {
     "note": "invariante matematica",
     "updated_at": "2026-07-04T00:10:22+00:00",
@@ -163,5 +168,5 @@
   }
  },
  "protocol": "state-memory/1.0",
- "updated_at": "2026-07-04T15:54:56+00:00"
+ "updated_at": "2026-07-04T16:05:21+00:00"
 }
