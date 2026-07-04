@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { paraCentavos } from "@/lib/money";
+import { mensagemDeErro } from "@/lib/erros";
+import { MAX_PARCELAS_UI } from "@/lib/constantes";
 
 type CartaoOpcao = { id: string; nome: string };
 
@@ -58,8 +60,7 @@ export default function NovaTransacaoForm({ cartoes }: { cartoes: CartaoOpcao[] 
     setPendente(false);
 
     if (error) {
-      // hint carrega a remediação (padrão FW4xx do backend)
-      setErro(error.hint ? `${error.message} ${error.hint}` : error.message);
+      setErro(mensagemDeErro(error));
       return;
     }
     const resultado = data as { parcelas_criadas?: number } | null;
@@ -151,7 +152,7 @@ export default function NovaTransacaoForm({ cartoes }: { cartoes: CartaoOpcao[] 
               <input
                 type="number"
                 min={1}
-                max={48}
+                max={MAX_PARCELAS_UI}
                 value={numParcelas}
                 onChange={(e) => setNumParcelas(e.target.value)}
                 required

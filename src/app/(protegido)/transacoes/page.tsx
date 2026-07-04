@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import NovaTransacaoForm from "@/components/nova-transacao-form";
 import { formatarCentavos, formatarData } from "@/lib/money";
+import { LIMITE_TRANSACOES_LISTA } from "@/lib/constantes";
 
 export default async function TransacoesPage() {
   const supabase = await createClient();
@@ -9,9 +10,9 @@ export default async function TransacoesPage() {
     supabase.from("cartoes_credito").select("id, nome").order("nome"),
     supabase
       .from("transacoes_origem")
-      .select("*, parcelas(numero, valor, data_competencia, status)")
+      .select("id, descricao, valor_total, tipo, forma_pagamento, data_compra, num_parcelas")
       .order("created_at", { ascending: false })
-      .limit(20),
+      .limit(LIMITE_TRANSACOES_LISTA),
   ]);
   if (cartoesRes.error) throw new Error(cartoesRes.error.message);
   if (transacoesRes.error) throw new Error(transacoesRes.error.message);

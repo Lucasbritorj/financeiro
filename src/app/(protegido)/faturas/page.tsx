@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatarCentavos, formatarCompetencia, formatarData } from "@/lib/money";
+import { LIMITE_FATURAS_LISTA } from "@/lib/constantes";
 
 const ESTILO_STATUS: Record<string, string> = {
   ABERTA: "bg-emerald-100 text-emerald-800",
@@ -9,19 +10,23 @@ const ESTILO_STATUS: Record<string, string> = {
 
 export default async function FaturasPage() {
   const supabase = await createClient();
-  const [faturasRes, totaisRes] = await Promise.all([
-    supabase
-      .from("faturas")
-      .select(
-        "*, cartoes_credito(nome), parcelas(id, numero, valor, status, transacoes_origem(descricao, num_parcelas, tipo))"
-      )
-      .order("competencia", { ascending: false }),
-    // Fonte única do total: a view aplica o sinal (RECEITA/estorno abate).
-    supabase.from("vw_faturas_consolidadas").select("id, valor_total_fatura"),
-  ]);
+  const faturasRes = await supabase
+    .from("faturas")
+    .select(
+      "id, status, competencia, data_vencimento, cartoes_credito(nome), parcelas(id, numero, valor, status, transacoes_origem(descricao, num_parcelas, tipo))"
+    )
+    .order("competencia", { ascending: false })
+    .limit(LIMITE_FATURAS_LISTA);
   if (faturasRes.error) throw new Error(faturasRes.error.message);
-  if (totaisRes.error) throw new Error(totaisRes.error.message);
   const faturas = faturasRes.data;
+
+  // Fonte única do total: a view aplica o sinal (RECEITA/estorno abate).
+  // Busca restrita às faturas da página — a view não é varrida inteira.
+  const totaisRes = await supabase
+    .from("vw_faturas_consolidadas")
+    .select("id, valor_total_fatura")
+    .in("id", faturas.map((f) => f.id));
+  if (totaisRes.error) throw new Error(totaisRes.error.message);
   const totais = new Map(totaisRes.data.map((t) => [t.id, t.valor_total_fatura]));
 
   return (

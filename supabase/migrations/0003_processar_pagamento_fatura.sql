@@ -41,6 +41,13 @@ begin
     raise exception 'p_fatura_id é obrigatório.'
       using errcode = 'FW400', hint = 'Informe o uuid da fatura e chame novamente.';
   end if;
+  -- Sanidade temporal: pagamento retroativo ok; futuro além de amanhã, não.
+  if p_data_pagamento is not null
+     and (p_data_pagamento > now() + interval '1 day'
+          or p_data_pagamento < timestamptz '2000-01-01 00:00Z') then
+    raise exception 'data_pagamento fora do intervalo plausível: %', p_data_pagamento
+      using errcode = 'FW400', hint = 'Use uma data entre 2000-01-01 e amanhã.';
+  end if;
 
   -- FOR UPDATE: dois pagamentos simultâneos da mesma fatura serializam;
   -- o segundo enxerga status = PAGA e falha no FW409 (idempotência dura).

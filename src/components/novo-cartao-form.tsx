@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { paraCentavos } from "@/lib/money";
+import { mensagemDeErro } from "@/lib/erros";
 
 export default function NovoCartaoForm() {
   const router = useRouter();
@@ -37,8 +38,7 @@ export default function NovoCartaoForm() {
     setPendente(false);
 
     if (error) {
-      // hint carrega a remediação (padrão FW4xx do backend)
-      setErro(error.hint ? `${error.message} ${error.hint}` : error.message);
+      setErro(mensagemDeErro(error));
       return;
     }
     setNome("");

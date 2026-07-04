@@ -1,13 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import NovoCartaoForm from "@/components/novo-cartao-form";
 import { formatarCentavos } from "@/lib/money";
+import { LIMITE_CARTOES_LISTA } from "@/lib/constantes";
 
 export default async function CartoesPage() {
   const supabase = await createClient();
   const { data: cartoes, error } = await supabase
     .from("cartoes_credito")
-    .select("*")
-    .order("created_at", { ascending: true });
+    .select("id, nome, limite_total, dia_fechamento, dia_vencimento")
+    .order("created_at", { ascending: true })
+    .limit(LIMITE_CARTOES_LISTA);
   if (error) throw new Error(error.message);
 
   return (

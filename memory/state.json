@@ -34,6 +34,23 @@
      "protocol": "audit-verdict/1.0",
      "verdict": "APROVADO"
     }
+   },
+   "commit5_loop_geral": {
+    "note": "veredito watchdog commit 5",
+    "updated_at": "2026-07-04T09:33:54+00:00",
+    "v": {
+     "artefatos": "infra teste local + guards temporais + perf paginas + money/erros/constantes",
+     "data": "2026-07-04",
+     "findings_minor_aplicados": [
+      "CON-02 view sem bound: .in('id', ids) aplicado em faturas/page.tsx",
+      "CON-02 runner sem teardown em falha: trap EXIT aplicado (TEARDOWN_OK provado)",
+      "CON-02 asserts so no teto: pisos 1999-12-31 adicionados em [15][16]"
+     ],
+     "gates": "unit 10/10; tsc 0; lint 0; build ok; audit 0 vulns; SQL 17/17 em postgres:16 real",
+     "iteration": 1,
+     "protocol": "audit-verdict/1.0",
+     "verdict": "APROVADO"
+    }
    }
   },
   "regras_negocio": {
@@ -77,10 +94,25 @@
     "updated_at": "2026-07-04T00:10:22+00:00",
     "v": "Dinheiro = centavos bigint no DB e RPCs. Decimal/float so na borda da UI (src/lib/money.ts). BRL."
    },
+   "paracentavos_decimais": {
+    "note": "commit 5 fase 4",
+    "updated_at": "2026-07-04T09:33:54+00:00",
+    "v": "paraCentavos rejeita >2 casas decimais (NaN) em vez de arredondar em silencio: 100,555 / 1.2345 / 0,001 sao invalidos. Formatos legitimos pt-BR/US/milhar cobertos em tests/unit/money.test.ts."
+   },
+   "sanidade_temporal": {
+    "note": "commit 5 fase 2",
+    "updated_at": "2026-07-04T09:33:54+00:00",
+    "v": "Guards FW400: data_compra e data_pagamento aceitas entre 2000-01-01 e amanha (+1 dia tolera fuso do cliente; compra usa America/Sao_Paulo). Retroativo legitimo passa; typo de ano nao."
+   },
    "soft_delete": {
     "note": "delecao logica",
     "updated_at": "2026-07-04T00:10:22+00:00",
     "v": "DELETE fisico proibido. Exclusao = deleted_at. Leituras e indices unicos com WHERE deleted_at IS NULL. Cascata transacao->parcelas via trigger."
+   },
+   "teste_local": {
+    "note": "infra de verificacao commit 5",
+    "updated_at": "2026-07-04T09:33:54+00:00",
+    "v": "Suite SQL local: npm run test:sql (Docker postgres:16-alpine + tests/sql/00_shim_auth.sql replicando roles/auth.uid()/default privileges do Supabase; migracoes em ordem; verificacao_nucleo.sql 17 asserts). Unit: npm test (node:test roda .ts nativo no Node 24; tsconfig allowImportingTsExtensions). Shim NUNCA vai para producao."
    },
    "timezone": {
     "note": "calculos de data",
@@ -100,5 +132,5 @@
   }
  },
  "protocol": "state-memory/1.0",
- "updated_at": "2026-07-04T01:00:15+00:00"
+ "updated_at": "2026-07-04T09:33:54+00:00"
 }

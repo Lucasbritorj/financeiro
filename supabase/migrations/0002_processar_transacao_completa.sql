@@ -46,6 +46,13 @@ begin
     raise exception 'descricao é obrigatória.'
       using errcode = 'FW400', hint = 'Informe uma descrição e chame novamente.';
   end if;
+  -- Sanidade temporal: +1 dia tolera fuso do cliente adiantado; piso evita
+  -- typo de ano corromper competências/faturas décadas fora do real.
+  if v_data_compra > (now() at time zone 'America/Sao_Paulo')::date + 1
+     or v_data_compra < date '2000-01-01' then
+    raise exception 'data_compra fora do intervalo plausível: %', v_data_compra
+      using errcode = 'FW400', hint = 'Use uma data entre 2000-01-01 e amanhã (America/Sao_Paulo).';
+  end if;
   if p_valor_total is null or p_valor_total <= 0 then
     raise exception 'valor_total deve ser positivo, em centavos. Recebido: %', p_valor_total
       using errcode = 'FW400', hint = 'Envie o valor em centavos (inteiro > 0).';

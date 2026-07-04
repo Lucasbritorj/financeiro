@@ -169,7 +169,48 @@ begin
     when sqlstate 'FW404' then null; -- esperado
   end;
 
-  raise notice 'OK: 14/14 asserts do núcleo transacional passaram.';
+  -- [15] Sanidade temporal da compra: teto (ano 3000) e piso (< 2000) => FW400
+  begin
+    perform public.processar_transacao_completa(
+      'Compra no futuro', 1000, 'DESPESA', 'PIX', null, date '3000-01-01', 1);
+    raise exception 'FALHA [15]: data de compra absurda foi aceita';
+  exception
+    when sqlstate 'FW400' then null; -- esperado
+  end;
+  begin
+    perform public.processar_transacao_completa(
+      'Compra no passado remoto', 1000, 'DESPESA', 'PIX', null, date '1999-12-31', 1);
+    raise exception 'FALHA [15]: data de compra anterior a 2000 foi aceita';
+  exception
+    when sqlstate 'FW400' then null; -- esperado
+  end;
+
+  -- [16] Sanidade temporal do pagamento: futuro e passado remoto => FW400
+  select id into v_fatura
+  from public.faturas
+  where cartao_id = v_cartao and competencia = date '2026-02-01';
+  begin
+    perform public.processar_pagamento_fatura(v_fatura, now() + interval '30 days');
+    raise exception 'FALHA [16]: data de pagamento futura foi aceita';
+  exception
+    when sqlstate 'FW400' then null; -- esperado
+  end;
+  begin
+    perform public.processar_pagamento_fatura(v_fatura, timestamptz '1999-12-31 00:00Z');
+    raise exception 'FALHA [16]: data de pagamento anterior a 2000 foi aceita';
+  exception
+    when sqlstate 'FW400' then null; -- esperado
+  end;
+
+  -- [17] Regressão de privilégios: authenticated não pode ter DML direto
+  if has_table_privilege('authenticated', 'public.cartoes_credito', 'INSERT,UPDATE,DELETE')
+     or has_table_privilege('authenticated', 'public.faturas', 'INSERT,UPDATE,DELETE')
+     or has_table_privilege('authenticated', 'public.transacoes_origem', 'INSERT,UPDATE,DELETE')
+     or has_table_privilege('authenticated', 'public.parcelas', 'INSERT,UPDATE,DELETE') then
+    raise exception 'FALHA [17]: authenticated recuperou DML direto em alguma tabela';
+  end if;
+
+  raise notice 'OK: 17/17 asserts do núcleo transacional passaram.';
 end $$;
 
 rollback;
