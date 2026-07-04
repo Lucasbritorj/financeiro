@@ -20,16 +20,26 @@ fuso de negócio `America/Sao_Paulo`.
    - `supabase/migrations/0003_processar_pagamento_fatura.sql` (colunas de auditoria + máquina de estados de pagamento)
    - `supabase/migrations/0004_faturas_unique_parcial.sql` (unicidade só entre faturas ativas — soft delete não trava competência)
    - `supabase/migrations/0005_blindagem_privilegios.sql` (least privilege: REVOKE de DML direto, fim do DELETE físico, RPC `criar_cartao`, view `vw_faturas_consolidadas`)
-3. (Opcional) Execute `supabase/tests/verificacao_nucleo.sql` — roda 14 asserts
-   (divisão centesimal, Falha do Dia 31, corte de fechamento, idempotência,
-   fluxo não-crédito, limite de crédito, pagamento de fatura, repagamento
-   bloqueado, recriação pós soft-delete, trava de fatura paga, teto de
-   parcelas, estorno na view, DML direto negado, erro FW404) e termina em
-   `ROLLBACK`, sem persistir nada.
-4. Copie `.env.example` para `.env.local` e preencha com os valores de
+   - `supabase/migrations/0006_ciclo_e_exclusao.sql` (updated_at universal + trigger, RPCs `excluir_transacao`/`excluir_cartao`, `fechar_faturas` para o ciclo ABERTA→FECHADA)
+3. (Opcional) Execute `supabase/tests/verificacao_nucleo.sql` — 21 asserts
+   cobrindo divisão centesimal, Falha do Dia 31, corte de fechamento,
+   idempotência, limite de crédito, máquina de estados (pagar/fechar),
+   sanidade temporal, privilégios, exclusões soft e a view de estornos;
+   termina em `ROLLBACK`, sem persistir nada.
+4. Agende o fechamento diário do ciclo (Database → Cron, extensão `pg_cron`):
+   `select cron.schedule('fechar-faturas', '10 3 * * *', $$select public.fechar_faturas()$$);`
+   (`fechar_faturas` é administrativa — clientes não conseguem executá-la.)
+5. Copie `.env.example` para `.env.local` e preencha com os valores de
    **Settings → API** do projeto.
-5. Para testar rápido, desative **Confirm email** em Authentication → Providers → Email.
-6. `npm install && npm run dev` e acesse http://localhost:3000.
+6. Para testar rápido, desative **Confirm email** em Authentication → Providers → Email.
+7. `npm install && npm run dev` e acesse http://localhost:3000.
+
+## Testes locais
+
+- `npm test` — unitários (node:test, roda `.ts` nativo no Node 24).
+- `npm run test:sql` — Postgres 16 efêmero em Docker: shim do ambiente
+  Supabase + migrações na ordem + os 21 asserts do núcleo.
+- CI (`.github/workflows/ci.yml`) roda os mesmos gates em push/PR.
 
 ## Estrutura
 

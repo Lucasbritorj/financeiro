@@ -21,6 +21,8 @@ declare
   v_qtd    int;
   v_fatura uuid;
   v_total  bigint;
+  v_upd_antes timestamptz;
+  v_cartao2   uuid;
 begin
   -- Pós-0005 o INSERT direto é negado: cartão nasce pela RPC, como no app.
   v_res := public.criar_cartao('Teste 31/31', 1000000, 31, 31);
@@ -210,7 +212,90 @@ begin
     raise exception 'FALHA [17]: authenticated recuperou DML direto em alguma tabela';
   end if;
 
-  raise notice 'OK: 17/17 asserts do núcleo transacional passaram.';
+  -- [18] Exclusão soft de transação: cascata via trigger e updated_at tocado
+  v_res := public.processar_transacao_completa(
+    'Compra a excluir', 2000, 'DESPESA', 'CREDITO', v_cartao, date '2026-04-15', 2);
+  select updated_at into v_upd_antes
+  from public.transacoes_origem where id = (v_res->>'transacao_id')::uuid;
+  v_res := public.excluir_transacao((v_res->>'transacao_id')::uuid);
+  if (v_res->>'parcelas_afetadas')::int <> 2 then
+    raise exception 'FALHA [18]: cascata reportou % parcelas (esperado 2)', v_res->>'parcelas_afetadas';
+  end if;
+  if exists (select 1 from public.parcelas
+             where transacao_id = (v_res->>'transacao_id')::uuid and deleted_at is null) then
+    raise exception 'FALHA [18]: parcelas seguiram ativas após exclusão da transação';
+  end if;
+  -- Linhas soft-deletadas são invisíveis sob RLS: verificação como admin.
+  -- trg_touch_updated_at usa clock_timestamp(), que avança dentro da transação.
+  reset role;
+  if not exists (select 1 from public.transacoes_origem
+                 where id = (v_res->>'transacao_id')::uuid
+                   and deleted_at is not null
+                   and updated_at > v_upd_antes) then
+    raise exception 'FALHA [18]: updated_at da transação não avançou na exclusão';
+  end if;
+  if exists (select 1 from public.parcelas
+             where transacao_id = (v_res->>'transacao_id')::uuid
+               and (deleted_at is null or updated_at <= v_upd_antes)) then
+    raise exception 'FALHA [18]: updated_at de parcela cascateada não avançou';
+  end if;
+  set local role authenticated;
+
+  -- [19] Transação com parcela PAGA não se exclui, se estorna => FW409
+  begin
+    perform public.excluir_transacao(
+      (select transacao_id from public.parcelas
+       where status = 'PAGA' and user_id = auth.uid() limit 1));
+    raise exception 'FALHA [19]: transação com parcela paga foi excluída';
+  exception
+    when sqlstate 'FW409' then null; -- esperado
+  end;
+
+  -- [20] Cartão com parcelas pendentes não sai => FW409; cartão limpo sai
+  begin
+    perform public.excluir_cartao(v_cartao);
+    raise exception 'FALHA [20]: cartão com pendências foi excluído';
+  exception
+    when sqlstate 'FW409' then null; -- esperado
+  end;
+  v_res := public.criar_cartao('Temporário', 100000, 10, 20);
+  v_res := public.excluir_cartao((v_res->>'cartao_id')::uuid);
+  -- Sob RLS, cartão soft-deletado fica invisível — visibilidade = falha.
+  if exists (select 1 from public.cartoes_credito
+             where id = (v_res->>'cartao_id')::uuid) then
+    raise exception 'FALHA [20]: cartão sem pendências continua visível (não foi soft-deletado)';
+  end if;
+
+  -- [21] Fechamento de ciclo: em 01/03/2026, fev (fecha 28/02) vira FECHADA;
+  --      mar (fecha 31/03) segue ABERTA; fatura soft-deletada com corte
+  --      vencido NÃO fecha. Função é administrativa: roda fora da role
+  --      authenticated (pg_cron/painel).
+  v_res := public.criar_cartao('Cartão fechamento', 100000, 10, 20);
+  v_cartao2 := (v_res->>'cartao_id')::uuid;
+  perform public.processar_transacao_completa(
+    'Compra p/ fatura deletada', 1000, 'DESPESA', 'CREDITO', v_cartao2, date '2026-02-05', 1);
+  reset role;
+  update public.faturas set deleted_at = now()
+  where cartao_id = v_cartao2 and competencia = date '2026-02-01';
+  v_qtd := public.fechar_faturas(date '2026-03-01');
+  if v_qtd < 1 then
+    raise exception 'FALHA [21]: fechar_faturas não fechou nenhuma fatura';
+  end if;
+  if (select status from public.faturas
+      where cartao_id = v_cartao2 and competencia = date '2026-02-01') <> 'ABERTA' then
+    raise exception 'FALHA [21]: fatura soft-deletada foi fechada';
+  end if;
+  set local role authenticated;
+  if (select status from public.faturas
+      where cartao_id = v_cartao and competencia = date '2026-02-01') <> 'FECHADA' then
+    raise exception 'FALHA [21]: fatura fev/2026 não fechou';
+  end if;
+  if (select status from public.faturas
+      where cartao_id = v_cartao and competencia = date '2026-03-01' and deleted_at is null) <> 'ABERTA' then
+    raise exception 'FALHA [21]: fatura mar/2026 fechou antes da hora';
+  end if;
+
+  raise notice 'OK: 21/21 asserts do núcleo transacional passaram.';
 end $$;
 
 rollback;

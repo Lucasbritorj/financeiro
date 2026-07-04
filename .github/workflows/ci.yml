@@ -1,0 +1,61 @@
+# CI: os mesmos gates rodados localmente (npm test / test:sql / tsc / lint /
+# build). Ativa automaticamente quando o repositório ganhar remote GitHub.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  node:
+    name: typecheck · lint · unit · build
+    runs-on: ubuntu-latest
+    env:
+      # Build não conecta no Supabase; placeholders satisfazem o createClient.
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  sql:
+    name: migrações + asserts em Postgres real
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: app
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d app"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: test
+      PGDATABASE: app
+    steps:
+      - uses: actions/checkout@v4
+      - name: shim + migrações em ordem
+        run: |
+          psql -v ON_ERROR_STOP=1 -q -f tests/sql/00_shim_auth.sql
+          for f in supabase/migrations/*.sql; do
+            echo "== $f"
+            psql -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+      - name: asserts do núcleo
+        run: |
+          saida=$(psql -v ON_ERROR_STOP=1 -f supabase/tests/verificacao_nucleo.sql 2>&1)
+          echo "$saida"
+          echo "$saida" | grep -q "OK: .* asserts"

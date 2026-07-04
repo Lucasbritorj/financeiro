@@ -20,6 +20,7 @@ export type Database = {
           dia_fechamento: number;
           dia_vencimento: number;
           created_at: string;
+          updated_at: string;
           deleted_at: string | null;
         };
         Insert: {
@@ -30,6 +31,7 @@ export type Database = {
           dia_fechamento: number;
           dia_vencimento: number;
           created_at?: string;
+          updated_at?: string;
           deleted_at?: string | null;
         };
         Update: {
@@ -40,6 +42,7 @@ export type Database = {
           dia_fechamento?: number;
           dia_vencimento?: number;
           created_at?: string;
+          updated_at?: string;
           deleted_at?: string | null;
         };
         Relationships: [];
@@ -100,6 +103,7 @@ export type Database = {
           data_compra: string;
           num_parcelas: number;
           created_at: string;
+          updated_at: string;
           deleted_at: string | null;
         };
         Insert: {
@@ -113,6 +117,7 @@ export type Database = {
           data_compra: string;
           num_parcelas?: number;
           created_at?: string;
+          updated_at?: string;
           deleted_at?: string | null;
         };
         Update: {
@@ -126,6 +131,7 @@ export type Database = {
           data_compra?: string;
           num_parcelas?: number;
           created_at?: string;
+          updated_at?: string;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -242,6 +248,14 @@ export type Database = {
           p_dia_fechamento: number;
           p_dia_vencimento: number;
         };
+        Returns: Json;
+      };
+      excluir_transacao: {
+        Args: { p_transacao_id: string };
+        Returns: Json;
+      };
+      excluir_cartao: {
+        Args: { p_cartao_id: string };
         Returns: Json;
       };
     };

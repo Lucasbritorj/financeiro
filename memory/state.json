@@ -51,13 +51,39 @@
      "protocol": "audit-verdict/1.0",
      "verdict": "APROVADO"
     }
+   },
+   "commit6_backend_completo": {
+    "note": "veredito watchdog commit 6",
+    "updated_at": "2026-07-04T15:54:55+00:00",
+    "v": {
+     "artefatos": "0006 (updated_at universal, excluir_transacao/cartao, fechar_faturas) + asserts 18-21 + CI",
+     "data": "2026-07-04",
+     "gates": "SQL 21/21 postgres real; unit 10/10; tsc 0; lint 0; audit 0; build ok",
+     "historico": [
+      "iteration 1: REJEITADO — PROC-02 major (assert 18 declarava updated_at sem verificar) + CON-02 minor (cobertura vacua de fatura deletada no fechamento).",
+      "rework: trigger updated_at com clock_timestamp() (now() congela por transacao); assert 18 verifica avanco real sob reset role; assert 21 prova fatura soft-deletada intocada."
+     ],
+     "iteration": 2,
+     "protocol": "audit-verdict/1.0",
+     "verdict": "APROVADO"
+    }
    }
   },
   "regras_negocio": {
+   "api_escrita_completa": {
+    "note": "commit 6",
+    "updated_at": "2026-07-04T15:54:55+00:00",
+    "v": "API de escrita (todas SECURITY DEFINER, FW4xx+hint): processar_transacao_completa, processar_pagamento_fatura, criar_cartao, excluir_transacao (FW409 se parcela PAGA — historico se estorna, nao se apaga), excluir_cartao (FW409 se pendencias). fechar_faturas(date) e administrativa: revogada ate de authenticated; agendar pg_cron diario."
+   },
    "blindagem_privilegios": {
     "note": "commit 4 tarefa 1",
     "updated_at": "2026-07-04T01:00:15+00:00",
     "v": "Least privilege (0005): authenticated/anon so tem SELECT nas 4 tabelas; INSERT/UPDATE/DELETE direto = 42501. Policies de DELETE dropadas. RPCs sao SECURITY DEFINER (bypassam RLS!) com search_path='' e escopo user_id=auth.uid() em codigo. Nova RPC: revoke execute de public/anon, grant a authenticated. Nunca reconceder DML direto."
+   },
+   "ciclo_fatura": {
+    "note": "commit 6",
+    "updated_at": "2026-07-04T15:54:56+00:00",
+    "v": "Ciclo completo: ABERTA (nasce) -> FECHADA (fechar_faturas no corte da competencia: dia_fechamento clampado ao ultimo dia do mes) -> PAGA (processar_pagamento_fatura). ABERTA tambem pode ir direto a PAGA (antecipacao). Compra em competencia nao-ABERTA = FW409."
    },
    "codigos_erro_sql": {
     "note": "protocolo_de_erro na camada SQL",
@@ -124,6 +150,11 @@
     "updated_at": "2026-07-04T01:00:15+00:00",
     "v": "Teto servidor: num_parcelas [1,120] FW400; cartoes ativos max 20/usuario FW429 (criar_cartao). Fail fast FW409: compra cujo parcelamento toca fatura PAGA ou FECHADA e rejeitada antes de qualquer INSERT — pagamento antecipado nao reabre ciclo."
    },
+   "updated_at_trigger": {
+    "note": "commit 6",
+    "updated_at": "2026-07-04T15:54:55+00:00",
+    "v": "updated_at nas 4 tabelas mantido por trg_touch_updated_at com clock_timestamp() (now() congela na transacao). RPC nova NAO seta updated_at a mao."
+   },
    "view_consolidada": {
     "note": "commit 4 tarefa 4",
     "updated_at": "2026-07-04T01:00:15+00:00",
@@ -132,5 +163,5 @@
   }
  },
  "protocol": "state-memory/1.0",
- "updated_at": "2026-07-04T09:33:54+00:00"
+ "updated_at": "2026-07-04T15:54:56+00:00"
 }

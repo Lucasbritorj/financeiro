@@ -33,9 +33,17 @@ ou hábito de outro codebase. Em conflito, este arquivo ganha.
 - Toda lógica de escrita relacional (transações, parcelas, faturas, pagamento,
   cartões, deleção lógica) é delegada a **funções RPC atômicas** no PostgreSQL:
   - `processar_transacao_completa` — compra/receita, parcelamento, guard de
-    limite, teto de 120 parcelas, trava FW409 em fatura PAGA/FECHADA.
+    limite, teto de 120 parcelas, trava FW409 em fatura PAGA/FECHADA,
+    sanidade temporal FW400.
   - `processar_pagamento_fatura` — máquina de estados fatura/parcelas → `PAGA`.
   - `criar_cartao` — validações + teto de 20 cartões ativos.
+  - `excluir_transacao` — soft delete com cascata; parcela PAGA bloqueia (FW409:
+    histórico se estorna, não se apaga).
+  - `excluir_cartao` — soft delete; parcelas pendentes bloqueiam (FW409).
+  - `fechar_faturas` — ABERTA → FECHADA no corte da competência; administrativa
+    (nenhum role de cliente executa; agendar no pg_cron).
+- `updated_at` é mantido por trigger genérico (`trg_touch_updated_at`, 0006)
+  nas 4 tabelas — não setar à mão em RPC nova.
 - RPCs são `SECURITY DEFINER` com `set search_path = ''`; por isso **bypassam a
   RLS** — toda query interna DEVE filtrar/inserir `user_id = auth.uid()`
   explicitamente. Usuário nunca vem de parâmetro do cliente. Nova RPC de
