@@ -26,26 +26,19 @@ export default function NovoCartaoForm() {
 
     setPendente(true);
     const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setPendente(false);
-      setErro("Sessão expirada. Entre novamente.");
-      return;
-    }
-
-    const { error } = await supabase.from("cartoes_credito").insert({
-      user_id: user.id,
-      nome: nome.trim(),
-      limite_total: limiteCentavos,
-      dia_fechamento: Number(diaFechamento),
-      dia_vencimento: Number(diaVencimento),
+    // Escrita direta é revogada no banco (0005): cartão nasce pela RPC,
+    // que valida e resolve o usuário via auth.uid().
+    const { error } = await supabase.rpc("criar_cartao", {
+      p_nome: nome.trim(),
+      p_limite_total: limiteCentavos,
+      p_dia_fechamento: Number(diaFechamento),
+      p_dia_vencimento: Number(diaVencimento),
     });
     setPendente(false);
 
     if (error) {
-      setErro(error.message);
+      // hint carrega a remediação (padrão FW4xx do backend)
+      setErro(error.hint ? `${error.message} ${error.hint}` : error.message);
       return;
     }
     setNome("");

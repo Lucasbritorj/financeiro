@@ -27,22 +27,36 @@ ou hábito de outro codebase. Em conflito, este arquivo ganha.
 
 ## Arquitetura de escrita
 
-- O frontend é **estritamente proibido** de fazer inserts/updates complexos via ORM,
-  query builder ou rotas REST padrão.
+- Escrita direta é **revogada no banco** (0005): `authenticated`/`anon` só têm
+  `SELECT`; INSERT/UPDATE/DELETE diretos falham com `42501`. Não é convenção —
+  é enforcement. Nunca reconceda DML direto a essas roles.
 - Toda lógica de escrita relacional (transações, parcelas, faturas, pagamento,
-  deleção lógica) é delegada a **funções RPC atômicas** no PostgreSQL:
-  - `processar_transacao_completa` — compra/receita, parcelamento, guard de limite.
+  cartões, deleção lógica) é delegada a **funções RPC atômicas** no PostgreSQL:
+  - `processar_transacao_completa` — compra/receita, parcelamento, guard de
+    limite, teto de 120 parcelas, trava FW409 em fatura PAGA/FECHADA.
   - `processar_pagamento_fatura` — máquina de estados fatura/parcelas → `PAGA`.
-- RPCs são `SECURITY INVOKER` (rodam sob a RLS do chamador) e o usuário vem de
-  `auth.uid()`, nunca de parâmetro do cliente.
+  - `criar_cartao` — validações + teto de 20 cartões ativos.
+- RPCs são `SECURITY DEFINER` com `set search_path = ''`; por isso **bypassam a
+  RLS** — toda query interna DEVE filtrar/inserir `user_id = auth.uid()`
+  explicitamente. Usuário nunca vem de parâmetro do cliente. Nova RPC de
+  escrita: repetir o padrão completo (definer + search_path + escopo em código
+  + revoke execute de `public`/`anon` + grant a `authenticated`).
+- Totais de fatura são lidos da view `vw_faturas_consolidadas`
+  (`security_invoker = true` — obrigatório em toda view nova, senão a view
+  roda com privilégio do dono e vaza dados entre usuários). RECEITA (estorno)
+  abate; parcelas guardam valor absoluto, o sinal vive na view.
 - Erros de RPC usam SQLSTATE estável + `hint` com remediação acionável:
   `FW400` input inválido · `FW401` não autenticado · `FW404` não encontrado ·
-  `FW409` estado conflitante (ex.: fatura já paga) · `FW429` limite excedido.
+  `FW409` estado conflitante (ex.: fatura já paga) · `FW429` limite excedido ·
+  `FW500` falha interna de integridade.
   Novo `RAISE` em RPC deve seguir o padrão (`using errcode = ..., hint = ...`).
+  Frontend exibe `error.message` + `error.hint`.
 
 ## Soft delete
 
-- **Nunca** executar `DELETE` físico. Exclusão = setar `deleted_at`.
+- **Nunca** executar `DELETE` físico — as policies de DELETE foram dropadas
+  (0005) e o privilégio revogado: clientes não conseguem nem tentando.
+  Exclusão = setar `deleted_at` (via RPC).
 - Toda query de leitura e todo índice único devem ter `WHERE deleted_at IS NULL`
   (ex.: `faturas_ativas_cartao_competencia_idx`).
 - `ON CONFLICT` que mira índice parcial precisa do predicado:
@@ -55,8 +69,9 @@ ou hábito de outro codebase. Em conflito, este arquivo ganha.
 - `supabase/migrations/` é a fonte da verdade do schema; migrações são aplicadas em
   ordem numérica no SQL Editor. Alterou schema: regenere `src/lib/database.types.ts`
   (`npx supabase gen types typescript --project-id <id>`).
-- `supabase/tests/verificacao_nucleo.sql` roda 9 asserts e termina em `ROLLBACK`.
-  Alterou regra de negócio no SQL: adicione/ajuste assert correspondente.
+- `supabase/tests/verificacao_nucleo.sql` roda os asserts do núcleo e termina
+  em `ROLLBACK`. Alterou regra de negócio no SQL: adicione/ajuste assert
+  correspondente.
 
 ## Governança do agente (antigravity-core)
 

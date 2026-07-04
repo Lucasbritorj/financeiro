@@ -58,7 +58,8 @@ export default function NovaTransacaoForm({ cartoes }: { cartoes: CartaoOpcao[] 
     setPendente(false);
 
     if (error) {
-      setErro(error.message);
+      // hint carrega a remediação (padrão FW4xx do backend)
+      setErro(error.hint ? `${error.message} ${error.hint}` : error.message);
       return;
     }
     const resultado = data as { parcelas_criadas?: number } | null;

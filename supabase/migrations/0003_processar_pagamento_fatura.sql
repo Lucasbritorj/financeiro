@@ -14,16 +14,18 @@ alter table public.faturas  add column if not exists updated_at timestamptz not 
 alter table public.parcelas add column if not exists updated_at timestamptz not null default now();
 alter table public.parcelas add column if not exists data_pagamento timestamptz;
 
--- SECURITY INVOKER: roda sob a RLS do chamador — fatura de outro usuário é
--- invisível e cai no FW404. Função PL/pgSQL é atômica: qualquer RAISE reverte
--- fatura e parcelas juntas.
+-- SECURITY DEFINER: as tabelas têm DML revogado para 'authenticated' (0005);
+-- esta função é a única porta de pagamento. Escopo garantido em código:
+-- toda query filtra user_id = auth.uid() — fatura de outro usuário cai no
+-- FW404. Função PL/pgSQL é atômica: qualquer RAISE reverte fatura e
+-- parcelas juntas.
 create or replace function public.processar_pagamento_fatura(
   p_fatura_id       uuid,
   p_data_pagamento  timestamptz default now()
 )
 returns jsonb
 language plpgsql
-security invoker
+security definer
 set search_path = ''
 as $$
 declare
@@ -66,6 +68,7 @@ begin
          data_pagamento = coalesce(p_data_pagamento, now()),
          updated_at = now()
    where fatura_id = v_fatura.id
+     and user_id = v_user_id  -- defesa em profundidade (DEFINER bypassa RLS)
      and deleted_at is null
      and status <> 'PAGA';
   get diagnostics v_pagas = row_count;

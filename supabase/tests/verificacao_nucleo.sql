@@ -20,10 +20,11 @@ declare
   v_venc   date;
   v_qtd    int;
   v_fatura uuid;
+  v_total  bigint;
 begin
-  insert into public.cartoes_credito (user_id, nome, limite_total, dia_fechamento, dia_vencimento)
-  values (auth.uid(), 'Teste 31/31', 1000000, 31, 31)
-  returning id into v_cartao;
+  -- Pós-0005 o INSERT direto é negado: cartão nasce pela RPC, como no app.
+  v_res := public.criar_cartao('Teste 31/31', 1000000, 31, 31);
+  v_cartao := (v_res->>'cartao_id')::uuid;
 
   -- [1] Divisão centesimal: R$100,00 em 3x => 3334 + 3333 + 3333 = 10000
   v_res := public.processar_transacao_completa(
@@ -98,9 +99,13 @@ begin
   end;
 
   -- [9] Soft delete não trava competência: fatura mar/2026 deletada, nova
-  --     compra 2x tocando março recria fatura ativa (índice parcial de 0004)
+  --     compra 2x tocando março recria fatura ativa (índice parcial de 0004).
+  --     UPDATE direto é negado a authenticated (0005): a exclusão lógica de
+  --     fatura ainda não tem RPC, então o teste troca para a role da sessão.
+  reset role;
   update public.faturas set deleted_at = now()
   where cartao_id = v_cartao and competencia = date '2026-03-01';
+  set local role authenticated;
   v_res := public.processar_transacao_completa(
     'Pós soft-delete', 2000, 'DESPESA', 'CREDITO', v_cartao, date '2026-02-15', 2);
   if (v_res->>'parcelas_criadas')::int <> 2 then
@@ -113,7 +118,58 @@ begin
     raise exception 'FALHA [9]: % faturas ativas para mar/2026 (esperado 1)', v_qtd;
   end if;
 
-  raise notice 'OK: 9/9 asserts do núcleo transacional passaram.';
+  -- [10] Trava de fatura liquidada: jan/2026 está PAGA ([7]); nova compra
+  --      na mesma competência => FW409 (fail fast, sem escrita parcial)
+  begin
+    perform public.processar_transacao_completa(
+      'Compra pós-pagamento', 1000, 'DESPESA', 'CREDITO', v_cartao, date '2026-01-15', 1);
+    raise exception 'FALHA [10]: compra em fatura PAGA não foi travada';
+  exception
+    when sqlstate 'FW409' then null; -- esperado
+  end;
+
+  -- [11] Teto de parcelas no servidor: 121 => FW400
+  begin
+    perform public.processar_transacao_completa(
+      'Parcelas demais', 500000, 'DESPESA', 'CREDITO', v_cartao, date '2026-04-10', 121);
+    raise exception 'FALHA [11]: teto de 120 parcelas não aplicado';
+  exception
+    when sqlstate 'FW400' then null; -- esperado
+  end;
+
+  -- [12] Camada semântica: despesa 10000 + estorno 3000 em abr/2026 =>
+  --      vw_faturas_consolidadas fecha em 7000 (RECEITA abate)
+  perform public.processar_transacao_completa(
+    'Compra abril', 10000, 'DESPESA', 'CREDITO', v_cartao, date '2026-04-10', 1);
+  perform public.processar_transacao_completa(
+    'Estorno abril', 3000, 'RECEITA', 'CREDITO', v_cartao, date '2026-04-10', 1);
+  select valor_total_fatura into v_total
+  from public.vw_faturas_consolidadas
+  where cartao_id = v_cartao and competencia = date '2026-04-01';
+  if v_total is distinct from 7000 then
+    raise exception 'FALHA [12]: view consolidou % (esperado 7000)', v_total;
+  end if;
+
+  -- [13] Least privilege: INSERT direto como authenticated => negado (42501)
+  begin
+    insert into public.transacoes_origem
+      (user_id, descricao, valor_total, tipo, forma_pagamento, data_compra)
+    values (auth.uid(), 'bypass', 100, 'DESPESA', 'PIX', date '2026-01-01');
+    raise exception 'FALHA [13]: INSERT direto não foi negado';
+  exception
+    when insufficient_privilege then null; -- esperado
+  end;
+
+  -- [14] Erro classificado: cartão inexistente => FW404
+  begin
+    perform public.processar_transacao_completa(
+      'Cartão fantasma', 1000, 'DESPESA', 'CREDITO', gen_random_uuid(), date '2026-04-10', 1);
+    raise exception 'FALHA [14]: cartão inexistente não retornou FW404';
+  exception
+    when sqlstate 'FW404' then null; -- esperado
+  end;
+
+  raise notice 'OK: 14/14 asserts do núcleo transacional passaram.';
 end $$;
 
 rollback;

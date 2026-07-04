@@ -18,9 +18,30 @@
      "sha256_0004": "a69fc7ecd786e34e23315d3e1b88fc9d3ab8e2c8698188b3082174fd5978e0e6",
      "verdict": "APROVADO"
     }
+   },
+   "commit4_blindagem": {
+    "note": "veredito watchdog commit 4",
+    "updated_at": "2026-07-04T01:00:15+00:00",
+    "v": {
+     "artefatos": "0002/0003/0005 + tests + frontend + CLAUDE.md",
+     "data": "2026-07-03",
+     "findings_minor": [
+      "CON-02: filtros user_id defesa-em-profundidade nas queries DEFINER — APLICADOS pos-veredito (fix_instruction do proprio auditor).",
+      "PROC-02: CLAUDE.md dizia 9 asserts vs 14 reais — CORRIGIDO (numero fixo removido)."
+     ],
+     "iteration": 1,
+     "nota": "shas do veredito anteriores aos 4 fixes minor; fixes sao 1-linha das fix_instructions.",
+     "protocol": "audit-verdict/1.0",
+     "verdict": "APROVADO"
+    }
    }
   },
   "regras_negocio": {
+   "blindagem_privilegios": {
+    "note": "commit 4 tarefa 1",
+    "updated_at": "2026-07-04T01:00:15+00:00",
+    "v": "Least privilege (0005): authenticated/anon so tem SELECT nas 4 tabelas; INSERT/UPDATE/DELETE direto = 42501. Policies de DELETE dropadas. RPCs sao SECURITY DEFINER (bypassam RLS!) com search_path='' e escopo user_id=auth.uid() em codigo. Nova RPC: revoke execute de public/anon, grant a authenticated. Nunca reconceder DML direto."
+   },
    "codigos_erro_sql": {
     "note": "protocolo_de_erro na camada SQL",
     "updated_at": "2026-07-04T00:10:23+00:00",
@@ -65,9 +86,19 @@
     "note": "calculos de data",
     "updated_at": "2026-07-04T00:10:22+00:00",
     "v": "Fuso de negocio America/Sao_Paulo para data_compra, fechamento e competencia."
+   },
+   "travas_motor": {
+    "note": "commit 4 tarefas 2-3",
+    "updated_at": "2026-07-04T01:00:15+00:00",
+    "v": "Teto servidor: num_parcelas [1,120] FW400; cartoes ativos max 20/usuario FW429 (criar_cartao). Fail fast FW409: compra cujo parcelamento toca fatura PAGA ou FECHADA e rejeitada antes de qualquer INSERT — pagamento antecipado nao reabre ciclo."
+   },
+   "view_consolidada": {
+    "note": "commit 4 tarefa 4",
+    "updated_at": "2026-07-04T01:00:15+00:00",
+    "v": "vw_faturas_consolidadas = fonte unica do total de fatura: RECEITA abate (sinal na view, parcela guarda modulo), COALESCE 0, filtra deleted_at. security_invoker=true OBRIGATORIO em toda view (default do Postgres roda como dono e vaza RLS). Frontend le total da view, nao soma parcelas."
    }
   }
  },
  "protocol": "state-memory/1.0",
- "updated_at": "2026-07-04T00:21:37+00:00"
+ "updated_at": "2026-07-04T01:00:15+00:00"
 }

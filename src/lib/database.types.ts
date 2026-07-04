@@ -53,6 +53,7 @@ export type Database = {
           data_vencimento: string;
           status: string;
           created_at: string;
+          updated_at: string;
           deleted_at: string | null;
         };
         Insert: {
@@ -63,6 +64,7 @@ export type Database = {
           data_vencimento: string;
           status?: string;
           created_at?: string;
+          updated_at?: string;
           deleted_at?: string | null;
         };
         Update: {
@@ -73,6 +75,7 @@ export type Database = {
           data_vencimento?: string;
           status?: string;
           created_at?: string;
+          updated_at?: string;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -145,7 +148,9 @@ export type Database = {
           valor: number;
           data_competencia: string;
           status: string;
+          data_pagamento: string | null;
           created_at: string;
+          updated_at: string;
           deleted_at: string | null;
         };
         Insert: {
@@ -157,7 +162,9 @@ export type Database = {
           valor: number;
           data_competencia: string;
           status?: string;
+          data_pagamento?: string | null;
           created_at?: string;
+          updated_at?: string;
           deleted_at?: string | null;
         };
         Update: {
@@ -169,7 +176,9 @@ export type Database = {
           valor?: number;
           data_competencia?: string;
           status?: string;
+          data_pagamento?: string | null;
           created_at?: string;
+          updated_at?: string;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -190,7 +199,22 @@ export type Database = {
         ];
       };
     };
-    Views: { [_ in never]: never };
+    Views: {
+      vw_faturas_consolidadas: {
+        Row: {
+          id: string;
+          user_id: string;
+          cartao_id: string;
+          competencia: string;
+          ano_referencia: number;
+          mes_referencia: number;
+          status: string;
+          data_vencimento: string;
+          valor_total_fatura: number;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
       processar_transacao_completa: {
         Args: {
@@ -201,6 +225,22 @@ export type Database = {
           p_cartao_id?: string | null;
           p_data_compra?: string | null;
           p_num_parcelas?: number;
+        };
+        Returns: Json;
+      };
+      processar_pagamento_fatura: {
+        Args: {
+          p_fatura_id: string;
+          p_data_pagamento?: string;
+        };
+        Returns: Json;
+      };
+      criar_cartao: {
+        Args: {
+          p_nome: string;
+          p_limite_total: number;
+          p_dia_fechamento: number;
+          p_dia_vencimento: number;
         };
         Returns: Json;
       };
