@@ -15,7 +15,7 @@ export default function SairBotao() {
   return (
     <button
       onClick={sair}
-      className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-100"
+      className="botao-fantasma text-xs"
     >
       Sair
     </button>

@@ -72,7 +72,7 @@ export default function NovaTransacaoForm({ cartoes }: { cartoes: CartaoOpcao[] 
   }
 
   return (
-    <form onSubmit={enviar} className="rounded-lg border border-zinc-200 bg-white p-4">
+    <form onSubmit={enviar} className="vidro-soberano p-4">
       <h2 className="mb-3 font-medium">Nova transação</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-sm sm:col-span-2">
@@ -81,7 +81,7 @@ export default function NovaTransacaoForm({ cartoes }: { cartoes: CartaoOpcao[] 
             value={descricao}
             onChange={(e) => setDescricao(e.target.value)}
             required
-            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5"
+            className="campo-soberano"
             placeholder="Ex.: Mercado"
           />
         </label>
@@ -92,7 +92,7 @@ export default function NovaTransacaoForm({ cartoes }: { cartoes: CartaoOpcao[] 
             onChange={(e) => setValor(e.target.value)}
             required
             inputMode="decimal"
-            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5"
+            className="campo-soberano"
             placeholder="100,00"
           />
         </label>
@@ -103,7 +103,7 @@ export default function NovaTransacaoForm({ cartoes }: { cartoes: CartaoOpcao[] 
             value={dataCompra}
             onChange={(e) => setDataCompra(e.target.value)}
             required
-            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5"
+            className="campo-soberano"
           />
         </label>
         <label className="text-sm">
@@ -111,7 +111,7 @@ export default function NovaTransacaoForm({ cartoes }: { cartoes: CartaoOpcao[] 
           <select
             value={tipo}
             onChange={(e) => setTipo(e.target.value)}
-            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5"
+            className="campo-soberano"
           >
             <option value="DESPESA">Despesa</option>
             <option value="RECEITA">Receita</option>
@@ -122,7 +122,7 @@ export default function NovaTransacaoForm({ cartoes }: { cartoes: CartaoOpcao[] 
           <select
             value={forma}
             onChange={(e) => setForma(e.target.value)}
-            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5"
+            className="campo-soberano"
           >
             <option value="CREDITO">Crédito</option>
             <option value="DEBITO">Débito</option>
@@ -137,7 +137,7 @@ export default function NovaTransacaoForm({ cartoes }: { cartoes: CartaoOpcao[] 
               <select
                 value={cartaoId}
                 onChange={(e) => setCartaoId(e.target.value)}
-                className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5"
+                className="campo-soberano"
               >
                 {cartoes.length === 0 && <option value="">Nenhum cartão cadastrado</option>}
                 {cartoes.map((c) => (
@@ -156,18 +156,18 @@ export default function NovaTransacaoForm({ cartoes }: { cartoes: CartaoOpcao[] 
                 value={numParcelas}
                 onChange={(e) => setNumParcelas(e.target.value)}
                 required
-                className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5"
+                className="campo-soberano"
               />
             </label>
           </>
         )}
       </div>
-      {erro && <p className="mt-2 text-sm text-red-600">{erro}</p>}
-      {ok && <p className="mt-2 text-sm text-emerald-700">{ok}</p>}
+      {erro && <p className="mt-2 text-sm" style={{ color: "var(--acento-negativo)" }}>{erro}</p>}
+      {ok && <p className="mt-2 text-sm" style={{ color: "var(--acento)" }}>{ok}</p>}
       <button
         type="submit"
         disabled={pendente}
-        className="mt-3 rounded bg-zinc-900 px-4 py-1.5 text-sm text-white hover:bg-zinc-700 disabled:opacity-50"
+        className="botao-soberano mt-3 text-sm"
       >
         {pendente ? "Processando..." : "Registrar"}
       </button>

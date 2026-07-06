@@ -15,23 +15,28 @@ export default async function ProtegidoLayout({
   if (!user) redirect("/login");
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      <header className="border-b border-zinc-200 bg-white">
+    <div className="min-h-screen">
+      <header
+        className="sticky top-0 z-20 border-b backdrop-blur-xl"
+        style={{ borderColor: "var(--vidro-borda)", background: "rgba(6, 8, 10, 0.7)" }}
+      >
         <nav className="mx-auto flex max-w-4xl items-center gap-5 px-4 py-3">
-          <span className="font-semibold">Financeiro</span>
-          <Link href="/dashboard" className="text-sm hover:underline">
+          <span className="font-semibold tracking-tight" style={{ color: "var(--acento)" }}>
+            Financeiro
+          </span>
+          <Link href="/dashboard" className="text-sm transition-colors hover:text-[var(--acento)]">
             Dashboard
           </Link>
-          <Link href="/transacoes" className="text-sm hover:underline">
+          <Link href="/transacoes" className="text-sm transition-colors hover:text-[var(--acento)]">
             Transações
           </Link>
-          <Link href="/faturas" className="text-sm hover:underline">
+          <Link href="/faturas" className="text-sm transition-colors hover:text-[var(--acento)]">
             Faturas
           </Link>
-          <Link href="/cartoes" className="text-sm hover:underline">
+          <Link href="/cartoes" className="text-sm transition-colors hover:text-[var(--acento)]">
             Cartões
           </Link>
-          <div className="ml-auto flex items-center gap-3 text-sm text-zinc-500">
+          <div className="ml-auto flex items-center gap-3 text-sm" style={{ color: "var(--texto-suave)" }}>
             <span className="hidden sm:inline">{user.email}</span>
             <SairBotao />
           </div>

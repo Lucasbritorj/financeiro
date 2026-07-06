@@ -56,21 +56,26 @@ export default function PainelPatrimonio() {
 
   const pontos = useMemo(() => agregarFluxoMensal(parcelas ?? []), [parcelas]);
   const anomalia = useMemo(() => detectarAnomalia(pontos), [pontos]);
-  const atual = pontos.at(-1);
+  // KPIs do mês corrente em São Paulo; parcelamento gera competências
+  // futuras — o último ponto pode ser um mês que ainda não chegou.
+  const mesCorrente = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+  })
+    .format(new Date())
+    .slice(0, 7);
+  const doMes = pontos.find((p) => p.mes === mesCorrente);
+  const projetado = pontos.at(-1);
 
   if (error) {
     return (
-      <div className="soberano rounded-2xl p-6 overflow-hidden">
-        <p className="text-sm" style={{ color: "var(--acento-negativo)" }}>
-          Falha ao carregar o fluxo: {error.message}
-        </p>
-      </div>
+      <p className="text-sm" style={{ color: "var(--acento-negativo)" }}>
+        Falha ao carregar o fluxo: {error.message}
+      </p>
     );
   }
 
   return (
-    <div className="soberano rounded-2xl p-6 overflow-hidden">
-      <motion.div
+    <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={MOLA}
@@ -86,20 +91,20 @@ export default function PainelPatrimonio() {
                 —
               </span>
             ) : (
-              <TickerNumerico centavos={atual?.acumulado ?? 0} />
+              <TickerNumerico centavos={projetado?.acumulado ?? 0} />
             )}
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:max-w-md">
             <div>
-              <p style={{ color: "var(--texto-suave)" }}>Entradas no mês</p>
+              <p style={{ color: "var(--texto-suave)" }}>Entradas em {mesCorrente.slice(5)}/{mesCorrente.slice(0, 4)}</p>
               <p className="numero-soberano" style={{ color: "var(--acento)" }}>
-                {formatarCentavos(atual?.entradas ?? 0)}
+                {formatarCentavos(doMes?.entradas ?? 0)}
               </p>
             </div>
             <div>
-              <p style={{ color: "var(--texto-suave)" }}>Saídas no mês</p>
+              <p style={{ color: "var(--texto-suave)" }}>Saídas em {mesCorrente.slice(5)}/{mesCorrente.slice(0, 4)}</p>
               <p className="numero-soberano" style={{ color: "var(--acento-negativo)" }}>
-                {formatarCentavos(atual?.saidas ?? 0)}
+                {formatarCentavos(doMes?.saidas ?? 0)}
               </p>
             </div>
           </div>
@@ -110,7 +115,6 @@ export default function PainelPatrimonio() {
         </CartaoGlow>
 
         <PainelAnomalia anomalia={anomalia} />
-      </motion.div>
-    </div>
+    </motion.div>
   );
 }

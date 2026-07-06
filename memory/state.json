@@ -69,6 +69,23 @@
     }
    }
   },
+  "producao": {
+   "e2e_visual_pendente": {
+    "note": "follow-up",
+    "updated_at": "2026-07-05T14:20:24+00:00",
+    "v": "E2E de API em producao passou (signup/RPC/view/42501). Pendente: teste visual humano do dashboard e fluxo de signup com confirm email ligado. Conta de teste e2e criada via plus-address do dono (lucasfbrito23+e2e*@gmail.com) com dados soft-deletados."
+   },
+   "infra": {
+    "note": "deploy 2026-07-05",
+    "updated_at": "2026-07-05T14:20:24+00:00",
+    "v": "Supabase: projeto bqkichuwmugkjumpvrio (sa-east-1, PG17). Migracoes 0001-0006 aplicadas via Management API (endpoint database/query, exige User-Agent custom senao Cloudflare 1010). 21/21 asserts no banco real. pg_cron job fechar-faturas 03:10. Auth: senha min 8, confirm email LIGADO (autoconfirm so em teste). Vercel: projeto prj_Ih8Yyx5hizimYww0AIYCcNfAK5rE team team_nk65XiSED9TDRfEvnsrpSCRe, dominio financeiro-web-sepia.vercel.app, env vars em production+preview. GitHub: Lucasbritorj/financeiro-web privado, default branch master, PR #1 = auditoria."
+   },
+   "segredos_rotacao": {
+    "note": "higiene pos-deploy",
+    "updated_at": "2026-07-05T14:20:24+00:00",
+    "v": "Tokens usados no deploy 2026-07-05 (revogar apos estabilizar): Supabase PAT sbp_ (dashboard/account/tokens), GitHub OAuth device (settings/applications), Vercel token vcp_ (vercel.com/account/tokens). Nenhum segredo commitado; anon key e publica por design."
+   }
+  },
   "regras_negocio": {
    "api_escrita_completa": {
     "note": "commit 6",
@@ -168,5 +185,5 @@
   }
  },
  "protocol": "state-memory/1.0",
- "updated_at": "2026-07-04T16:05:21+00:00"
+ "updated_at": "2026-07-05T14:20:24+00:00"
 }

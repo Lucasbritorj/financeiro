@@ -60,10 +60,12 @@ export default function GraficoFluxo({ pontos }: { pontos: PontoFluxo[] }) {
     return () => chart.remove();
   }, [pontos]);
 
-  if (pontos.length === 0) {
+  if (pontos.length < 2) {
     return (
       <p className="py-10 text-center text-sm" style={{ color: "var(--texto-suave)" }}>
-        Sem movimentos ainda — registre transações para ver a curva.
+        {pontos.length === 0
+          ? "Sem movimentos ainda — registre transações para ver a curva."
+          : "A curva aparece com 2+ meses de competência — parcele uma compra no crédito ou registre movimentos em meses distintos."}
       </p>
     );
   }

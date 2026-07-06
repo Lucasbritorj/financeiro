@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
+import BotaoAcaoRpc from "@/components/botao-acao-rpc";
 import { formatarCentavos, formatarCompetencia, formatarData } from "@/lib/money";
 import { LIMITE_FATURAS_LISTA } from "@/lib/constantes";
 
-const ESTILO_STATUS: Record<string, string> = {
-  ABERTA: "bg-emerald-100 text-emerald-800",
-  FECHADA: "bg-amber-100 text-amber-800",
-  PAGA: "bg-zinc-200 text-zinc-700",
+const CLASSE_SELO: Record<string, string> = {
+  ABERTA: "selo selo-aberta",
+  FECHADA: "selo selo-fechada",
+  PAGA: "selo selo-paga",
 };
 
 export default async function FaturasPage() {
@@ -18,10 +19,10 @@ export default async function FaturasPage() {
     .order("competencia", { ascending: false })
     .limit(LIMITE_FATURAS_LISTA);
   if (faturasRes.error) throw new Error(faturasRes.error.message);
-  const faturas = faturasRes.data;
+  // Fatura sem parcela ativa (ex.: sobra de transação excluída) é ruído.
+  const faturas = faturasRes.data.filter((f) => (f.parcelas ?? []).length > 0);
 
   // Fonte única do total: a view aplica o sinal (RECEITA/estorno abate).
-  // Busca restrita às faturas da página — a view não é varrida inteira.
   const totaisRes = await supabase
     .from("vw_faturas_consolidadas")
     .select("id, valor_total_fatura")
@@ -33,8 +34,8 @@ export default async function FaturasPage() {
     <div className="grid gap-6">
       <h1 className="text-xl font-semibold">Faturas</h1>
       {faturas.length === 0 ? (
-        <p className="text-sm text-zinc-500">
-          Nenhuma fatura ainda — registre uma compra no crédito.
+        <p className="text-sm" style={{ color: "var(--texto-suave)" }}>
+          Nenhuma fatura com lançamentos — registre uma compra no crédito.
         </p>
       ) : (
         <ul className="grid gap-4">
@@ -42,47 +43,51 @@ export default async function FaturasPage() {
             const parcelas = [...(f.parcelas ?? [])].sort((a, b) => a.numero - b.numero);
             const total = totais.get(f.id) ?? 0;
             return (
-              <li key={f.id} className="rounded-lg border border-zinc-200 bg-white p-4">
+              <li key={f.id} className="vidro-soberano p-4">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="font-medium">
                     {f.cartoes_credito?.nome} · {formatarCompetencia(f.competencia)}
                   </span>
-                  <span
-                    className={`rounded px-1.5 py-0.5 text-xs ${
-                      ESTILO_STATUS[f.status] ?? "bg-zinc-100 text-zinc-600"
-                    }`}
-                  >
-                    {f.status}
-                  </span>
-                  <span className="text-xs text-zinc-500">
+                  <span className={CLASSE_SELO[f.status] ?? "selo selo-paga"}>{f.status}</span>
+                  <span className="text-xs" style={{ color: "var(--texto-suave)" }}>
                     Vence em {formatarData(f.data_vencimento)}
                   </span>
-                  <span className="ml-auto font-semibold">{formatarCentavos(total)}</span>
+                  <span className="numero-soberano ml-auto font-semibold">
+                    {formatarCentavos(total)}
+                  </span>
+                  {f.status !== "PAGA" && (
+                    <BotaoAcaoRpc
+                      acao={{ rpc: "processar_pagamento_fatura", args: { p_fatura_id: f.id } }}
+                      rotulo="Pagar fatura"
+                      rotuloPendente="Pagando..."
+                      confirmacao={`Marcar a fatura de ${formatarCompetencia(f.competencia)} como PAGA? As parcelas serão quitadas.`}
+                    />
+                  )}
                 </div>
-                {parcelas.length > 0 && (
-                  <ul className="mt-3 grid gap-1 border-t border-zinc-100 pt-3 text-sm">
-                    {parcelas.map((p) => {
-                      const ehEstorno = p.transacoes_origem?.tipo === "RECEITA";
-                      return (
-                        <li key={p.id} className="flex gap-2">
-                          <span>
-                            {p.transacoes_origem?.descricao}
-                            {(p.transacoes_origem?.num_parcelas ?? 1) > 1 &&
-                              ` (${p.numero}/${p.transacoes_origem?.num_parcelas})`}
-                          </span>
-                          <span
-                            className={`ml-auto tabular-nums ${
-                              ehEstorno ? "text-emerald-700" : ""
-                            }`}
-                          >
-                            {ehEstorno && "-"}
-                            {formatarCentavos(p.valor)}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
+                <ul
+                  className="mt-3 grid gap-1 border-t pt-3 text-sm"
+                  style={{ borderColor: "var(--vidro-borda)" }}
+                >
+                  {parcelas.map((p) => {
+                    const ehEstorno = p.transacoes_origem?.tipo === "RECEITA";
+                    return (
+                      <li key={p.id} className="flex gap-2">
+                        <span>
+                          {p.transacoes_origem?.descricao}
+                          {(p.transacoes_origem?.num_parcelas ?? 1) > 1 &&
+                            ` (${p.numero}/${p.transacoes_origem?.num_parcelas})`}
+                        </span>
+                        <span
+                          className="numero-soberano ml-auto"
+                          style={ehEstorno ? { color: "var(--acento)" } : undefined}
+                        >
+                          {ehEstorno && "-"}
+                          {formatarCentavos(p.valor)}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
               </li>
             );
           })}

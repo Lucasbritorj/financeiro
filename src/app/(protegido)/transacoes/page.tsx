@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import NovaTransacaoForm from "@/components/nova-transacao-form";
+import BotaoAcaoRpc from "@/components/botao-acao-rpc";
 import { formatarCentavos, formatarData } from "@/lib/money";
 import { LIMITE_TRANSACOES_LISTA } from "@/lib/constantes";
 
@@ -25,27 +26,35 @@ export default async function TransacoesPage() {
       <h1 className="text-xl font-semibold">Transações</h1>
       <NovaTransacaoForm cartoes={cartoes} />
       {transacoes.length === 0 ? (
-        <p className="text-sm text-zinc-500">Nenhuma transação registrada ainda.</p>
+        <p className="text-sm" style={{ color: "var(--texto-suave)" }}>
+          Nenhuma transação registrada ainda.
+        </p>
       ) : (
         <ul className="grid gap-2">
           {transacoes.map((t) => (
             <li
               key={t.id}
-              className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-lg border border-zinc-200 bg-white px-4 py-3"
+              className="vidro-soberano flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-3"
             >
               <span className="font-medium">{t.descricao}</span>
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs" style={{ color: "var(--texto-suave)" }}>
                 {formatarData(t.data_compra)} · {t.forma_pagamento}
                 {t.num_parcelas > 1 ? ` · ${t.num_parcelas}x` : ""}
               </span>
               <span
-                className={`ml-auto font-medium ${
-                  t.tipo === "RECEITA" ? "text-emerald-700" : "text-zinc-900"
-                }`}
+                className="numero-soberano ml-auto font-medium"
+                style={{ color: t.tipo === "RECEITA" ? "var(--acento)" : "var(--texto)" }}
               >
                 {t.tipo === "RECEITA" ? "+" : "-"}
                 {formatarCentavos(t.valor_total)}
               </span>
+              <BotaoAcaoRpc
+                acao={{ rpc: "excluir_transacao", args: { p_transacao_id: t.id } }}
+                rotulo="Excluir"
+                rotuloPendente="Excluindo..."
+                confirmacao={`Excluir "${t.descricao}"? Parcelas pendentes saem das faturas.`}
+                perigo
+              />
             </li>
           ))}
         </ul>

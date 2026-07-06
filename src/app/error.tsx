@@ -10,16 +10,16 @@ export default function ErroGlobal({
   reset: () => void;
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 text-zinc-900">
-      <div className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-6 text-center">
+    <main className="flex min-h-screen items-center justify-center px-4">
+      <div className="vidro-soberano w-full max-w-sm p-6 text-center">
         <h1 className="text-lg font-semibold">Algo deu errado</h1>
-        <p className="mt-2 text-sm text-zinc-500">
+        <p className="mt-2 text-sm" style={{ color: "var(--texto-suave)" }}>
           Tente novamente. Se persistir, informe o código
           {error.digest ? ` ${error.digest}` : " exibido no console"} ao suporte.
         </p>
         <button
           onClick={reset}
-          className="mt-4 rounded bg-zinc-900 px-4 py-2 text-sm text-white hover:bg-zinc-700"
+          className="botao-soberano mt-4 text-sm"
         >
           Tentar novamente
         </button>
