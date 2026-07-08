@@ -8,6 +8,7 @@ import SairBotao from "@/components/sair-botao";
 // continuam acessíveis, mas fora do fluxo principal.
 const NAV_PRINCIPAL = [
   { href: "/dashboard", rotulo: "Dashboard" },
+  { href: "/analise", rotulo: "Análise" },
   { href: "/transacoes", rotulo: "Transações" },
   { href: "/categorias", rotulo: "Categorias" },
   { href: "/importar", rotulo: "Importar" },

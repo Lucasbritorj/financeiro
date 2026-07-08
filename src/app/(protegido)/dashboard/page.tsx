@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatarCentavos } from "@/lib/money";
 import {
@@ -9,9 +10,11 @@ import {
   projecaoFechamento,
   type TransacaoInsight,
 } from "@/lib/insights";
+import { analisarFinancas } from "@/lib/analise";
 import HeroNarrativo, { type StatHero } from "@/components/dashboard/hero-narrativo";
 import DonutCategorias from "@/components/dashboard/donut-categorias";
 import TopDespesas from "@/components/dashboard/top-despesas";
+import CartaoObservacao from "@/components/analise/cartao-observacao";
 import SemearCategorias from "@/components/semear-categorias";
 
 // Base temporal do dashboard = data_compra (visão caixa "quanto gastei
@@ -26,6 +29,18 @@ function mesAnterior(mesISO: string): string {
   const [ano, mes] = mesISO.split("-").map(Number);
   const d = new Date(Date.UTC(ano, mes - 2, 1));
   return d.toISOString().slice(0, 7);
+}
+
+// Janela de 4 meses: o comparativo do herói usa o mês anterior; a análise
+// (teaser abaixo) precisa de até 3 meses de histórico para as tendências.
+// gastoPorCategoria/resumoDoMes filtram por mês, então o histórico extra
+// não contamina o donut nem os KPIs.
+function inicioJanela(mesISO: string): string {
+  const [ano, mes] = mesISO.split("-").map(Number);
+  return new Date(Date.UTC(ano, mes - 1 - 3, 1)).toISOString().slice(0, 10);
+}
+function hojeSaoPaulo(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 }
 
 type LinhaTransacao = {
@@ -53,7 +68,7 @@ export default async function DashboardPage() {
     .select(
       "descricao, valor_total, tipo, data_compra, categorias(id, nome, cor, orcamento_mensal)"
     )
-    .gte("data_compra", `${anterior}-01`)
+    .gte("data_compra", inicioJanela(mes))
     .order("data_compra", { ascending: false });
 
   if (error) {
@@ -103,6 +118,14 @@ export default async function DashboardPage() {
   const projecao = projecaoFechamento(resumoAtual.saidas, diaAtual, diasNoMes);
   const poupanca = taxaPoupanca(resumoAtual.entradas, resumoAtual.saidas);
 
+  // Observação de maior relevância como chamada para a página de Análise.
+  const destaque = analisarFinancas(transacoes, {
+    mesISO: mes,
+    hojeISO: hojeSaoPaulo(),
+    formatar: formatarCentavos,
+    limite: 1,
+  })[0];
+
   const stats: StatHero[] = [
     {
       rotulo: "Saldo do mês",
@@ -128,6 +151,18 @@ export default async function DashboardPage() {
       {(totalCategorias ?? 0) === 0 && <SemearCategorias />}
 
       <HeroNarrativo frase={frase} stats={stats} />
+
+      {destaque && destaque.id !== "estavel" && (
+        <Link href="/analise" className="group grid gap-2">
+          <CartaoObservacao observacao={destaque} />
+          <span
+            className="justify-self-end text-xs transition-colors group-hover:text-[var(--ouro)]"
+            style={{ color: "var(--grafite)" }}
+          >
+            ver análise completa →
+          </span>
+        </Link>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
         <section className="vidro-soberano p-6">
