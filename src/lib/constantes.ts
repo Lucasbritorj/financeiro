@@ -13,3 +13,9 @@ export const LIMITE_FATURAS_LISTA = 24;
 
 /** Espelha o teto de cartões ativos do servidor (criar_cartao). */
 export const LIMITE_CARTOES_LISTA = 20;
+
+/** Página de transações: itens por página do cursor keyset (0007). */
+export const TAMANHO_PAGINA_TRANSACOES = 20;
+
+/** Espelha o teto de linhas por importação do servidor (criar_importacao). */
+export const LIMITE_LINHAS_IMPORTACAO = 1000;

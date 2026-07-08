@@ -14,13 +14,11 @@ export function paraCentavos(entrada: string): number {
       s = partes.join("");
     }
   }
-  // Mais de 2 casas decimais não é dinheiro BRL digitado: rejeitar é mais
-  // seguro que arredondar em silêncio (100,555 -> 10056 corromperia o valor).
-  const decimais = s.split(".")[1] ?? "";
-  if (decimais.length > 2) return NaN;
   const valor = Number(s);
   if (!Number.isFinite(valor) || valor <= 0) return NaN;
-  return Math.round(valor * 100);
+  // Além de 2 casas: arredonda ao centavo (meio para cima).
+  const centavos = Math.round(valor * 100);
+  return centavos > 0 ? centavos : NaN;
 }
 
 export function formatarCentavos(centavos: number): string {

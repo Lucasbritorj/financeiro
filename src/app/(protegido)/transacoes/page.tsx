@@ -1,64 +1,43 @@
 import { createClient } from "@/lib/supabase/server";
 import NovaTransacaoForm from "@/components/nova-transacao-form";
-import BotaoAcaoRpc from "@/components/botao-acao-rpc";
-import { formatarCentavos, formatarData } from "@/lib/money";
-import { LIMITE_TRANSACOES_LISTA } from "@/lib/constantes";
+import ListaTransacoes, { type TransacaoLista } from "@/components/lista-transacoes";
+import { TAMANHO_PAGINA_TRANSACOES } from "@/lib/constantes";
+
+const COLUNAS =
+  "id, descricao, valor_total, tipo, forma_pagamento, data_compra, num_parcelas, created_at, categoria_id";
 
 export default async function TransacoesPage() {
   const supabase = await createClient();
 
-  const [cartoesRes, transacoesRes] = await Promise.all([
+  // Primeira página por keyset (created_at, id) desc; pede N+1 para saber
+  // se há próxima sem uma contagem separada.
+  const [cartoesRes, categoriasRes, transacoesRes] = await Promise.all([
     supabase.from("cartoes_credito").select("id, nome").order("nome"),
+    supabase.from("categorias").select("id, nome, tipo").order("nome"),
     supabase
       .from("transacoes_origem")
-      .select("id, descricao, valor_total, tipo, forma_pagamento, data_compra, num_parcelas")
+      .select(COLUNAS)
       .order("created_at", { ascending: false })
-      .limit(LIMITE_TRANSACOES_LISTA),
+      .order("id", { ascending: false })
+      .limit(TAMANHO_PAGINA_TRANSACOES + 1),
   ]);
   if (cartoesRes.error) throw new Error(cartoesRes.error.message);
+  if (categoriasRes.error) throw new Error(categoriasRes.error.message);
   if (transacoesRes.error) throw new Error(transacoesRes.error.message);
 
-  const cartoes = cartoesRes.data;
-  const transacoes = transacoesRes.data;
+  const todas = transacoesRes.data as TransacaoLista[];
+  const temMais = todas.length > TAMANHO_PAGINA_TRANSACOES;
+  const primeira = todas.slice(0, TAMANHO_PAGINA_TRANSACOES);
 
   return (
     <div className="grid gap-6">
-      <h1 className="text-xl font-semibold">Transações</h1>
-      <NovaTransacaoForm cartoes={cartoes} />
-      {transacoes.length === 0 ? (
-        <p className="text-sm" style={{ color: "var(--texto-suave)" }}>
-          Nenhuma transação registrada ainda.
-        </p>
-      ) : (
-        <ul className="grid gap-2">
-          {transacoes.map((t) => (
-            <li
-              key={t.id}
-              className="vidro-soberano flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-3"
-            >
-              <span className="font-medium">{t.descricao}</span>
-              <span className="text-xs" style={{ color: "var(--texto-suave)" }}>
-                {formatarData(t.data_compra)} · {t.forma_pagamento}
-                {t.num_parcelas > 1 ? ` · ${t.num_parcelas}x` : ""}
-              </span>
-              <span
-                className="numero-soberano ml-auto font-medium"
-                style={{ color: t.tipo === "RECEITA" ? "var(--acento)" : "var(--texto)" }}
-              >
-                {t.tipo === "RECEITA" ? "+" : "-"}
-                {formatarCentavos(t.valor_total)}
-              </span>
-              <BotaoAcaoRpc
-                acao={{ rpc: "excluir_transacao", args: { p_transacao_id: t.id } }}
-                rotulo="Excluir"
-                rotuloPendente="Excluindo..."
-                confirmacao={`Excluir "${t.descricao}"? Parcelas pendentes saem das faturas.`}
-                perigo
-              />
-            </li>
-          ))}
-        </ul>
-      )}
+      <h1 className="serifa text-2xl font-medium">Transações</h1>
+      <NovaTransacaoForm cartoes={cartoesRes.data} categorias={categoriasRes.data} />
+      <ListaTransacoes
+        inicial={primeira}
+        categorias={categoriasRes.data}
+        temMais={temMais}
+      />
     </div>
   );
 }

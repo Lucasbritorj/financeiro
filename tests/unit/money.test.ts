@@ -39,12 +39,10 @@ test("paraCentavos: inválidos e não-positivos viram NaN", () => {
   assert.ok(Number.isNaN(paraCentavos("0")));
 });
 
-test("paraCentavos: mais de 2 casas decimais é rejeitado, não arredondado", () => {
-  // Dinheiro BRL digitado tem no máximo 2 decimais; arredondar em silêncio
-  // ("100,555" virar 10056) corromperia o valor sem o usuário perceber.
-  assert.ok(Number.isNaN(paraCentavos("100,555")));
-  assert.ok(Number.isNaN(paraCentavos("1.2345")));
-  assert.ok(Number.isNaN(paraCentavos("0,001")));
+test("paraCentavos: mais de 2 casas decimais arredonda para o centavo", () => {
+  assert.equal(paraCentavos("100,555"), 10056);
+  assert.equal(paraCentavos("1.2345"), 123);
+  assert.ok(Number.isNaN(paraCentavos("0,004"))); // arredonda a 0 -> inválido
 });
 
 test("formatarCentavos: BRL pt-BR", () => {

@@ -1,79 +1,97 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Sovereign Glass — design system global.
-   Materialidade sombria: fundo abissal, vidro escuro, numerais
-   tabulares monoespaçados, iluminação que reage ao cursor.
+   Ateliê — design system global (substitui o Sovereign Glass).
+   Direção: docs/modelo_final_financeiro.md §2 + docs/mockup_dashboard.html.
+   Superfícies SÓLIDAS e quentes (sem blur/glass), ousadia gasta num
+   lugar só (o herói narrativo); ouro com parcimônia; numerais
+   tabulares mono que não "pulam".
+   Nomes de classe legados (vidro-soberano etc.) mantidos de propósito:
+   a pele muda aqui, sem tocar em todos os componentes.
    ============================================================ */
 :root {
-  --abissal: #06080a;
-  --vidro: rgba(16, 21, 26, 0.72);
-  --vidro-borda: rgba(148, 180, 212, 0.14);
-  --texto: #dbe7f1;
-  --texto-suave: #6f8296;
-  --acento: #4cc9a6;
-  --acento-negativo: #e06c75;
-  --alerta: #e0b06c;
-  --brilho: rgba(76, 201, 166, 0.16);
+  --tinta: #161311;        /* fundo — espresso quente */
+  --pergaminho: #1e1a17;   /* superfície de card */
+  --pergaminho-2: #282320; /* superfície elevada / trilha de barra */
+  --giz: #f1ebe0;          /* texto primário */
+  --grafite: #a69c8d;      /* texto secundário */
+  --ouro: #d9a24e;         /* assinatura — destaques, CTA */
+  --verde: #7cb49a;        /* entrada / positivo */
+  --telha: #d6674e;        /* saída / negativo / estouro */
+  --borda: rgba(241, 235, 224, 0.09);
+  --borda-forte: rgba(241, 235, 224, 0.16);
+
+  /* Aliases legados -> tokens Ateliê (componentes antigos continuam válidos). */
+  --abissal: var(--tinta);
+  --vidro: var(--pergaminho);
+  --vidro-borda: var(--borda);
+  --texto: var(--giz);
+  --texto-suave: var(--grafite);
+  --acento: var(--verde);
+  --acento-negativo: var(--telha);
+  --alerta: var(--ouro);
+}
+
+/* Tema claro quente, opcional: <html data-tema="claro">. */
+:root[data-tema="claro"] {
+  --tinta: #f7f3ec;
+  --pergaminho: #fffdf8;
+  --pergaminho-2: #eee8dd;
+  --giz: #2a241f;
+  --grafite: #6f6558;
+  --borda: rgba(42, 36, 31, 0.1);
+  --borda-forte: rgba(42, 36, 31, 0.2);
 }
 
 @theme inline {
-  --color-background: var(--abissal);
-  --color-foreground: var(--texto);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--tinta);
+  --color-foreground: var(--giz);
+  --font-sans: var(--font-hanken);
+  --font-mono: var(--font-plex-mono);
 }
 
 body {
-  background: radial-gradient(120% 90% at 20% 0%, #0a1016 0%, var(--abissal) 55%) fixed;
-  color: var(--texto);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: radial-gradient(120% 80% at 15% -10%, #1c1815 0%, transparent 55%),
+    var(--tinta);
+  color: var(--giz);
+  font-family: var(--font-hanken), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+:root[data-tema="claro"] body {
+  background: var(--tinta);
 }
 
-/* Ruído global: material real, não flat — 2% de opacidade. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  opacity: 0.02;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-body > * {
-  position: relative;
-  z-index: 1;
+/* Piso de acessibilidade: foco visível em tudo. */
+:focus-visible {
+  outline: 2px solid var(--ouro);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
-/* Vidro escuro com glow radial que segue o cursor (--mx/--my via JS). */
+/* Papel tipográfico da serifa (herói e títulos, com restrição). */
+.serifa {
+  font-family: var(--font-fraunces), Georgia, serif;
+  letter-spacing: -0.01em;
+}
+.eyebrow {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.82rem;
+  color: var(--grafite);
+}
+
+/* Card sólido (ex-vidro): pergaminho, borda fina, sem blur nem glow. */
 .vidro-soberano {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--vidro-borda);
+  border: 1px solid var(--borda);
   border-radius: 1rem;
-  background: var(--vidro);
-  backdrop-filter: blur(14px);
-}
-.vidro-soberano::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 0.35s ease;
-  pointer-events: none;
-  background: radial-gradient(
-    360px circle at var(--mx, 50%) var(--my, 50%),
-    var(--brilho),
-    transparent 65%
-  );
-}
-.vidro-soberano:hover::before {
-  opacity: 1;
+  background: var(--pergaminho);
 }
 
 /* Tipografia monetária: mono + numerais tabulares — número nunca "pula". */
 .numero-soberano {
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--font-plex-mono), monospace;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
@@ -83,36 +101,36 @@ body > * {
   margin-top: 0.25rem;
   width: 100%;
   border-radius: 0.5rem;
-  border: 1px solid var(--vidro-borda);
-  background: rgba(6, 8, 10, 0.55);
-  color: var(--texto);
+  border: 1px solid var(--borda-forte);
+  background: var(--pergaminho-2);
+  color: var(--giz);
   padding: 0.45rem 0.6rem;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .campo-soberano:focus {
-  border-color: var(--acento);
-  box-shadow: 0 0 0 3px rgba(76, 201, 166, 0.15);
+  border-color: var(--ouro);
+  box-shadow: 0 0 0 3px rgba(217, 162, 78, 0.15);
 }
 .campo-soberano::placeholder {
-  color: var(--texto-suave);
+  color: var(--grafite);
 }
 select.campo-soberano option {
-  background: #10151a;
-  color: var(--texto);
+  background: var(--pergaminho);
+  color: var(--giz);
 }
 
-/* Botões. */
+/* Botões. Primário = ouro (a assinatura age no CTA). */
 .botao-soberano {
   border-radius: 0.5rem;
-  background: var(--acento);
-  color: #06221a;
+  background: var(--ouro);
+  color: #221a0e;
   font-weight: 600;
   padding: 0.45rem 1rem;
   transition: filter 0.2s ease, transform 0.15s ease;
 }
 .botao-soberano:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.08);
 }
 .botao-soberano:active {
   transform: scale(0.98);
@@ -122,21 +140,21 @@ select.campo-soberano option {
 }
 .botao-fantasma {
   border-radius: 0.5rem;
-  border: 1px solid var(--vidro-borda);
-  color: var(--texto-suave);
+  border: 1px solid var(--borda-forte);
+  color: var(--grafite);
   padding: 0.3rem 0.7rem;
   transition: color 0.2s ease, border-color 0.2s ease;
 }
 .botao-fantasma:hover {
-  color: var(--texto);
-  border-color: var(--texto-suave);
+  color: var(--giz);
+  border-color: var(--grafite);
 }
 .botao-perigo:hover {
-  color: var(--acento-negativo);
-  border-color: var(--acento-negativo);
+  color: var(--telha);
+  border-color: var(--telha);
 }
 
-/* Selos de status de fatura. */
+/* Selos de status. */
 .selo {
   border-radius: 0.375rem;
   padding: 0.125rem 0.45rem;
@@ -144,14 +162,35 @@ select.campo-soberano option {
   letter-spacing: 0.06em;
 }
 .selo-aberta {
-  background: rgba(76, 201, 166, 0.12);
-  color: var(--acento);
+  background: rgba(124, 180, 154, 0.12);
+  color: var(--verde);
 }
 .selo-fechada {
-  background: rgba(224, 176, 108, 0.12);
-  color: var(--alerta);
+  background: rgba(217, 162, 78, 0.12);
+  color: var(--ouro);
 }
 .selo-paga {
-  background: rgba(148, 180, 212, 0.1);
-  color: var(--texto-suave);
+  background: rgba(166, 156, 141, 0.12);
+  color: var(--grafite);
+}
+
+/* Barra de envelope (gasto/orçamento): trilha + preenchimento. */
+.envelope-trilha {
+  height: 4px;
+  border-radius: 3px;
+  background: var(--pergaminho-2);
+  overflow: hidden;
+}
+.envelope-trilha > i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+}
+
+/* Micro-interações discretas; nada de odômetro/ruído/glow-no-cursor. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
 }

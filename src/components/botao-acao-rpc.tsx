@@ -11,7 +11,12 @@ import { mensagemDeErro } from "@/lib/erros";
 export type AcaoRpc =
   | { rpc: "processar_pagamento_fatura"; args: { p_fatura_id: string } }
   | { rpc: "excluir_transacao"; args: { p_transacao_id: string } }
-  | { rpc: "excluir_cartao"; args: { p_cartao_id: string } };
+  | { rpc: "excluir_cartao"; args: { p_cartao_id: string } }
+  | { rpc: "excluir_categoria"; args: { p_categoria_id: string } }
+  | { rpc: "excluir_regra_categorizacao"; args: { p_regra_id: string } }
+  | { rpc: "confirmar_importacao"; args: { p_importacao_id: string } }
+  | { rpc: "descartar_importacao"; args: { p_importacao_id: string } }
+  | { rpc: "arquivar_cofrinho"; args: { p_cofrinho_id: string; p_arquivado?: boolean } };
 
 export default function BotaoAcaoRpc({
   acao,

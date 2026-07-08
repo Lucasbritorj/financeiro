@@ -34,15 +34,13 @@ for f in supabase/migrations/*.sql; do
   run_sql "$f"
 done
 
-echo "== asserts: supabase/tests/verificacao_nucleo.sql"
 # raise notice sai no stderr do psql — capturar junto.
-saida=$(docker exec -i "$CONTAINER" psql -U postgres -d app -v ON_ERROR_STOP=1 \
-  <supabase/tests/verificacao_nucleo.sql 2>&1) || { echo "$saida"; echo "SQL SUITE VERMELHA"; exit 1; }
-echo "$saida"
-
-if echo "$saida" | grep -q "OK: .* asserts"; then
-  echo "SQL SUITE VERDE"
-else
-  echo "SQL SUITE VERMELHA (notice de sucesso ausente)"
-  exit 1
-fi
+for teste in verificacao_nucleo verificacao_assistente; do
+  echo "== asserts: supabase/tests/$teste.sql"
+  saida=$(docker exec -i "$CONTAINER" psql -U postgres -d app -v ON_ERROR_STOP=1 \
+    <"supabase/tests/$teste.sql" 2>&1) || { echo "$saida"; echo "SQL SUITE VERMELHA ($teste)"; exit 1; }
+  echo "$saida"
+  echo "$saida" | grep -q "OK: .* asserts" || {
+    echo "SQL SUITE VERMELHA (notice de sucesso ausente em $teste)"; exit 1; }
+done
+echo "SQL SUITE VERDE"

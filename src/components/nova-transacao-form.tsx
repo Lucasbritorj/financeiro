@@ -8,6 +8,7 @@ import { mensagemDeErro } from "@/lib/erros";
 import { MAX_PARCELAS_UI } from "@/lib/constantes";
 
 type CartaoOpcao = { id: string; nome: string };
+type CategoriaOpcao = { id: string; nome: string; tipo: string };
 
 function hojeSaoPaulo(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -15,13 +16,20 @@ function hojeSaoPaulo(): string {
   }).format(new Date());
 }
 
-export default function NovaTransacaoForm({ cartoes }: { cartoes: CartaoOpcao[] }) {
+export default function NovaTransacaoForm({
+  cartoes,
+  categorias = [],
+}: {
+  cartoes: CartaoOpcao[];
+  categorias?: CategoriaOpcao[];
+}) {
   const router = useRouter();
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
   const [tipo, setTipo] = useState("DESPESA");
   const [forma, setForma] = useState("CREDITO");
   const [cartaoId, setCartaoId] = useState(cartoes[0]?.id ?? "");
+  const [categoriaId, setCategoriaId] = useState("");
   const [dataCompra, setDataCompra] = useState(hojeSaoPaulo);
   const [numParcelas, setNumParcelas] = useState("1");
   const [pendente, setPendente] = useState(false);
@@ -29,6 +37,8 @@ export default function NovaTransacaoForm({ cartoes }: { cartoes: CartaoOpcao[] 
   const [ok, setOk] = useState<string | null>(null);
 
   const ehCredito = forma === "CREDITO";
+  // Categoria vazia => trigger de autocategorização (0008) decide pela regra.
+  const categoriasDoTipo = categorias.filter((c) => c.tipo === tipo);
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -57,17 +67,30 @@ export default function NovaTransacaoForm({ cartoes }: { cartoes: CartaoOpcao[] 
       p_data_compra: dataCompra,
       p_num_parcelas: ehCredito ? Number(numParcelas) : 1,
     });
-    setPendente(false);
 
     if (error) {
+      setPendente(false);
       setErro(mensagemDeErro(error));
       return;
     }
-    const resultado = data as { parcelas_criadas?: number } | null;
+    const resultado = data as { transacao_id?: string; parcelas_criadas?: number } | null;
+
+    // Categoria escolhida à mão prevalece sobre a autocategorização por
+    // regra (trigger 0008); vazio = deixa a regra decidir. Passo separado
+    // para não tocar na assinatura da RPC crítica de escrita.
+    if (categoriaId && resultado?.transacao_id) {
+      await supabase.rpc("definir_categoria_transacao", {
+        p_transacao_id: resultado.transacao_id,
+        p_categoria_id: categoriaId,
+      });
+    }
+    setPendente(false);
+
     setOk(`Transação registrada: ${resultado?.parcelas_criadas ?? 1} parcela(s).`);
     setDescricao("");
     setValor("");
     setNumParcelas("1");
+    setCategoriaId("");
     router.refresh();
   }
 
@@ -130,6 +153,23 @@ export default function NovaTransacaoForm({ cartoes }: { cartoes: CartaoOpcao[] 
             <option value="DINHEIRO">Dinheiro</option>
           </select>
         </label>
+        {categorias.length > 0 && (
+          <label className="text-sm">
+            Categoria
+            <select
+              value={categoriaId}
+              onChange={(e) => setCategoriaId(e.target.value)}
+              className="campo-soberano"
+            >
+              <option value="">Automática (por regra)</option>
+              {categoriasDoTipo.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {ehCredito && (
           <>
             <label className="text-sm">
