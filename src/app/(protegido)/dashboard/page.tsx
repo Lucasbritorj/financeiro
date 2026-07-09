@@ -20,6 +20,7 @@ import DonutCategorias from "@/components/dashboard/donut-categorias";
 import TopDespesas from "@/components/dashboard/top-despesas";
 import SeletorMes from "@/components/dashboard/seletor-mes";
 import HistoricoMensal from "@/components/dashboard/historico-mensal";
+import CarteiraCaixa, { type FaturaFutura } from "@/components/dashboard/carteira-caixa";
 import CartaoObservacao from "@/components/analise/cartao-observacao";
 import SemearCategorias from "@/components/semear-categorias";
 
@@ -79,7 +80,7 @@ export default async function DashboardPage({
   // comparativo do herói e a análise. gastoPorCategoria/resumoDoMes filtram
   // por mês, então o histórico extra não contamina donut/KPIs.
   const inicioJanela = `${deslocarMes(mes, -(MESES_HISTORICO - 1))}-01`;
-  const [{ data, error }, categoriasCount] = await Promise.all([
+  const [{ data, error }, categoriasCount, carteiraRes, faturasRes] = await Promise.all([
     supabase
       .from("transacoes_origem")
       .select(
@@ -89,6 +90,15 @@ export default async function DashboardPage({
       .lt("data_compra", `${deslocarMes(mes, 1)}-01`)
       .order("data_compra", { ascending: false }),
     supabase.from("categorias").select("id", { count: "exact", head: true }),
+    // Carteira (regime de caixa): uma linha só. Faturas em aberto/fechadas =
+    // compromissos futuros do cartão (onde vivem as parcelas a vencer).
+    supabase.from("vw_carteira").select("*").maybeSingle(),
+    supabase
+      .from("vw_faturas_consolidadas")
+      .select("id, competencia, data_vencimento, status, valor_total_fatura")
+      .neq("status", "PAGA")
+      .order("data_vencimento", { ascending: true })
+      .limit(6),
   ]);
 
   if (error) {
@@ -191,6 +201,14 @@ export default async function DashboardPage({
           </span>
         </Link>
       )}
+
+      <CarteiraCaixa
+        saldoCaixa={carteiraRes.data?.saldo_caixa ?? 0}
+        entradas={carteiraRes.data?.entradas ?? 0}
+        saidasAvista={carteiraRes.data?.saidas_avista ?? 0}
+        faturasPagas={carteiraRes.data?.faturas_pagas ?? 0}
+        proximasFaturas={(faturasRes.data as FaturaFutura[] | null) ?? []}
+      />
 
       <section className="vidro-soberano p-6">
         <header className="mb-5 flex items-baseline justify-between">

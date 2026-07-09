@@ -263,7 +263,48 @@ begin
     when insufficient_privilege then null;
   end;
 
-  raise notice 'OK: 23/23 asserts do assistente (blocos A-D) passaram.';
+  -- ============ CARTEIRA (regime de caixa, 0012) ============
+  -- Cenário limpo: novo usuário isolado para números previsíveis.
+  perform set_config('request.jwt.claims',
+    '{"sub":"00000000-0000-0000-0000-0000000000cf","role":"authenticated"}', true);
+  reset role;
+  insert into auth.users (id, email)
+  values ('00000000-0000-0000-0000-0000000000cf', 'caixa@local.dev')
+  on conflict (id) do nothing;
+  set local role authenticated;
+
+  declare
+    v_cartao_cx uuid;
+    v_fat uuid;
+    v_saldo bigint;
+    v_pagas bigint;
+  begin
+    -- Receita 1000, despesa à vista (PIX) 300 => caixa 700 (crédito não conta).
+    perform public.processar_transacao_completa('Salário', 100000, 'RECEITA', 'PIX', null, date '2026-03-01', 1);
+    perform public.processar_transacao_completa('Mercado', 30000, 'DESPESA', 'PIX', null, date '2026-03-02', 1);
+    v_cartao_cx := (public.criar_cartao('CX', 500000, 10, 20)->>'cartao_id')::uuid;
+    -- Compra no crédito 60000 à vista no cartão: NÃO afeta o caixa ainda.
+    perform public.processar_transacao_completa('TV', 60000, 'DESPESA', 'CREDITO', v_cartao_cx, date '2026-03-05', 1);
+
+    select saldo_caixa into v_saldo from public.vw_carteira;
+    if v_saldo <> 70000 then
+      raise exception 'FALHA [CX1]: caixa = % (esperado 70000; crédito não deve reduzir)', v_saldo;
+    end if;
+
+    -- Paga a fatura de março (competência 2026-03-01) => caixa cai p/ 10000.
+    select id into v_fat from public.faturas
+    where cartao_id = v_cartao_cx and competencia = date '2026-03-01';
+    perform public.processar_pagamento_fatura(v_fat, timestamptz '2026-03-20 10:00-03');
+    select saldo_caixa, faturas_pagas into v_saldo, v_pagas from public.vw_carteira;
+    if v_pagas <> 60000 then
+      raise exception 'FALHA [CX2]: faturas_pagas = % (esperado 60000)', v_pagas;
+    end if;
+    if v_saldo <> 10000 then
+      raise exception 'FALHA [CX3]: caixa pós-pagamento = % (esperado 10000)', v_saldo;
+    end if;
+  end;
+
+  raise notice 'OK: 26/26 asserts do assistente (blocos A-D + carteira) passaram.';
 end $$;
 
 rollback;

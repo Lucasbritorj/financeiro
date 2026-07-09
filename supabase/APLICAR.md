@@ -1,20 +1,20 @@
 # Como deixar o projeto 100% funcional
 
 As funcionalidades novas (categorias, importação, cofrinhos, análise, edição
-completa de transação) exigem aplicar as migrations `0007`–`0011` no seu
-Supabase. O que já existia (transações, faturas, cartões) continua funcionando
-sem isso.
+completa de transação, carteira/regime de caixa) exigem aplicar as migrations
+`0007`–`0012` no seu Supabase. O que já existia (transações, faturas, cartões)
+continua funcionando sem isso.
 
 ## Passo 1 — Aplicar as migrations (obrigatório, ~2 min)
 
 **Opção A — SQL Editor (mais simples):**
 1. Abra o painel do seu projeto no Supabase → menu **SQL Editor** → **New query**.
-2. Cole o conteúdo inteiro de [`APLICAR_0007_0011.sql`](./APLICAR_0007_0011.sql)
-   (bundle das 5 migrations, já na ordem correta).
+2. Cole o conteúdo inteiro de [`APLICAR_0007_0012.sql`](./APLICAR_0007_0012.sql)
+   (bundle das 6 migrations, já na ordem correta).
 3. Clique **Run**. Deve terminar sem erro (`Success. No rows returned`).
 
-> **Já aplicou 0007–0010 antes?** Rode só a nova:
-> [`migrations/0011_substituir_transacao.sql`](./migrations/0011_substituir_transacao.sql).
+> **Já aplicou parte antes?** Rode só as que faltam, em ordem. Ex.: se já
+> aplicou até 0011, rode só [`migrations/0012_carteira_caixa.sql`](./migrations/0012_carteira_caixa.sql).
 
 > Rode **uma vez só**. As migrations criam tabelas/funções — reexecutar dá erro
 > de objeto já existente. Se precisar recomeçar, aplique num banco limpo.

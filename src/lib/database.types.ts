@@ -488,6 +488,15 @@ export type Database = {
         };
         Relationships: [];
       };
+      vw_carteira: {
+        Row: {
+          entradas: number;
+          saidas_avista: number;
+          faturas_pagas: number;
+          saldo_caixa: number;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       processar_transacao_completa: {
