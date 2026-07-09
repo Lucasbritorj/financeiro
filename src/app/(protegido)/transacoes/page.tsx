@@ -36,6 +36,7 @@ export default async function TransacoesPage() {
       <ListaTransacoes
         inicial={primeira}
         categorias={categoriasRes.data}
+        cartoes={cartoesRes.data}
         temMais={temMais}
       />
     </div>

@@ -74,6 +74,52 @@ begin
     when sqlstate 'FW409' then null;
   end;
 
+  -- [A5] Substituir: troca forma/parcelas. PIX à vista -> CREDITO 3x.
+  --      A antiga sai (soft-delete), a nova tem 3 parcelas.
+  v_res := public.processar_transacao_completa(
+    'Troca forma', 9000, 'DESPESA', 'PIX', null, date '2026-01-20', 1);
+  v_tx := (v_res->>'transacao_id')::uuid;
+  v_res := public.substituir_transacao(
+    v_tx, 'Troca forma', 9000, 'DESPESA', 'CREDITO', v_cartao, date '2026-01-05', 3, null);
+  -- RLS esconde soft-deletados do authenticated: a antiga não deve mais
+  -- estar visível (some da listagem), prova de que foi soft-deletada.
+  if exists (select 1 from public.transacoes_origem where id = v_tx) then
+    raise exception 'FALHA [A5]: transação antiga ainda visível (não soft-deletada)';
+  end if;
+  if (select count(*) from public.parcelas
+      where transacao_id = (v_res->>'transacao_id')::uuid and deleted_at is null) <> 3 then
+    raise exception 'FALHA [A5]: nova transação não tem 3 parcelas';
+  end if;
+
+  -- [A6] Substituir troca o tipo: DESPESA -> RECEITA.
+  v_res := public.processar_transacao_completa(
+    'Troca tipo', 5000, 'DESPESA', 'PIX', null, date '2026-01-21', 1);
+  v_tx := (v_res->>'transacao_id')::uuid;
+  v_res := public.substituir_transacao(
+    v_tx, 'Troca tipo', 5000, 'RECEITA', 'PIX', null, date '2026-01-21', 1, null);
+  if (select tipo from public.transacoes_origem where id = (v_res->>'transacao_id')::uuid) <> 'RECEITA' then
+    raise exception 'FALHA [A6]: substituição não trocou o tipo para RECEITA';
+  end if;
+
+  -- [A7] Substituir com parcela PAGA => FW409, antiga permanece ativa.
+  v_res := public.processar_transacao_completa(
+    'Trava paga', 4000, 'DESPESA', 'PIX', null, date '2026-01-22', 1);
+  v_tx := (v_res->>'transacao_id')::uuid;
+  reset role;
+  update public.parcelas set status = 'PAGA' where transacao_id = v_tx;
+  set local role authenticated;
+  begin
+    perform public.substituir_transacao(
+      v_tx, 'Trava paga', 4000, 'RECEITA', 'PIX', null, date '2026-01-22', 1, null);
+    raise exception 'FALHA [A7]: substituição de transação com parcela PAGA não foi bloqueada';
+  exception
+    when sqlstate 'FW409' then null;
+  end;
+  -- Bloqueado antes do soft-delete: a antiga continua visível/ativa.
+  if not exists (select 1 from public.transacoes_origem where id = v_tx) then
+    raise exception 'FALHA [A7]: transação sumiu apesar do bloqueio';
+  end if;
+
   -- ============ BLOCO B: categorias + regras + autocategorização ============
   -- [B1] Seed idempotente: 1ª cria (>0), 2ª é no-op (0).
   v_res := public.seed_categorias_padrao();
@@ -217,7 +263,7 @@ begin
     when insufficient_privilege then null;
   end;
 
-  raise notice 'OK: 20/20 asserts do assistente (blocos A-D) passaram.';
+  raise notice 'OK: 23/23 asserts do assistente (blocos A-D) passaram.';
 end $$;
 
 rollback;

@@ -20,6 +20,7 @@ export type TransacaoLista = {
 };
 
 type CategoriaOpcao = { id: string; nome: string; tipo: string };
+type CartaoOpcao = { id: string; nome: string };
 
 const COLUNAS =
   "id, descricao, valor_total, tipo, forma_pagamento, data_compra, num_parcelas, created_at, categoria_id";
@@ -27,10 +28,12 @@ const COLUNAS =
 export default function ListaTransacoes({
   inicial,
   categorias,
+  cartoes,
   temMais: temMaisInicial,
 }: {
   inicial: TransacaoLista[];
   categorias: CategoriaOpcao[];
+  cartoes: CartaoOpcao[];
   temMais: boolean;
 }) {
   const router = useRouter();
@@ -193,6 +196,8 @@ export default function ListaTransacoes({
           <FormEdicao
             key={t.id}
             transacao={t}
+            categorias={categorias}
+            cartoes={cartoes}
             aoFechar={() => setEditando(null)}
             aoSalvar={(atualizada) => {
               setItens((atual) => atual.map((x) => (x.id === t.id ? atualizada : x)));
@@ -326,20 +331,43 @@ function BotaoExcluir({
   );
 }
 
+// Edição completa: além de descrição/valor/data, permite trocar tipo, forma
+// de pagamento, cartão e parcelas. Quando só mudam descrição/valor/data usa
+// editar_transacao (barato, mantém as parcelas); quando muda tipo/forma/
+// cartão/parcelas usa substituir_transacao (recria via motor completo).
 function FormEdicao({
   transacao,
+  categorias,
+  cartoes,
   aoFechar,
   aoSalvar,
 }: {
   transacao: TransacaoLista;
+  categorias: CategoriaOpcao[];
+  cartoes: CartaoOpcao[];
   aoFechar: () => void;
   aoSalvar: (t: TransacaoLista) => void;
 }) {
   const [descricao, setDescricao] = useState(transacao.descricao);
   const [valor, setValor] = useState((transacao.valor_total / 100).toFixed(2).replace(".", ","));
   const [data, setData] = useState(transacao.data_compra);
+  const [tipo, setTipo] = useState(transacao.tipo);
+  const [forma, setForma] = useState(transacao.forma_pagamento);
+  const [cartaoId, setCartaoId] = useState<string>(cartoes[0]?.id ?? "");
+  const [numParcelas, setNumParcelas] = useState(String(transacao.num_parcelas || 1));
+  const [categoriaId, setCategoriaId] = useState(transacao.categoria_id ?? "");
   const [pendente, setPendente] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  const ehCredito = forma === "CREDITO";
+  const categoriasDoTipo = categorias.filter((c) => c.tipo === tipo);
+
+  // Só descrição/valor/data mudaram => edição barata (mantém parcelas).
+  const soCamposLeves =
+    tipo === transacao.tipo &&
+    forma === transacao.forma_pagamento &&
+    (!ehCredito || Number(numParcelas) === transacao.num_parcelas) &&
+    (categoriaId || null) === (transacao.categoria_id ?? null);
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
@@ -349,58 +377,183 @@ function FormEdicao({
       setErro("Valor inválido.");
       return;
     }
+    if (ehCredito && !cartaoId) {
+      setErro("Selecione um cartão para o crédito.");
+      return;
+    }
     setPendente(true);
-    const { error } = await createClient().rpc("editar_transacao", {
+    const supabase = createClient();
+
+    if (soCamposLeves) {
+      const { error } = await supabase.rpc("editar_transacao", {
+        p_transacao_id: transacao.id,
+        p_descricao: descricao.trim(),
+        p_valor_total: centavos,
+        p_data_compra: data,
+      });
+      setPendente(false);
+      if (error) {
+        setErro(mensagemDeErro(error));
+        return;
+      }
+      aoSalvar({
+        ...transacao,
+        descricao: descricao.trim(),
+        valor_total: centavos,
+        data_compra: data,
+      });
+      return;
+    }
+
+    // Mudou tipo/forma/parcelas/categoria: substitui (recria) atomicamente.
+    const { data: res, error } = await supabase.rpc("substituir_transacao", {
       p_transacao_id: transacao.id,
       p_descricao: descricao.trim(),
       p_valor_total: centavos,
+      p_tipo: tipo,
+      p_forma_pagamento: forma,
+      p_cartao_id: ehCredito ? cartaoId : null,
       p_data_compra: data,
+      p_num_parcelas: ehCredito ? Number(numParcelas) : 1,
+      p_categoria_id: categoriaId || null,
     });
     setPendente(false);
     if (error) {
       setErro(mensagemDeErro(error));
       return;
     }
-    aoSalvar({ ...transacao, descricao: descricao.trim(), valor_total: centavos, data_compra: data });
+    const novoId = (res as { transacao_id?: string } | null)?.transacao_id ?? transacao.id;
+    aoSalvar({
+      ...transacao,
+      id: novoId,
+      descricao: descricao.trim(),
+      valor_total: centavos,
+      data_compra: data,
+      tipo,
+      forma_pagamento: forma,
+      num_parcelas: ehCredito ? Number(numParcelas) : 1,
+      categoria_id: categoriaId || null,
+    });
   }
 
   return (
-    <form
-      onSubmit={salvar}
-      className="vidro-soberano grid gap-2 px-4 py-3 sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-center"
-    >
-      <input
-        value={descricao}
-        onChange={(e) => setDescricao(e.target.value)}
-        required
-        className="campo-soberano !mt-0"
-        aria-label="Descrição"
-      />
-      <input
-        value={valor}
-        onChange={(e) => setValor(e.target.value)}
-        inputMode="decimal"
-        className="campo-soberano !mt-0 !w-28"
-        aria-label="Valor"
-      />
-      <input
-        type="date"
-        value={data}
-        onChange={(e) => setData(e.target.value)}
-        className="campo-soberano !mt-0 !w-auto"
-        aria-label="Data da compra"
-      />
-      <button type="submit" disabled={pendente} className="botao-soberano text-xs">
-        {pendente ? "Salvando..." : "Salvar"}
-      </button>
-      <button type="button" onClick={aoFechar} className="botao-fantasma text-xs">
-        Cancelar
-      </button>
-      {erro && (
-        <span className="text-xs sm:col-span-5" style={{ color: "var(--telha)" }}>
-          {erro}
-        </span>
+    <form onSubmit={salvar} className="vidro-soberano grid gap-3 p-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-sm sm:col-span-2">
+          Descrição
+          <input
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+            required
+            className="campo-soberano"
+            aria-label="Descrição"
+          />
+        </label>
+        <label className="text-sm">
+          Valor (R$)
+          <input
+            value={valor}
+            onChange={(e) => setValor(e.target.value)}
+            inputMode="decimal"
+            required
+            className="campo-soberano"
+            aria-label="Valor"
+          />
+        </label>
+        <label className="text-sm">
+          Data da compra
+          <input
+            type="date"
+            value={data}
+            onChange={(e) => setData(e.target.value)}
+            className="campo-soberano"
+            aria-label="Data da compra"
+          />
+        </label>
+        <label className="text-sm">
+          Tipo
+          <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="campo-soberano">
+            <option value="DESPESA">Despesa</option>
+            <option value="RECEITA">Receita</option>
+          </select>
+        </label>
+        <label className="text-sm">
+          Forma de pagamento
+          <select value={forma} onChange={(e) => setForma(e.target.value)} className="campo-soberano">
+            <option value="CREDITO">Crédito</option>
+            <option value="DEBITO">Débito</option>
+            <option value="PIX">Pix</option>
+            <option value="DINHEIRO">Dinheiro</option>
+          </select>
+        </label>
+        {ehCredito && (
+          <>
+            <label className="text-sm">
+              Cartão
+              <select
+                value={cartaoId}
+                onChange={(e) => setCartaoId(e.target.value)}
+                className="campo-soberano"
+              >
+                {cartoes.length === 0 && <option value="">Nenhum cartão</option>}
+                {cartoes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm">
+              Parcelas
+              <input
+                type="number"
+                min={1}
+                max={48}
+                value={numParcelas}
+                onChange={(e) => setNumParcelas(e.target.value)}
+                className="campo-soberano"
+              />
+            </label>
+          </>
+        )}
+        {categorias.length > 0 && (
+          <label className="text-sm">
+            Categoria
+            <select
+              value={categoriaId}
+              onChange={(e) => setCategoriaId(e.target.value)}
+              className="campo-soberano"
+            >
+              <option value="">Automática / sem categoria</option>
+              {categoriasDoTipo.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+      {!soCamposLeves && (
+        <p className="text-xs" style={{ color: "var(--grafite)" }}>
+          Mudar tipo, forma, cartão ou parcelas recria a transação (recalcula
+          parcelas e faturas). Transação com parcela já paga não pode ser
+          alterada.
+        </p>
       )}
+      {erro && (
+        <p className="text-sm" style={{ color: "var(--telha)" }}>
+          {erro}
+        </p>
+      )}
+      <div className="flex gap-3">
+        <button type="submit" disabled={pendente} className="botao-soberano text-sm">
+          {pendente ? "Salvando..." : "Salvar"}
+        </button>
+        <button type="button" onClick={aoFechar} className="botao-fantasma text-sm">
+          Cancelar
+        </button>
+      </div>
     </form>
   );
 }

@@ -535,6 +535,20 @@ export type Database = {
         };
         Returns: Json;
       };
+      substituir_transacao: {
+        Args: {
+          p_transacao_id: string;
+          p_descricao: string;
+          p_valor_total: number;
+          p_tipo: string;
+          p_forma_pagamento: string;
+          p_cartao_id?: string | null;
+          p_data_compra?: string | null;
+          p_num_parcelas?: number;
+          p_categoria_id?: string | null;
+        };
+        Returns: Json;
+      };
       criar_categoria: {
         Args: {
           p_nome: string;
