@@ -48,17 +48,12 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="vidro-soberano w-full max-w-sm p-7">
-        <p
-          className="text-xs uppercase tracking-widest"
-          style={{ color: "var(--texto-suave)" }}
-        >
-          Gestão com integridade matemática
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold" style={{ color: "var(--acento)" }}>
-          Financeiro
+      <div className="vidro-soberano w-full max-w-sm p-8">
+        <p className="eyebrow">seu dinheiro, com clareza</p>
+        <h1 className="serifa mt-1 text-3xl font-semibold" style={{ color: "var(--giz)" }}>
+          Ateliê
         </h1>
-        <p className="mb-5 mt-3 text-sm" style={{ color: "var(--texto-suave)" }}>
+        <p className="mb-6 mt-3 text-sm" style={{ color: "var(--grafite)" }}>
           {modo === "entrar" ? "Entre na sua conta" : "Crie sua conta"}
         </p>
         <form onSubmit={enviar} className="grid gap-3">
@@ -84,12 +79,12 @@ export default function LoginPage() {
             />
           </label>
           {erro && (
-            <p className="text-sm" style={{ color: "var(--acento-negativo)" }}>
+            <p className="text-sm" style={{ color: "var(--telha)" }}>
               {erro}
             </p>
           )}
           {aviso && (
-            <p className="text-sm" style={{ color: "var(--acento)" }}>
+            <p className="text-sm" style={{ color: "var(--verde)" }}>
               {aviso}
             </p>
           )}
@@ -99,8 +94,8 @@ export default function LoginPage() {
         </form>
         <button
           onClick={() => setModo(modo === "entrar" ? "cadastrar" : "entrar")}
-          className="mt-4 text-sm transition-colors hover:text-[var(--acento)]"
-          style={{ color: "var(--texto-suave)" }}
+          className="mt-4 text-sm transition-colors hover:text-[var(--ouro)]"
+          style={{ color: "var(--grafite)" }}
         >
           {modo === "entrar" ? "Não tem conta? Cadastre-se" : "Já tem conta? Entre"}
         </button>

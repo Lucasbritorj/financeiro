@@ -39,7 +39,20 @@ export default function ListaTransacoes({
   const [carregando, setCarregando] = useState(false);
   const [editando, setEditando] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
-  const nomePorId = new Map(categorias.map((c) => [c.id, c.nome]));
+  const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
+  const [excluindoLote, setExcluindoLote] = useState(false);
+
+  function alternarSelecao(id: string) {
+    setSelecionadas((atual) => {
+      const proximo = new Set(atual);
+      if (proximo.has(id)) proximo.delete(id);
+      else proximo.add(id);
+      return proximo;
+    });
+  }
+  function selecionarTodas(marcar: boolean) {
+    setSelecionadas(marcar ? new Set(itens.map((t) => t.id)) : new Set());
+  }
 
   // Keyset por (created_at, id) desc: estável mesmo com inserções durante
   // a paginação (o .limit(N) fixo pulava/duplicava linhas).
@@ -88,6 +101,40 @@ export default function ListaTransacoes({
     if (criarRegra) router.refresh();
   }
 
+  // Exclusão em massa: cada excluir_transacao é atômico no banco; aqui as
+  // selecionadas caem em paralelo (allSettled p/ não abortar no 1º FW409 —
+  // ex.: transação com parcela PAGA). Só some da lista o que excluiu.
+  async function excluirSelecionadas() {
+    const ids = [...selecionadas];
+    if (ids.length === 0) return;
+    if (!window.confirm(`Excluir ${ids.length} transação(ões)? Parcelas pendentes saem das faturas.`))
+      return;
+    setErro(null);
+    setExcluindoLote(true);
+    const supabase = createClient();
+    const resultados = await Promise.allSettled(
+      ids.map((id) =>
+        supabase.rpc("excluir_transacao", { p_transacao_id: id }).then((r) => {
+          if (r.error) throw new Error(mensagemDeErro(r.error));
+          return id;
+        })
+      )
+    );
+    setExcluindoLote(false);
+    const excluidas = new Set(
+      resultados.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []))
+    );
+    const falhas = resultados.filter((r) => r.status === "rejected").length;
+    setItens((atual) => atual.filter((t) => !excluidas.has(t.id)));
+    setSelecionadas(new Set());
+    if (falhas > 0) {
+      setErro(
+        `${excluidas.size} excluída(s); ${falhas} não puderam ser excluídas (ex.: parcela paga).`
+      );
+    }
+    router.refresh();
+  }
+
   if (itens.length === 0) {
     return (
       <p className="text-sm" style={{ color: "var(--grafite)" }}>
@@ -96,6 +143,8 @@ export default function ListaTransacoes({
     );
   }
 
+  const todasMarcadas = itens.length > 0 && selecionadas.size === itens.length;
+
   return (
     <div className="grid gap-2">
       {erro && (
@@ -103,6 +152,42 @@ export default function ListaTransacoes({
           {erro}
         </p>
       )}
+
+      <div
+        className="flex flex-wrap items-center gap-x-4 gap-y-2 px-1 text-sm"
+        style={{ color: "var(--grafite)" }}
+      >
+        <label className="inline-flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            checked={todasMarcadas}
+            onChange={(e) => selecionarTodas(e.target.checked)}
+            aria-label="Selecionar todas as transações carregadas"
+          />
+          Selecionar todas ({itens.length})
+        </label>
+        {selecionadas.size > 0 && (
+          <>
+            <span style={{ color: "var(--giz)" }}>{selecionadas.size} selecionada(s)</span>
+            <button
+              type="button"
+              onClick={excluirSelecionadas}
+              disabled={excluindoLote}
+              className="botao-fantasma botao-perigo text-xs"
+            >
+              {excluindoLote ? "Excluindo..." : "Excluir selecionadas"}
+            </button>
+            <button
+              type="button"
+              onClick={() => selecionarTodas(false)}
+              className="text-xs underline-offset-2 hover:underline"
+            >
+              limpar
+            </button>
+          </>
+        )}
+      </div>
+
       {itens.map((t) =>
         editando === t.id ? (
           <FormEdicao
@@ -119,7 +204,14 @@ export default function ListaTransacoes({
           <div
             key={t.id}
             className="vidro-soberano flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3"
+            style={selecionadas.has(t.id) ? { borderColor: "var(--ouro)" } : undefined}
           >
+            <input
+              type="checkbox"
+              checked={selecionadas.has(t.id)}
+              onChange={() => alternarSelecao(t.id)}
+              aria-label={`Selecionar ${t.descricao}`}
+            />
             <span className="font-medium">{t.descricao}</span>
             <span className="text-xs" style={{ color: "var(--grafite)" }}>
               {formatarData(t.data_compra)} · {t.forma_pagamento}

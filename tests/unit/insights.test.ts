@@ -10,6 +10,9 @@ import {
   topDespesas,
   envelopesEstourados,
   montarFraseHeroi,
+  deslocarMes,
+  historicoMensal,
+  ultimoMesComDados,
   type TransacaoInsight,
 } from "../../src/lib/insights.ts";
 
@@ -119,4 +122,24 @@ test("frase-herói: mês vazio vira convite; sem histórico anota 1º mês", () 
 test("nomeMes", () => {
   assert.equal(nomeMes("2026-07"), "julho");
   assert.equal(nomeMes("2026-01"), "janeiro");
+});
+
+test("deslocarMes soma/subtrai cruzando ano", () => {
+  assert.equal(deslocarMes("2026-07", 1), "2026-08");
+  assert.equal(deslocarMes("2026-01", -1), "2025-12");
+  assert.equal(deslocarMes("2026-12", 1), "2027-01");
+});
+
+test("historicoMensal resume cada mês na ordem", () => {
+  const h = historicoMensal(transacoes, ["2026-06", "2026-07"]);
+  assert.equal(h.length, 2);
+  assert.equal(h[0].mes, "2026-06");
+  assert.equal(h[0].saidas, 70000);
+  assert.equal(h[1].mes, "2026-07");
+  assert.equal(h[1].entradas, 850000);
+});
+
+test("ultimoMesComDados acha a competência mais recente", () => {
+  assert.equal(ultimoMesComDados(transacoes), "2026-07");
+  assert.equal(ultimoMesComDados([]), null);
 });

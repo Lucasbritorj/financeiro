@@ -41,6 +41,30 @@ export function nomeMes(mesISO: string): string {
   return NOMES_MES[Number(mesISO.slice(5, 7)) - 1] ?? mesISO;
 }
 
+/** "2026-07" + delta meses -> "YYYY-MM" (delta pode ser negativo). */
+export function deslocarMes(mesISO: string, delta: number): string {
+  const [ano, mes] = mesISO.split("-").map(Number);
+  return new Date(Date.UTC(ano, mes - 1 + delta, 1)).toISOString().slice(0, 7);
+}
+
+/** Resumo (entradas/saídas/saldo) de cada mês pedido, na ordem dada. */
+export function historicoMensal(
+  transacoes: TransacaoInsight[],
+  meses: string[]
+): { mes: string; entradas: number; saidas: number; saldo: number }[] {
+  return meses.map((mes) => ({ mes, ...resumoDoMes(transacoes, mes) }));
+}
+
+/** Competência (YYYY-MM) mais recente presente nas transações; null se vazio. */
+export function ultimoMesComDados(transacoes: TransacaoInsight[]): string | null {
+  let max: string | null = null;
+  for (const t of transacoes) {
+    const m = t.data_compra.slice(0, 7);
+    if (max === null || m > max) max = m;
+  }
+  return max;
+}
+
 function doMes(transacoes: TransacaoInsight[], mesISO: string) {
   return transacoes.filter((t) => t.data_compra.slice(0, 7) === mesISO);
 }
