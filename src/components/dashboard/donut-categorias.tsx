@@ -1,14 +1,19 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatarCentavos } from "@/lib/money";
 import type { GastoCategoria } from "@/lib/insights";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
-// "Para onde vai o dinheiro": donut SVG + ranking com barra de envelope
-// (gasto/orçamento). Server component — o donut é aritmética de arcos,
-// não precisa de biblioteca de gráfico.
+// "Para onde vai o dinheiro": donut interativo com Recharts + ranking com barra
+// de envelope (gasto/orçamento). O card é estreito (meia coluna do dashboard):
+// donut e legenda empilham SEMPRE — lado a lado não cabe sem espremer.
 
 const COR_FALLBACK = "#A69C8D"; // grafite p/ "Sem categoria"
-const CIRCUNFERENCIA = 2 * Math.PI * 52;
 
 export default function DonutCategorias({ categorias }: { categorias: GastoCategoria[] }) {
+  const router = useRouter();
   const total = categorias.reduce((soma, c) => soma + c.gasto, 0);
 
   if (total === 0) {
@@ -20,45 +25,66 @@ export default function DonutCategorias({ categorias }: { categorias: GastoCateg
     );
   }
 
-  // Arcos proporcionais via stroke-dasharray (mesma técnica do mockup).
-  let offsetAcumulado = 0;
-  const arcos = categorias.map((c) => {
-    const fracao = c.gasto / total;
-    const arco = {
-      cor: c.cor ?? COR_FALLBACK,
-      dash: fracao * CIRCUNFERENCIA,
-      offset: offsetAcumulado,
-    };
-    offsetAcumulado += fracao * CIRCUNFERENCIA;
-    return arco;
-  });
+  // id "sem" = filtro de transações sem categoria na lista.
+  const arcos = categorias.map((c) => ({
+    id: c.id ?? "sem",
+    name: c.nome,
+    gasto: c.gasto,
+    cor: c.cor ?? COR_FALLBACK,
+  }));
+
+  // O rótulo central precisa caber no furo do anel (Ø 100px): valores longos
+  // descem de corpo em vez de vazar por cima do traçado.
+  const rotuloTotal = formatarCentavos(total);
+  const tamanhoRotulo =
+    rotuloTotal.length > 12 ? "text-xs" : rotuloTotal.length > 9 ? "text-sm" : "text-lg";
 
   return (
-    <div className="grid items-center gap-6 sm:grid-cols-[auto_1fr]">
+    <div className="grid gap-5">
       <div className="relative mx-auto h-[150px] w-[150px]">
-        <svg
-          viewBox="0 0 120 120"
-          width="150"
-          height="150"
-          aria-label="Distribuição de gastos por categoria"
-        >
-          <g transform="rotate(-90 60 60)" fill="none" strokeWidth="15">
-            <circle cx="60" cy="60" r="52" stroke="var(--pergaminho-2)" />
-            {arcos.map((a, i) => (
-              <circle
-                key={i}
-                cx="60"
-                cy="60"
-                r="52"
-                stroke={a.cor}
-                strokeDasharray={`${a.dash} ${CIRCUNFERENCIA - a.dash}`}
-                strokeDashoffset={-a.offset}
-              />
-            ))}
-          </g>
-        </svg>
-        <div className="absolute inset-0 grid place-content-center text-center">
-          <span className="numero-soberano text-lg">{formatarCentavos(total)}</span>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={arcos}
+              dataKey="gasto"
+              cx="50%"
+              cy="50%"
+              innerRadius={50}
+              outerRadius={65}
+              stroke="var(--pergaminho-2)"
+              strokeWidth={2}
+              paddingAngle={2}
+              isAnimationActive={true}
+              animationBegin={200}
+              animationDuration={800}
+              style={{ cursor: "pointer" }}
+              // Clicar na fatia abre a lista já filtrada pela categoria.
+              onClick={(fatia) => {
+                const id =
+                  (fatia as { id?: string; payload?: { id?: string } }).id ??
+                  (fatia as { payload?: { id?: string } }).payload?.id;
+                if (id) router.push(`/transacoes?categoria=${id}`);
+              }}
+            >
+              {arcos.map((a, index) => (
+                <Cell key={`cell-${index}`} fill={a.cor} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value) => formatarCentavos(Number(value))}
+              contentStyle={{ 
+                background: "var(--pergaminho)", 
+                border: "1px solid var(--borda)", 
+                borderRadius: "8px", 
+                color: "var(--giz)",
+                boxShadow: "var(--sombra-flutuante)"
+              }}
+              itemStyle={{ color: "var(--giz)" }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="absolute inset-0 grid place-content-center overflow-hidden text-center pointer-events-none">
+          <span className={`numero-soberano ${tamanhoRotulo}`}>{rotuloTotal}</span>
           <span
             className="text-[0.62rem] uppercase tracking-widest"
             style={{ color: "var(--grafite)" }}
@@ -88,7 +114,13 @@ export default function DonutCategorias({ categorias }: { categorias: GastoCateg
                 style={{ background: c.cor ?? COR_FALLBACK }}
               />
               <span className="text-sm">
-                {c.nome}
+                <Link
+                  href={`/transacoes?categoria=${c.id ?? "sem"}`}
+                  className="underline-offset-2 hover:underline"
+                  title={`Ver transações de ${c.nome}`}
+                >
+                  {c.nome}
+                </Link>
                 {estourou && (
                   <b className="ml-2 text-xs font-semibold" style={{ color: "var(--telha)" }}>
                     estourou

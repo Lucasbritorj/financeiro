@@ -96,7 +96,7 @@ export default function NovoCartaoForm() {
           />
         </label>
       </div>
-      {erro && <p className="mt-2 text-sm" style={{ color: "var(--acento-negativo)" }}>{erro}</p>}
+      {erro && <p className="mt-2 text-sm" style={{ color: "var(--telha)" }}>{erro}</p>}
       <button
         type="submit"
         disabled={pendente}

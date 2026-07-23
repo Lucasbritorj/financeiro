@@ -6,13 +6,18 @@
    Superfícies SÓLIDAS e quentes (sem blur/glass); ousadia gasta num
    lugar só (o herói narrativo); ouro com parcimônia; numerais
    tabulares mono que não "pulam".
-   Nomes de classe legados (vidro-soberano etc.) mantidos de propósito:
-   a pele muda aqui, sem tocar em todos os componentes.
+   Refino premium (2026-07): materialidade multicamada (brilho de topo +
+   sombra em camadas), selos em pílula com ponto de cor, botão-ouro com
+   gradiente,   numerais tabulares mono que não "pulam".
+   [v2.0 Fintech Premium]: Incorporando profundidade, mesh gradients e 
+   bordas translúcidas sutis (glassmorphism contido). Fontes modernas (Inter).
+   Nomes de classe legados mantidos de propósito: a pele muda aqui.
    ============================================================ */
 :root {
   --tinta: #161311;        /* fundo — espresso quente */
   --pergaminho: #1e1a17;   /* superfície de card */
   --pergaminho-2: #282320; /* superfície elevada / trilha de barra */
+  --pergaminho-3: #322c28; /* superfície mais elevada (chips, hovers) */
   --giz: #f1ebe0;          /* texto primário */
   --grafite: #a69c8d;      /* texto secundário */
   --ouro: #d9a24e;         /* assinatura — destaques, CTA */
@@ -20,10 +25,19 @@
   --verde: #7cb49a;        /* entrada / positivo */
   --telha: #d6674e;        /* saída / negativo / estouro */
   --borda: rgba(241, 235, 224, 0.09);
-  --borda-forte: rgba(241, 235, 224, 0.16);
-  /* sombra quente e discreta — dá profundidade sem recorrer a vidro */
-  --sombra-card: 0 1px 2px rgba(0, 0, 0, 0.28), 0 8px 24px -14px rgba(0, 0, 0, 0.55);
-  --sombra-flutuante: 0 12px 40px -18px rgba(0, 0, 0, 0.7);
+  --borda-forte: rgba(255, 255, 255, 0.16);
+  /* Brilho de topo: hairline claro que dá a leitura de "papel levantado". */
+  --brilho-topo: rgba(255, 255, 255, 0.08);
+  /* Sombra com mais profundidade e glow contido */
+  --sombra-card:
+    0 1px 1px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    0 20px 40px -20px rgba(0, 0, 0, 0.8);
+  --sombra-flutuante:
+    0 0 0 1px rgba(255,255,255, 0.05),
+    0 8px 16px rgba(0, 0, 0, 0.4),
+    0 24px 64px -24px rgba(0, 0, 0, 0.9),
+    0 0 32px -8px color-mix(in oklab, var(--ouro) 20%, transparent);
 
   /* Aliases legados -> tokens Ateliê (componentes antigos continuam válidos). */
   --abissal: var(--tinta);
@@ -41,6 +55,7 @@
   --tinta: #f5efe4;
   --pergaminho: #fffdf9;
   --pergaminho-2: #ece4d6;
+  --pergaminho-3: #e3d9c8;
   --giz: #2a241f;
   --grafite: #6f6558;
   --ouro: #b8842f;
@@ -49,14 +64,20 @@
   --telha: #c1503a;
   --borda: rgba(42, 36, 31, 0.1);
   --borda-forte: rgba(42, 36, 31, 0.18);
-  --sombra-card: 0 1px 2px rgba(120, 100, 70, 0.08), 0 10px 30px -18px rgba(120, 100, 70, 0.35);
-  --sombra-flutuante: 0 16px 44px -20px rgba(120, 100, 70, 0.4);
+  --brilho-topo: rgba(255, 255, 255, 0.6);
+  --sombra-card:
+    0 1px 1px rgba(120, 100, 70, 0.06),
+    0 2px 6px rgba(120, 100, 70, 0.08),
+    0 16px 34px -20px rgba(120, 100, 70, 0.34);
+  --sombra-flutuante:
+    0 2px 8px rgba(120, 100, 70, 0.1),
+    0 22px 52px -22px rgba(120, 100, 70, 0.4);
 }
 
 @theme inline {
   --color-background: var(--tinta);
   --color-foreground: var(--giz);
-  --font-sans: var(--font-hanken);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-plex-mono);
 }
 
@@ -69,20 +90,25 @@ html {
 
 body {
   background:
-    radial-gradient(130% 90% at 12% -10%, color-mix(in oklab, var(--ouro) 8%, transparent) 0%, transparent 42%),
-    radial-gradient(120% 80% at 100% 0%, color-mix(in oklab, var(--pergaminho-2) 60%, transparent) 0%, transparent 46%),
+    radial-gradient(90% 90% at 50% -10%, color-mix(in oklab, var(--ouro) 12%, transparent) 0%, transparent 60%),
+    radial-gradient(120% 120% at 100% 100%, color-mix(in oklab, var(--verde) 6%, transparent) 0%, transparent 50%),
     var(--tinta);
   background-attachment: fixed;
   color: var(--giz);
-  font-family: var(--font-hanken), system-ui, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Rede de segurança: numeral tabular em TODO o app — nenhum valor monetário
+     "treme" ao atualizar, mesmo em spans que não usam .numero-soberano.
+     (.numero-soberano mantém o tratamento mono dos números-herói.) */
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 /* Piso de acessibilidade: foco visível em tudo. */
 :focus-visible {
   outline: 2px solid var(--ouro);
-  outline-offset: 3px;
+  outline-offset: 2px;
   border-radius: 6px;
 }
 ::selection {
@@ -93,23 +119,38 @@ body {
 /* Papel tipográfico da serifa (herói e títulos, com restrição). */
 .serifa {
   font-family: var(--font-fraunces), Georgia, serif;
-  letter-spacing: -0.015em;
+  font-optical-sizing: auto;
+  letter-spacing: -0.018em;
 }
 .eyebrow {
   font-family: var(--font-fraunces), Georgia, serif;
   font-style: italic;
   font-weight: 400;
   font-size: 0.82rem;
+  letter-spacing: 0.01em;
   color: var(--grafite);
 }
 
-/* Card sólido (ex-vidro): pergaminho, borda fina, sombra quente, sem blur. */
+/* Card sólido com Glassmorphism leve: fundo ultra escuro com backdrop blur, 
+   border translúcida e shadow glow sutil. */
 .vidro-soberano {
   border: 1px solid var(--borda);
-  border-radius: 1rem;
-  background: var(--pergaminho);
+  border-radius: 1.1rem;
+  background:
+    linear-gradient(180deg, var(--brilho-topo) 0%, transparent 40%),
+    color-mix(in oklab, var(--pergaminho) 90%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   box-shadow: var(--sombra-card);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Modificador para cards clicáveis: leve elevação no hover. Aplicado só
+   onde há navegação/ação — cartão estático não "flutua" à toa. */
+.card-hover:hover {
+  transform: translateY(-2px);
+  border-color: var(--borda-forte);
+  box-shadow: var(--sombra-flutuante);
 }
 
 /* Tipografia monetária: mono + numerais tabulares — número nunca "pula". */
@@ -121,18 +162,22 @@ body {
 
 /* Campos de formulário. */
 .campo-soberano {
-  margin-top: 0.25rem;
+  margin-top: 0.3rem;
   width: 100%;
-  border-radius: 0.6rem;
+  border-radius: 0.65rem;
   border: 1px solid var(--borda-forte);
   background: var(--pergaminho-2);
   color: var(--giz);
-  padding: 0.5rem 0.7rem;
+  padding: 0.55rem 0.72rem;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.campo-soberano:hover {
+  border-color: color-mix(in oklab, var(--grafite) 45%, var(--borda-forte));
 }
 .campo-soberano:focus {
   border-color: var(--ouro);
+  background: color-mix(in oklab, var(--ouro) 5%, var(--pergaminho-2));
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--ouro) 18%, transparent);
 }
 .campo-soberano::placeholder {
@@ -143,19 +188,23 @@ select.campo-soberano option {
   color: var(--giz);
 }
 
-/* Botões. Primário = ouro (a assinatura age no CTA). */
+/* Botões. Primário = ouro (a assinatura age no CTA), com gradiente sutil. */
 .botao-soberano {
-  border-radius: 0.6rem;
-  background: var(--ouro);
+  border-radius: 0.65rem;
+  background: linear-gradient(180deg, var(--ouro-suave) 0%, var(--ouro) 78%);
   color: #221a0e;
   font-weight: 600;
-  padding: 0.5rem 1.1rem;
-  box-shadow: 0 6px 18px -10px color-mix(in oklab, var(--ouro) 80%, transparent);
-  transition: background 0.18s ease, transform 0.15s ease, box-shadow 0.18s ease;
+  padding: 0.55rem 1.15rem;
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, #fff 35%, transparent),
+    0 6px 18px -10px color-mix(in oklab, var(--ouro) 80%, transparent);
+  transition: filter 0.18s ease, transform 0.15s ease, box-shadow 0.18s ease;
 }
 .botao-soberano:hover {
-  background: var(--ouro-suave);
-  box-shadow: 0 8px 22px -10px color-mix(in oklab, var(--ouro) 90%, transparent);
+  filter: brightness(1.05);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, #fff 40%, transparent),
+    0 9px 24px -10px color-mix(in oklab, var(--ouro) 90%, transparent);
 }
 .botao-soberano:active {
   transform: translateY(1px) scale(0.99);
@@ -163,18 +212,19 @@ select.campo-soberano option {
 .botao-soberano:disabled {
   opacity: 0.5;
   box-shadow: none;
+  filter: none;
 }
 .botao-fantasma {
-  border-radius: 0.55rem;
+  border-radius: 0.6rem;
   border: 1px solid var(--borda-forte);
   color: var(--grafite);
-  padding: 0.34rem 0.75rem;
+  padding: 0.36rem 0.78rem;
   transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 .botao-fantasma:hover {
   color: var(--giz);
   border-color: var(--grafite);
-  background: color-mix(in oklab, var(--giz) 5%, transparent);
+  background: color-mix(in oklab, var(--giz) 6%, transparent);
 }
 .botao-perigo:hover {
   color: var(--telha);
@@ -206,25 +256,36 @@ select.campo-soberano option {
   background: var(--ouro);
 }
 
-/* Selos de status. */
+/* Selos de status/natureza: pílula neutra + ponto de cor. Mais sofisticado
+   que chip preenchido, e desacopla a COR (categórica, no ponto) do TEXTO
+   (sempre legível). Resolve o choque de verde=entrada vs verde=boleto. */
 .selo {
-  border-radius: 0.4rem;
-  padding: 0.14rem 0.5rem;
-  font-size: 0.7rem;
-  letter-spacing: 0.05em;
-}
-.selo-aberta {
-  background: color-mix(in oklab, var(--verde) 15%, transparent);
-  color: var(--verde);
-}
-.selo-fechada {
-  background: color-mix(in oklab, var(--ouro) 15%, transparent);
-  color: var(--ouro);
-}
-.selo-paga {
-  background: color-mix(in oklab, var(--grafite) 15%, transparent);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  border-radius: 999px;
+  padding: 0.16rem 0.6rem;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  background: color-mix(in oklab, var(--giz) 6%, transparent);
+  border: 1px solid var(--borda);
   color: var(--grafite);
 }
+.selo::before {
+  content: "";
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: var(--selo-ponto, var(--grafite));
+}
+.selo-aberta  { --selo-ponto: var(--verde); }
+.selo-fechada { --selo-ponto: var(--ouro); }
+.selo-paga    { --selo-ponto: var(--grafite); }
+/* Natureza da conta a pagar: cartão = assinatura ouro; boleto = neutro claro. */
+.selo-fatura  { --selo-ponto: var(--ouro); }
+.selo-boleto  { --selo-ponto: var(--giz); }
 
 /* Barra de envelope (gasto/orçamento): trilha + preenchimento. */
 .envelope-trilha {
@@ -237,6 +298,226 @@ select.campo-soberano option {
   display: block;
   height: 100%;
   border-radius: 3px;
+}
+
+/* Cabeçalho sticky SÓLIDO: coerência com o princípio "sem glass" (era a
+   última superfície com blur). Opaco para esconder o conteúdo que rola por
+   baixo; brilho de topo + borda dão a separação sem recorrer a vidro. */
+.cabecalho-atelie {
+  background:
+    linear-gradient(180deg, var(--brilho-topo) 0%, transparent 60%),
+    var(--tinta);
+  box-shadow: 0 1px 0 var(--borda), 0 6px 20px -18px rgba(0, 0, 0, 0.7);
+}
+
+/* Toasts: pilha fixa, discreta, canto inferior-direito. Card sólido com
+   marcador de cor à esquerda (tipo), sem roubar foco. */
+.toast-pilha {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: min(22rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  border: 1px solid var(--borda-forte);
+  border-left-width: 3px;
+  border-radius: 0.7rem;
+  background:
+    linear-gradient(180deg, var(--brilho-topo) 0%, transparent 40%),
+    var(--pergaminho);
+  color: var(--giz);
+  box-shadow: var(--sombra-flutuante);
+  padding: 0.7rem 0.9rem;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  animation: toast-entra 0.22s ease;
+}
+.toast-sucesso { border-left-color: var(--verde); }
+.toast-erro    { border-left-color: var(--telha); }
+.toast-info    { border-left-color: var(--ouro); }
+@keyframes toast-entra {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Diálogo de confirmação (<dialog> nativo): card no centro, backdrop escuro.
+   Acessível de fábrica — foco preso, Esc fecha, aria-modal. */
+.dialogo {
+  margin: auto;
+  width: min(26rem, calc(100vw - 2rem));
+  border: 1px solid var(--borda-forte);
+  border-radius: 1rem;
+  background:
+    linear-gradient(180deg, var(--brilho-topo) 0%, transparent 38%),
+    var(--pergaminho);
+  color: var(--giz);
+  box-shadow: var(--sombra-flutuante);
+  padding: 1.4rem;
+}
+.dialogo::backdrop {
+  background: color-mix(in oklab, #000 55%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+/* Skeleton de carregamento (ex.: "carregar mais" na lista). */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background: var(--pergaminho-2);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--giz) 7%, transparent),
+    transparent
+  );
+  animation: skeleton-brilho 1.3s ease-in-out infinite;
+}
+@keyframes skeleton-brilho {
+  100% { transform: translateX(100%); }
+}
+
+/* Menu de comandos (Ctrl+K): reaproveita a base .dialogo, mas ancora no
+   topo (padrão de paleta de comandos) e cede o padding ao conteúdo. */
+.comando-dialogo {
+  margin-top: clamp(4rem, 14vh, 9rem);
+  width: min(36rem, calc(100vw - 2rem));
+  padding: 0;
+  overflow: hidden;
+}
+.comando-campo {
+  width: 100%;
+  background: transparent;
+  color: var(--giz);
+  padding: 0.95rem 1.15rem;
+  font-size: 1rem;
+  outline: none;
+  border-bottom: 1px solid var(--borda);
+}
+.comando-campo::placeholder {
+  color: var(--grafite);
+}
+.comando-lista {
+  max-height: 46vh;
+  overflow-y: auto;
+  padding: 0.4rem;
+  display: grid;
+  gap: 2px;
+}
+.comando-item {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.comando-item[data-ativo="true"] {
+  background: color-mix(in oklab, var(--ouro) 9%, var(--pergaminho-2));
+  border-color: var(--borda);
+}
+.comando-item-titulo {
+  font-size: 0.9rem;
+  color: var(--giz);
+}
+.comando-item-detalhe {
+  font-size: 0.75rem;
+  color: var(--grafite);
+}
+.comando-dica {
+  padding: 0.6rem 0.75rem;
+  font-size: 0.78rem;
+  color: var(--grafite);
+}
+.comando-rodape {
+  padding: 0.5rem 1.15rem 0.7rem;
+  border-top: 1px solid var(--borda);
+  font-size: 0.7rem;
+  color: var(--grafite);
+}
+.comando-gatilho {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.comando-kbd {
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.68rem;
+  border: 1px solid var(--borda-forte);
+  border-radius: 0.35rem;
+  padding: 0.06rem 0.4rem;
+  color: var(--grafite);
+}
+
+/* Letreiro de pregão (indicadores BCB): faixa fina, conteúdo passa em loop.
+   Duas cópias do grupo; o trilho anda -50% e recomeça sem emenda visível. */
+.letreiro {
+  overflow: hidden;
+  border-top: 1px solid var(--borda);
+  border-bottom: 1px solid var(--borda);
+  padding: 0.45rem 0;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.letreiro-vazio {
+  color: var(--grafite);
+  padding-left: 0.25rem;
+}
+.letreiro-trilho {
+  display: flex;
+  width: max-content;
+  animation: letreiro-passa 35s linear infinite;
+}
+.letreiro:hover .letreiro-trilho {
+  animation-play-state: paused;
+}
+.letreiro-grupo {
+  display: flex;
+  gap: 2.2rem;
+  padding-right: 2.2rem;
+}
+.letreiro-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+.letreiro-rotulo {
+  color: var(--grafite);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.66rem;
+}
+.letreiro-valor {
+  color: var(--giz);
+}
+.letreiro-referencia {
+  color: var(--grafite);
+  font-size: 0.66rem;
+}
+@keyframes letreiro-passa {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+/* Sem animação (preferência do usuário): faixa estática rolável, sem cópia. */
+@media (prefers-reduced-motion: reduce) {
+  .letreiro {
+    overflow-x: auto;
+  }
+  .letreiro-copia {
+    display: none;
+  }
 }
 
 /* Micro-interações discretas; nada de odômetro/ruído/glow-no-cursor. */

@@ -102,6 +102,7 @@ export type Database = {
           cartao_id: string | null;
           categoria_id: string | null;
           data_compra: string;
+          data_vencimento: string | null;
           num_parcelas: number;
           created_at: string;
           updated_at: string;
@@ -117,6 +118,7 @@ export type Database = {
           cartao_id?: string | null;
           categoria_id?: string | null;
           data_compra: string;
+          data_vencimento?: string | null;
           num_parcelas?: number;
           created_at?: string;
           updated_at?: string;
@@ -132,6 +134,7 @@ export type Database = {
           cartao_id?: string | null;
           categoria_id?: string | null;
           data_compra?: string;
+          data_vencimento?: string | null;
           num_parcelas?: number;
           created_at?: string;
           updated_at?: string;
@@ -380,6 +383,56 @@ export type Database = {
           },
         ];
       };
+      recorrencias: {
+        Row: {
+          id: string;
+          user_id: string;
+          descricao: string;
+          valor: number;
+          tipo: string;
+          forma_pagamento: string;
+          categoria_id: string | null;
+          dia_do_mes: number;
+          proxima_data: string;
+          ativa: boolean;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          descricao: string;
+          valor: number;
+          tipo: string;
+          forma_pagamento: string;
+          categoria_id?: string | null;
+          dia_do_mes: number;
+          proxima_data: string;
+          ativa?: boolean;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Update: {
+          descricao?: string;
+          valor?: number;
+          categoria_id?: string | null;
+          dia_do_mes?: number;
+          proxima_data?: string;
+          ativa?: boolean;
+          deleted_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "recorrencias_categoria_id_fkey";
+            columns: ["categoria_id"];
+            isOneToOne: false;
+            referencedRelation: "categorias";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       cofrinhos: {
         Row: {
           id: string;
@@ -494,6 +547,20 @@ export type Database = {
           saidas_avista: number;
           faturas_pagas: number;
           saldo_caixa: number;
+          boletos_pagos: number;
+        };
+        Relationships: [];
+      };
+      vw_contas_a_pagar: {
+        Row: {
+          tipo: string;
+          origem_id: string;
+          transacao_id: string | null;
+          descricao: string;
+          competencia: string;
+          data_vencimento: string;
+          status: string;
+          valor: number;
         };
         Relationships: [];
       };
@@ -515,6 +582,50 @@ export type Database = {
         Args: {
           p_fatura_id: string;
           p_data_pagamento?: string;
+        };
+        Returns: Json;
+      };
+      criar_boleto: {
+        Args: {
+          p_descricao: string;
+          p_valor: number;
+          p_data_vencimento: string;
+          p_data_competencia?: string | null;
+          p_categoria_id?: string | null;
+        };
+        Returns: Json;
+      };
+      pagar_boleto: {
+        Args: {
+          p_transacao_id: string;
+          p_data_pagamento?: string;
+        };
+        Returns: Json;
+      };
+      editar_boleto: {
+        Args: {
+          p_transacao_id: string;
+          p_descricao?: string | null;
+          p_valor?: number | null;
+          p_data_vencimento?: string | null;
+          p_data_competencia?: string | null;
+          p_categoria_id?: string | null;
+          p_alterar_categoria?: boolean;
+        };
+        Returns: Json;
+      };
+      estornar_pagamento_fatura: {
+        Args: { p_fatura_id: string };
+        Returns: Json;
+      };
+      estornar_boleto: {
+        Args: { p_transacao_id: string };
+        Returns: Json;
+      };
+      duplicar_boleto: {
+        Args: {
+          p_transacao_id: string;
+          p_meses?: number;
         };
         Returns: Json;
       };
@@ -630,6 +741,30 @@ export type Database = {
         Args: { p_importacao_id: string };
         Returns: Json;
       };
+      criar_recorrencia: {
+        Args: {
+          p_descricao: string;
+          p_valor: number;
+          p_tipo: string;
+          p_forma_pagamento: string;
+          p_dia_do_mes: number;
+          p_categoria_id?: string | null;
+          p_iniciar_em?: string | null;
+        };
+        Returns: Json;
+      };
+      alternar_recorrencia: {
+        Args: { p_recorrencia_id: string; p_ativa: boolean };
+        Returns: Json;
+      };
+      excluir_recorrencia: {
+        Args: { p_recorrencia_id: string };
+        Returns: Json;
+      };
+      aplicar_recorrencias: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
       criar_cofrinho: {
         Args: {
           p_nome: string;
@@ -668,4 +803,5 @@ export type RegraCategorizacao = Database["public"]["Tables"]["regras_categoriza
 export type Importacao = Database["public"]["Tables"]["importacoes"]["Row"];
 export type ImportacaoLinha = Database["public"]["Tables"]["importacao_linhas"]["Row"];
 export type Cofrinho = Database["public"]["Tables"]["cofrinhos"]["Row"];
+export type Recorrencia = Database["public"]["Tables"]["recorrencias"]["Row"];
 export type MovimentacaoCofrinhoRow = Database["public"]["Tables"]["movimentacoes_cofrinho"]["Row"];

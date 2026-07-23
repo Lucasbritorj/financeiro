@@ -3,9 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { formatarCentavos, formatarData, paraCentavos } from "@/lib/money";
+import { formatarCentavos, formatarCentavosAcessivel, formatarData, paraCentavos, centavosParaDecimalEditavel } from "@/lib/money";
 import { mensagemDeErro } from "@/lib/erros";
 import { TAMANHO_PAGINA_TRANSACOES } from "@/lib/constantes";
+import {
+  aplicarFiltrosTransacoes,
+  type FiltrosTransacoes,
+} from "@/lib/filtros-transacoes";
+import { useToast, useConfirm } from "@/components/feedback";
 
 export type TransacaoLista = {
   id: string;
@@ -14,6 +19,7 @@ export type TransacaoLista = {
   tipo: string;
   forma_pagamento: string;
   data_compra: string;
+  data_vencimento: string | null;
   num_parcelas: number;
   created_at: string;
   categoria_id: string | null;
@@ -23,25 +29,29 @@ type CategoriaOpcao = { id: string; nome: string; tipo: string };
 type CartaoOpcao = { id: string; nome: string };
 
 const COLUNAS =
-  "id, descricao, valor_total, tipo, forma_pagamento, data_compra, num_parcelas, created_at, categoria_id";
+  "id, descricao, valor_total, tipo, forma_pagamento, data_compra, data_vencimento, num_parcelas, created_at, categoria_id";
 
 export default function ListaTransacoes({
   inicial,
   categorias,
   cartoes,
   temMais: temMaisInicial,
+  filtros = {},
 }: {
   inicial: TransacaoLista[];
   categorias: CategoriaOpcao[];
   cartoes: CartaoOpcao[];
   temMais: boolean;
+  /** Mesmos filtros da 1ª página (servidor) — o keyset continua com eles. */
+  filtros?: FiltrosTransacoes;
 }) {
   const router = useRouter();
+  const notificar = useToast();
+  const confirmar = useConfirm();
   const [itens, setItens] = useState<TransacaoLista[]>(inicial);
   const [temMais, setTemMais] = useState(temMaisInicial);
   const [carregando, setCarregando] = useState(false);
   const [editando, setEditando] = useState<string | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
   const [excluindoLote, setExcluindoLote] = useState(false);
 
@@ -63,8 +73,7 @@ export default function ListaTransacoes({
     const cursor = itens[itens.length - 1];
     if (!cursor) return;
     setCarregando(true);
-    setErro(null);
-    const { data, error } = await createClient()
+    const consulta = createClient()
       .from("transacoes_origem")
       .select(COLUNAS)
       .order("created_at", { ascending: false })
@@ -75,9 +84,10 @@ export default function ListaTransacoes({
         `created_at.lt."${cursor.created_at}",and(created_at.eq."${cursor.created_at}",id.lt.${cursor.id})`
       )
       .limit(TAMANHO_PAGINA_TRANSACOES);
+    const { data, error } = await aplicarFiltrosTransacoes(consulta, filtros);
     setCarregando(false);
     if (error) {
-      setErro(error.message);
+      notificar(error.message, "erro");
       return;
     }
     const pagina = (data as TransacaoLista[]) ?? [];
@@ -86,7 +96,6 @@ export default function ListaTransacoes({
   }
 
   async function recategorizar(t: TransacaoLista, categoriaId: string, criarRegra: boolean) {
-    setErro(null);
     const supabase = createClient();
     const { error } = await supabase.rpc("definir_categoria_transacao", {
       p_transacao_id: t.id,
@@ -95,9 +104,10 @@ export default function ListaTransacoes({
       p_padrao: criarRegra ? t.descricao.trim().slice(0, 40) : null,
     });
     if (error) {
-      setErro(mensagemDeErro(error));
+      notificar(mensagemDeErro(error), "erro");
       return;
     }
+    if (criarRegra) notificar("Regra criada: descrições parecidas serão classificadas assim.", "sucesso");
     setItens((atual) =>
       atual.map((x) => (x.id === t.id ? { ...x, categoria_id: categoriaId || null } : x))
     );
@@ -110,9 +120,13 @@ export default function ListaTransacoes({
   async function excluirSelecionadas() {
     const ids = [...selecionadas];
     if (ids.length === 0) return;
-    if (!window.confirm(`Excluir ${ids.length} transação(ões)? Parcelas pendentes saem das faturas.`))
-      return;
-    setErro(null);
+    const ok = await confirmar({
+      titulo: "Excluir selecionadas",
+      mensagem: `Excluir ${ids.length} transação(ões)? Parcelas pendentes saem das faturas.`,
+      rotuloConfirmar: "Excluir",
+      perigo: true,
+    });
+    if (!ok) return;
     setExcluindoLote(true);
     const supabase = createClient();
     const resultados = await Promise.allSettled(
@@ -131,9 +145,12 @@ export default function ListaTransacoes({
     setItens((atual) => atual.filter((t) => !excluidas.has(t.id)));
     setSelecionadas(new Set());
     if (falhas > 0) {
-      setErro(
-        `${excluidas.size} excluída(s); ${falhas} não puderam ser excluídas (ex.: parcela paga).`
+      notificar(
+        `${excluidas.size} excluída(s); ${falhas} não puderam ser excluídas (ex.: parcela paga).`,
+        "erro"
       );
+    } else {
+      notificar(`${excluidas.size} transação(ões) excluída(s).`, "sucesso");
     }
     router.refresh();
   }
@@ -150,12 +167,6 @@ export default function ListaTransacoes({
 
   return (
     <div className="grid gap-2">
-      {erro && (
-        <p className="text-sm" style={{ color: "var(--telha)" }}>
-          {erro}
-        </p>
-      )}
-
       <div
         className="flex flex-wrap items-center gap-x-4 gap-y-2 px-1 text-sm"
         style={{ color: "var(--grafite)" }}
@@ -219,8 +230,11 @@ export default function ListaTransacoes({
             />
             <span className="font-medium">{t.descricao}</span>
             <span className="text-xs" style={{ color: "var(--grafite)" }}>
-              {formatarData(t.data_compra)} · {t.forma_pagamento}
-              {t.num_parcelas > 1 ? ` · ${t.num_parcelas}x` : ""}
+              {t.forma_pagamento === "BOLETO"
+                ? `Boleto${t.data_vencimento ? ` · vence ${formatarData(t.data_vencimento)}` : ""}`
+                : `${formatarData(t.data_compra)} · ${t.forma_pagamento}${
+                    t.num_parcelas > 1 ? ` · ${t.num_parcelas}x` : ""
+                  }`}
             </span>
 
             <select
@@ -253,6 +267,7 @@ export default function ListaTransacoes({
             <span
               className="numero-soberano ml-auto font-medium"
               style={{ color: t.tipo === "RECEITA" ? "var(--verde)" : "var(--giz)" }}
+              aria-label={`${t.tipo === "RECEITA" ? "entrada de" : "saída de"} ${formatarCentavosAcessivel(t.valor_total)}`}
             >
               {t.tipo === "RECEITA" ? "+" : "-"}
               {formatarCentavos(t.valor_total)}
@@ -271,14 +286,24 @@ export default function ListaTransacoes({
         )
       )}
 
-      {temMais && (
+      {carregando && (
+        <div className="mt-1 grid gap-2" aria-hidden>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="vidro-soberano flex items-center gap-3 px-4 py-3">
+              <div className="skeleton h-4" style={{ width: "40%" }} />
+              <div className="skeleton ml-auto h-4" style={{ width: "5rem" }} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {temMais && !carregando && (
         <button
           type="button"
           onClick={carregarMais}
-          disabled={carregando}
           className="botao-fantasma mt-2 justify-self-center text-sm"
         >
-          {carregando ? "Carregando..." : "Carregar mais"}
+          Carregar mais
         </button>
       )}
     </div>
@@ -295,39 +320,39 @@ function BotaoExcluir({
   aoExcluir: (id: string) => void;
 }) {
   const router = useRouter();
+  const notificar = useToast();
+  const confirmar = useConfirm();
   const [pendente, setPendente] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
 
   async function excluir() {
-    if (!window.confirm(`Excluir "${descricao}"? Parcelas pendentes saem das faturas.`)) return;
-    setErro(null);
+    const ok = await confirmar({
+      titulo: "Excluir transação",
+      mensagem: `Excluir "${descricao}"? Parcelas pendentes saem das faturas.`,
+      rotuloConfirmar: "Excluir",
+      perigo: true,
+    });
+    if (!ok) return;
     setPendente(true);
     const { error } = await createClient().rpc("excluir_transacao", { p_transacao_id: id });
     setPendente(false);
     if (error) {
-      setErro(mensagemDeErro(error));
+      notificar(mensagemDeErro(error), "erro");
       return;
     }
+    notificar("Transação excluída.", "sucesso");
     aoExcluir(id);
     router.refresh();
   }
 
   return (
-    <span className="inline-flex items-center gap-2">
-      <button
-        type="button"
-        onClick={excluir}
-        disabled={pendente}
-        className="botao-fantasma botao-perigo text-xs"
-      >
-        {pendente ? "Excluindo..." : "Excluir"}
-      </button>
-      {erro && (
-        <span className="text-xs" style={{ color: "var(--telha)" }}>
-          {erro}
-        </span>
-      )}
-    </span>
+    <button
+      type="button"
+      onClick={excluir}
+      disabled={pendente}
+      className="botao-fantasma botao-perigo text-xs"
+    >
+      {pendente ? "Excluindo..." : "Excluir"}
+    </button>
   );
 }
 
@@ -349,17 +374,19 @@ function FormEdicao({
   aoSalvar: (t: TransacaoLista) => void;
 }) {
   const [descricao, setDescricao] = useState(transacao.descricao);
-  const [valor, setValor] = useState((transacao.valor_total / 100).toFixed(2).replace(".", ","));
+  const [valor, setValor] = useState(centavosParaDecimalEditavel(transacao.valor_total));
   const [data, setData] = useState(transacao.data_compra);
   const [tipo, setTipo] = useState(transacao.tipo);
   const [forma, setForma] = useState(transacao.forma_pagamento);
   const [cartaoId, setCartaoId] = useState<string>(cartoes[0]?.id ?? "");
   const [numParcelas, setNumParcelas] = useState(String(transacao.num_parcelas || 1));
   const [categoriaId, setCategoriaId] = useState(transacao.categoria_id ?? "");
+  const [vencimento, setVencimento] = useState(transacao.data_vencimento ?? "");
   const [pendente, setPendente] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const ehCredito = forma === "CREDITO";
+  const ehBoleto = transacao.forma_pagamento === "BOLETO";
   const categoriasDoTipo = categorias.filter((c) => c.tipo === tipo);
 
   // Só descrição/valor/data mudaram => edição barata (mantém parcelas).
@@ -381,8 +408,39 @@ function FormEdicao({
       setErro("Selecione um cartão para o crédito.");
       return;
     }
+    if (ehBoleto && !vencimento) {
+      setErro("Informe a data de vencimento do boleto.");
+      return;
+    }
     setPendente(true);
     const supabase = createClient();
+
+    // Boleto: edição focada (valor variável, vencimento) via RPC própria.
+    if (ehBoleto) {
+      const { error } = await supabase.rpc("editar_boleto", {
+        p_transacao_id: transacao.id,
+        p_descricao: descricao.trim(),
+        p_valor: centavos,
+        p_data_vencimento: vencimento,
+        p_data_competencia: data,
+        p_categoria_id: categoriaId || null,
+        p_alterar_categoria: true,
+      });
+      setPendente(false);
+      if (error) {
+        setErro(mensagemDeErro(error));
+        return;
+      }
+      aoSalvar({
+        ...transacao,
+        descricao: descricao.trim(),
+        valor_total: centavos,
+        data_compra: data,
+        data_vencimento: vencimento,
+        categoria_id: categoriaId || null,
+      });
+      return;
+    }
 
     if (soCamposLeves) {
       const { error } = await supabase.rpc("editar_transacao", {
@@ -434,6 +492,94 @@ function FormEdicao({
       num_parcelas: ehCredito ? Number(numParcelas) : 1,
       categoria_id: categoriaId || null,
     });
+  }
+
+  // Boleto: form dedicado (sem tipo/forma/cartão/parcelas), com vencimento.
+  if (ehBoleto) {
+    return (
+      <form onSubmit={salvar} className="vidro-soberano grid gap-3 p-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm sm:col-span-2">
+            Descrição
+            <input
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              required
+              className="campo-soberano"
+              aria-label="Descrição do boleto"
+            />
+          </label>
+          <label className="text-sm">
+            Valor (R$)
+            <input
+              value={valor}
+              onChange={(e) => setValor(e.target.value)}
+              inputMode="decimal"
+              required
+              className="campo-soberano"
+              aria-label="Valor do boleto"
+            />
+          </label>
+          <label className="text-sm">
+            Vencimento
+            <input
+              type="date"
+              value={vencimento}
+              onChange={(e) => setVencimento(e.target.value)}
+              required
+              className="campo-soberano"
+              aria-label="Vencimento"
+            />
+          </label>
+          <label className="text-sm">
+            Competência (mês de referência)
+            <input
+              type="date"
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+              className="campo-soberano"
+              aria-label="Competência"
+            />
+          </label>
+          {categorias.length > 0 && (
+            <label className="text-sm">
+              Categoria
+              <select
+                value={categoriaId}
+                onChange={(e) => setCategoriaId(e.target.value)}
+                className="campo-soberano"
+              >
+                <option value="">Automática / sem categoria</option>
+                {categorias
+                  .filter((c) => c.tipo === "DESPESA")
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          )}
+        </div>
+        <p className="text-xs" style={{ color: "var(--grafite)" }}>
+          Boleto pago não pode ser editado (histórico). Ajuste o valor antes de
+          marcar como pago em Contas a pagar.
+        </p>
+        {erro && (
+          <p className="text-sm" style={{ color: "var(--telha)" }}>
+            {erro}
+          </p>
+        )}
+        <div className="flex gap-3">
+          <button type="submit" disabled={pendente} className="botao-soberano text-sm">
+            {pendente ? "Salvando..." : "Salvar"}
+          </button>
+          <button type="button" onClick={aoFechar} className="botao-fantasma text-sm">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    );
   }
 
   return (

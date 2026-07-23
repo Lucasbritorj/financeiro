@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { formatarCentavos } from "@/lib/money";
 import NovaCategoriaForm from "@/components/nova-categoria-form";
+import OrcamentoCategoria from "@/components/orcamento-categoria";
 import BotaoAcaoRpc from "@/components/botao-acao-rpc";
 import SemearCategorias from "@/components/semear-categorias";
 import type { Categoria, RegraCategorizacao } from "@/lib/database.types";
@@ -59,10 +59,12 @@ export default async function CategoriasPage() {
               >
                 {c.tipo}
               </span>
-              {c.orcamento_mensal != null && (
-                <span className="numero-soberano text-xs" style={{ color: "var(--grafite)" }}>
-                  envelope {formatarCentavos(c.orcamento_mensal)}/mês
-                </span>
+              {c.tipo === "DESPESA" && (
+                <OrcamentoCategoria
+                  categoriaId={c.id}
+                  nome={c.nome}
+                  orcamento={c.orcamento_mensal}
+                />
               )}
               <span className="ml-auto">
                 <BotaoAcaoRpc

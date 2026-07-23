@@ -54,8 +54,11 @@ jobs:
             echo "== $f"
             psql -v ON_ERROR_STOP=1 -q -f "$f"
           done
-      - name: asserts do núcleo
+      - name: asserts (núcleo, assistente, isolamento cross-tenant)
         run: |
-          saida=$(psql -v ON_ERROR_STOP=1 -f supabase/tests/verificacao_nucleo.sql 2>&1)
-          echo "$saida"
-          echo "$saida" | grep -q "OK: .* asserts"
+          for teste in verificacao_nucleo verificacao_assistente verificacao_isolamento verificacao_importacao_guard; do
+            echo "== $teste"
+            saida=$(psql -v ON_ERROR_STOP=1 -f "supabase/tests/$teste.sql" 2>&1)
+            echo "$saida"
+            echo "$saida" | grep -q "OK: .* asserts"
+          done

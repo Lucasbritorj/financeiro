@@ -5,7 +5,16 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatarCentavos, formatarData } from "@/lib/money";
 import { mensagemDeErro } from "@/lib/erros";
-import { parseCsvExtrato, PRESETS, type PresetBanco, type LinhaImportacao } from "@/lib/csv";
+import {
+  parseCsvExtrato,
+  parseMatrizExtrato,
+  PRESETS,
+  type PresetBanco,
+  type LinhaImportacao,
+  type ResultadoParse,
+} from "@/lib/csv";
+import { parseOfxExtrato } from "@/lib/ofx";
+import { parsePdfExtrato } from "@/lib/pdf-extrato";
 
 type CategoriaOpcao = { id: string; nome: string; tipo: string };
 
@@ -23,6 +32,80 @@ type Etapa =
   | { fase: "upload" }
   | { fase: "revisao"; importacaoId: string; linhas: LinhaRevisao[]; descartadasParse: number };
 
+type OrigemImportacao = "CSV" | "OFX" | "OFC" | "XLSX" | "PDF";
+
+// Bancos BR exportam CSV/OFX em Windows-1252 (superset do ISO-8859-1) tão
+// often quanto em UTF-8. Tenta UTF-8 estrito (fatal): se os bytes não forem
+// UTF-8 válido, decai para windows-1252 — que decodifica acentos (ê, ç, ã…) e
+// os caracteres 0x80-0x9F (–, …, aspas curvas) sem virar "�".
+async function lerTexto(arquivo: File): Promise<string> {
+  const bruto = await arquivo.arrayBuffer();
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bruto);
+  } catch {
+    return new TextDecoder("windows-1252").decode(bruto);
+  }
+}
+
+// XLSX -> matriz de strings (1ª aba). exceljs entra por import dinâmico:
+// só quem importa planilha paga o peso do bundle.
+async function matrizDoXlsx(arquivo: File): Promise<string[][]> {
+  const { Workbook } = await import("exceljs");
+  const wb = new Workbook();
+  await wb.xlsx.load(await arquivo.arrayBuffer());
+  const aba = wb.worksheets[0];
+  if (!aba) return [];
+  const matriz: string[][] = [];
+  aba.eachRow((linha) => {
+    const campos: string[] = [];
+    linha.eachCell({ includeEmpty: true }, (celula) => {
+      const v = celula.value;
+      if (v == null) campos.push("");
+      else if (v instanceof Date) {
+        const dd = String(v.getUTCDate()).padStart(2, "0");
+        const mm = String(v.getUTCMonth() + 1).padStart(2, "0");
+        campos.push(`${dd}/${mm}/${v.getUTCFullYear()}`);
+      } else if (typeof v === "object" && "richText" in v) {
+        campos.push(v.richText.map((t) => t.text).join(""));
+      } else if (typeof v === "object" && "result" in v) {
+        campos.push(v.result == null ? "" : String(v.result));
+      } else campos.push(String(v));
+    });
+    matriz.push(campos);
+  });
+  return matriz;
+}
+
+// PDF -> linhas de texto (pdfjs-dist, import dinâmico). Agrupa os pedaços
+// pela coordenada Y para reconstruir as linhas visuais do extrato.
+async function linhasDoPdf(arquivo: File): Promise<string[]> {
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.min.mjs",
+    import.meta.url,
+  ).toString();
+  const doc = await pdfjs.getDocument({ data: await arquivo.arrayBuffer() }).promise;
+  const linhas: string[] = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const pagina = await doc.getPage(p);
+    const conteudo = await pagina.getTextContent();
+    const porY = new Map<number, { x: number; texto: string }[]>();
+    for (const item of conteudo.items) {
+      if (!("str" in item) || item.str.trim() === "") continue;
+      const y = Math.round(item.transform[5]);
+      const grupo = porY.get(y) ?? [];
+      grupo.push({ x: item.transform[4], texto: item.str });
+      porY.set(y, grupo);
+    }
+    const ys = [...porY.keys()].sort((a, b) => b - a); // topo -> base
+    for (const y of ys) {
+      const pedacos = porY.get(y)!.sort((a, b) => a.x - b.x);
+      linhas.push(pedacos.map((s) => s.texto).join(" "));
+    }
+  }
+  return linhas;
+}
+
 export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpcao[] }) {
   const router = useRouter();
   const [preset, setPreset] = useState<PresetBanco>("nubank");
@@ -34,23 +117,54 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
     const arquivo = e.target.files?.[0];
     if (!arquivo) return;
     setErro(null);
-    const texto = await arquivo.text();
-    const { linhas, descartadas } = parseCsvExtrato(texto, preset);
-    if (linhas.length === 0) {
+    const ext = arquivo.name.split(".").pop()?.toLowerCase() ?? "";
+    let resultado: ResultadoParse;
+    let origem: OrigemImportacao;
+    setPendente(true);
+    try {
+      if (ext === "ofx" || ext === "ofc") {
+        resultado = parseOfxExtrato(await lerTexto(arquivo));
+        origem = ext.toUpperCase() as OrigemImportacao;
+      } else if (ext === "xlsx") {
+        resultado = parseMatrizExtrato(await matrizDoXlsx(arquivo));
+        origem = "XLSX";
+      } else if (ext === "pdf") {
+        resultado = parsePdfExtrato(await linhasDoPdf(arquivo), new Date().getFullYear());
+        origem = "PDF";
+      } else {
+        resultado = parseCsvExtrato(await lerTexto(arquivo), preset);
+        origem = "CSV";
+      }
+    } catch (err) {
+      setPendente(false);
       setErro(
-        "Nenhuma linha reconhecida. Confira o banco selecionado ou use o preset Genérico."
+        `Falha ao ler "${arquivo.name}": ${err instanceof Error ? err.message : String(err)}`,
       );
       e.target.value = "";
       return;
     }
-    await enviarStaging(linhas, descartadas);
+    setPendente(false);
+    if (resultado.linhas.length === 0) {
+      setErro(
+        origem === "CSV"
+          ? "Nenhuma linha reconhecida. Confira o banco selecionado ou use o preset Genérico."
+          : `Nenhum lançamento reconhecido no ${origem}. Exporte o extrato em CSV/OFX pelo banco se persistir.`,
+      );
+      e.target.value = "";
+      return;
+    }
+    await enviarStaging(resultado.linhas, resultado.descartadas, origem);
     e.target.value = "";
   }
 
-  async function enviarStaging(linhas: LinhaImportacao[], descartadasParse: number) {
+  async function enviarStaging(
+    linhas: LinhaImportacao[],
+    descartadasParse: number,
+    origem: OrigemImportacao,
+  ) {
     setPendente(true);
     const { data, error } = await createClient().rpc("criar_importacao", {
-      p_origem: "CSV",
+      p_origem: origem,
       p_linhas: linhas,
     });
     setPendente(false);
@@ -143,7 +257,7 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
       <div className="grid gap-4">
         <div className="vidro-soberano grid gap-3 p-5">
           <label className="text-sm">
-            Banco / formato
+            Banco / formato (usado só para CSV)
             <select
               value={preset}
               onChange={(e) => setPreset(e.target.value as PresetBanco)}
@@ -157,10 +271,10 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
             </select>
           </label>
           <label className="text-sm">
-            Arquivo CSV do extrato
+            Arquivo do extrato (CSV, OFX, OFC, XLSX ou PDF)
             <input
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,.ofx,.ofc,.xlsx,.pdf,text/csv"
               onChange={aoEscolherArquivo}
               disabled={pendente}
               className="campo-soberano"
@@ -169,7 +283,10 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
           <p className="text-xs" style={{ color: "var(--grafite)" }}>
             O arquivo é lido no seu navegador; só as linhas (data, valor,
             descrição) vão para o servidor, em uma área de revisão — nada entra
-            direto no seu histórico.
+            direto no seu histórico. OFX/OFC é o export padrão dos bancos e o
+            mais confiável. PDF é melhor-esforço: linha sem sinal entra como
+            despesa (marcador “C” vira receita) — confira na revisão antes de
+            importar.
           </p>
           {erro && (
             <p className="text-sm" style={{ color: "var(--telha)" }}>

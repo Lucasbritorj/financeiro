@@ -27,7 +27,14 @@ declare
   v_cof      uuid;
   v_qtd      int;
   v_saldo    bigint;
+  v_saldo0   bigint;
   v_linha    uuid;
+  v_boleto   uuid;
+  v_boleto2  uuid;
+  v_fatura   uuid;
+  v_rec      uuid;
+  v_rec2     uuid;
+  v_cat_g    uuid;
 begin
   -- ============ BLOCO A: editar_transacao ============
   v_cartao := (public.criar_cartao('Cartão A', 1000000, 10, 20)->>'cartao_id')::uuid;
@@ -304,7 +311,252 @@ begin
     end if;
   end;
 
-  raise notice 'OK: 26/26 asserts do assistente (blocos A-D + carteira) passaram.';
+  -- ============ BLOCO E: boletos (contas a pagar) ============
+  -- Baseline de caixa antes de qualquer boleto (o bloco CX deixou o caixa
+  -- num valor conhecido; aqui trabalhamos relativo a ele, sem acoplar totais).
+  select saldo_caixa into v_saldo0 from public.vw_carteira;
+
+  -- [BOL1] criar_boleto: transacao BOLETO + parcela PENDENTE, aparece em
+  --        vw_contas_a_pagar como BOLETO com o valor cheio.
+  v_res := public.criar_boleto('Conta de luz', 15000, date '2026-04-10', date '2026-04-01', null);
+  v_boleto := (v_res->>'transacao_id')::uuid;
+  if (select forma_pagamento from public.transacoes_origem where id = v_boleto) <> 'BOLETO' then
+    raise exception 'FALHA [BOL1]: forma_pagamento não é BOLETO';
+  end if;
+  if not exists (select 1 from public.parcelas
+                 where transacao_id = v_boleto and status = 'PENDENTE' and deleted_at is null) then
+    raise exception 'FALHA [BOL1]: parcela PENDENTE ausente';
+  end if;
+  if not exists (select 1 from public.vw_contas_a_pagar
+                 where transacao_id = v_boleto and tipo = 'BOLETO' and valor = 15000) then
+    raise exception 'FALHA [BOL1]: boleto não aparece em vw_contas_a_pagar';
+  end if;
+
+  -- [BOL2] boleto PENDENTE não toca o caixa (só quando pago).
+  select saldo_caixa into v_saldo from public.vw_carteira;
+  if v_saldo <> v_saldo0 then
+    raise exception 'FALHA [BOL2]: boleto pendente alterou o caixa (% -> %)', v_saldo0, v_saldo;
+  end if;
+
+  -- [BOL3] boleto entra na COMPETÊNCIA (abril/2026) como DESPESA — visível ao
+  --        donut/insights/análise que leem transacoes_origem por data_compra.
+  if not exists (select 1 from public.transacoes_origem
+                 where id = v_boleto and tipo = 'DESPESA' and data_compra = date '2026-04-01') then
+    raise exception 'FALHA [BOL3]: competência do boleto incorreta';
+  end if;
+
+  -- [BOL4] editar_boleto: novo valor e vencimento sincronizam a parcela única.
+  perform public.editar_boleto(v_boleto, null, 18000, date '2026-04-15', null, null, false);
+  if (select valor from public.parcelas where transacao_id = v_boleto and deleted_at is null) <> 18000 then
+    raise exception 'FALHA [BOL4]: parcela não sincronizou com o novo valor';
+  end if;
+  if (select data_vencimento from public.transacoes_origem where id = v_boleto) <> date '2026-04-15' then
+    raise exception 'FALHA [BOL4]: vencimento não atualizou';
+  end if;
+
+  -- [BOL5] pagar_boleto: baixa a parcela e reduz o caixa em 18000.
+  perform public.pagar_boleto(v_boleto, timestamptz '2026-04-15 09:00-03');
+  if (select status from public.parcelas where transacao_id = v_boleto and deleted_at is null) <> 'PAGA' then
+    raise exception 'FALHA [BOL5]: parcela não foi baixada para PAGA';
+  end if;
+  select saldo_caixa into v_saldo from public.vw_carteira;
+  if v_saldo <> v_saldo0 - 18000 then
+    raise exception 'FALHA [BOL5]: caixa pós-pagamento = % (esperado %)', v_saldo, v_saldo0 - 18000;
+  end if;
+  if (select boletos_pagos from public.vw_carteira) <> 18000 then
+    raise exception 'FALHA [BOL5]: boletos_pagos = % (esperado 18000)',
+      (select boletos_pagos from public.vw_carteira);
+  end if;
+
+  -- [BOL6] boleto pago sai de contas a pagar.
+  if exists (select 1 from public.vw_contas_a_pagar where transacao_id = v_boleto) then
+    raise exception 'FALHA [BOL6]: boleto pago ainda aparece em contas a pagar';
+  end if;
+
+  -- [BOL7] pagar de novo => FW409 (idempotência dura).
+  begin
+    perform public.pagar_boleto(v_boleto, now());
+    raise exception 'FALHA [BOL7]: pagar boleto pago duas vezes não barrou';
+  exception when sqlstate 'FW409' then null;
+  end;
+
+  -- [BOL8] editar boleto PAGO => FW409 (histórico imutável).
+  begin
+    perform public.editar_boleto(v_boleto, 'x', null, null, null, null, false);
+    raise exception 'FALHA [BOL8]: editar boleto pago não barrou';
+  exception when sqlstate 'FW409' then null;
+  end;
+
+  -- [BOL9] criar_boleto sem vencimento => FW400.
+  begin
+    perform public.criar_boleto('Sem vencimento', 5000, null, null, null);
+    raise exception 'FALHA [BOL9]: boleto sem vencimento não barrou';
+  exception when sqlstate 'FW400' then null;
+  end;
+
+  -- [BOL10] vw_contas_a_pagar unifica faturas de cartão não pagas (autocontido:
+  --         cria um cartão + compra e confere que a fatura em aberto aparece).
+  v_cartao := (public.criar_cartao('Cartão Boleto', 500000, 10, 20)->>'cartao_id')::uuid;
+  perform public.processar_transacao_completa(
+    'Compra p/ fatura', 40000, 'DESPESA', 'CREDITO', v_cartao, date '2026-05-05', 1);
+  if not exists (select 1 from public.vw_contas_a_pagar
+                 where tipo = 'FATURA' and descricao = 'Cartão Boleto' and valor = 40000) then
+    raise exception 'FALHA [BOL10]: fatura não paga não aparece em contas a pagar';
+  end if;
+
+  -- ============ BLOCO F: estorno de pagamento + recorrência (0014) ============
+  -- [EST1] estornar_pagamento_fatura: paga uma fatura de cartão e desfaz.
+  --        Status volta ao ciclo recomputado (competência 2026-02, corte já
+  --        passou -> FECHADA) e as parcelas voltam a PENDENTE.
+  v_res := public.processar_transacao_completa(
+    'Compra p/ estorno', 30000, 'DESPESA', 'CREDITO', v_cartao, date '2026-02-05', 1);
+  v_tx := (v_res->>'transacao_id')::uuid;
+  select fatura_id into v_fatura
+  from public.parcelas where transacao_id = v_tx and deleted_at is null limit 1;
+  perform public.processar_pagamento_fatura(v_fatura, timestamptz '2026-02-15 09:00-03');
+  if (select status from public.faturas where id = v_fatura) <> 'PAGA' then
+    raise exception 'FALHA [EST1]: fatura não ficou PAGA antes do estorno';
+  end if;
+  perform public.estornar_pagamento_fatura(v_fatura);
+  if (select status from public.faturas where id = v_fatura) <> 'FECHADA' then
+    raise exception 'FALHA [EST1]: status pós-estorno = % (esperado FECHADA)',
+      (select status from public.faturas where id = v_fatura);
+  end if;
+
+  -- [EST2] parcelas da fatura estornada voltam a PENDENTE (sem data_pagamento).
+  if exists (select 1 from public.parcelas
+             where fatura_id = v_fatura and deleted_at is null
+               and (status <> 'PENDENTE' or data_pagamento is not null)) then
+    raise exception 'FALHA [EST2]: parcela não voltou a PENDENTE após estorno';
+  end if;
+
+  -- [EST3] estornar fatura não paga => FW409.
+  begin
+    perform public.estornar_pagamento_fatura(v_fatura);
+    raise exception 'FALHA [EST3]: estornar fatura já estornada não barrou';
+  exception when sqlstate 'FW409' then null;
+  end;
+
+  -- [EST4] estornar_boleto: paga um boleto e desfaz. Parcela volta a PENDENTE
+  --        e o boleto reaparece em vw_contas_a_pagar.
+  v_boleto2 := (public.criar_boleto('Água', 8000, date '2026-06-10', date '2026-06-01', null)->>'transacao_id')::uuid;
+  perform public.pagar_boleto(v_boleto2, timestamptz '2026-06-11 09:00-03');
+  perform public.estornar_boleto(v_boleto2);
+  if (select status from public.parcelas where transacao_id = v_boleto2 and deleted_at is null) <> 'PENDENTE' then
+    raise exception 'FALHA [EST4]: parcela do boleto não voltou a PENDENTE';
+  end if;
+  if not exists (select 1 from public.vw_contas_a_pagar where transacao_id = v_boleto2) then
+    raise exception 'FALHA [EST4]: boleto estornado não reapareceu em contas a pagar';
+  end if;
+
+  -- [EST5] estornar boleto não pago => FW409.
+  begin
+    perform public.estornar_boleto(v_boleto2);
+    raise exception 'FALHA [EST5]: estornar boleto pendente não barrou';
+  exception when sqlstate 'FW409' then null;
+  end;
+
+  -- [EST6] duplicar_boleto: clona +2 meses (venc e competência deslocam), novo
+  --        boleto nasce PENDENTE, id novo, original intacto.
+  v_res := public.duplicar_boleto(v_boleto2, 2);
+  v_tx := (v_res->>'transacao_id')::uuid;
+  if v_tx = v_boleto2 then
+    raise exception 'FALHA [EST6]: clone reusou o id do original';
+  end if;
+  if (select data_vencimento from public.transacoes_origem where id = v_tx) <> date '2026-08-10'
+     or (select data_compra from public.transacoes_origem where id = v_tx) <> date '2026-08-01' then
+    raise exception 'FALHA [EST6]: datas do clone não deslocaram +2 meses';
+  end if;
+  if (select status from public.parcelas where transacao_id = v_tx and deleted_at is null) <> 'PENDENTE' then
+    raise exception 'FALHA [EST6]: clone não nasceu PENDENTE';
+  end if;
+
+  -- [EST7] duplicar com p_meses fora da faixa (0..12] => FW400.
+  begin
+    perform public.duplicar_boleto(v_boleto2, 0);
+    raise exception 'FALHA [EST7]: duplicar com p_meses=0 não barrou';
+  exception when sqlstate 'FW400' then null;
+  end;
+
+  -- ============================================================
+  -- BLOCO G — recorrências (0015)
+  -- A sessão está como o usuário "cf" desde o bloco CARTEIRA (as categorias
+  -- de "bb" não são visíveis nem utilizáveis aqui — e é isso que [REC5]
+  -- explora ao validar dono/tipo). Semeia categorias para o usuário atual.
+  -- ============================================================
+  perform public.seed_categorias_padrao();
+  select id into v_cat_g from public.categorias
+  where nome = 'Mercado' and user_id = (select auth.uid()) and deleted_at is null;
+
+  -- [REC1] criar_recorrencia com início explícito: proxima_data cai no dia
+  --        pedido do mês de início.
+  v_res := public.criar_recorrencia('Aluguel Teste', 150000, 'DESPESA', 'PIX', 5,
+                                    null, date '2026-06-01');
+  v_rec := (v_res->>'recorrencia_id')::uuid;
+  if (v_res->>'proxima_data')::date <> date '2026-06-05' then
+    raise exception 'FALHA [REC1]: proxima_data esperada 2026-06-05, veio %', v_res->>'proxima_data';
+  end if;
+
+  -- [REC2] forma CREDITO barrada (assinatura já vem na fatura) => FW400.
+  begin
+    perform public.criar_recorrencia('Assinatura', 2990, 'DESPESA', 'CREDITO', 10);
+    raise exception 'FALHA [REC2]: recorrência no crédito não barrou';
+  exception when sqlstate 'FW400' then null;
+  end;
+
+  -- [REC3] dia 31 barrado (não existe em todo mês) => FW400.
+  begin
+    perform public.criar_recorrencia('Dia 31', 1000, 'DESPESA', 'PIX', 31);
+    raise exception 'FALHA [REC3]: dia_do_mes 31 não barrou';
+  exception when sqlstate 'FW400' then null;
+  end;
+
+  -- [REC4] aplicar_recorrencias materializa as vencidas como transações
+  --        comuns (parcela única, à vista) e avança proxima_data.
+  v_res := public.aplicar_recorrencias();
+  if (v_res->>'transacoes_criadas')::int < 1 then
+    raise exception 'FALHA [REC4]: nenhuma transação materializada';
+  end if;
+  if not exists (select 1 from public.transacoes_origem
+                 where descricao = 'Aluguel Teste' and data_compra = date '2026-06-05'
+                   and forma_pagamento = 'PIX' and deleted_at is null) then
+    raise exception 'FALHA [REC4]: ocorrência de 2026-06-05 não virou transação';
+  end if;
+
+  -- [REC5] categoria explícita da recorrência prevalece na materialização.
+  v_res := public.criar_recorrencia('Feira Recorrente', 20000, 'DESPESA', 'DEBITO', 3,
+                                    v_cat_g, date '2026-06-01');
+  v_rec2 := (v_res->>'recorrencia_id')::uuid;
+  perform public.aplicar_recorrencias();
+  if (select categoria_id from public.transacoes_origem
+      where descricao = 'Feira Recorrente' and data_compra = date '2026-06-03'
+        and deleted_at is null) is distinct from v_cat_g then
+    raise exception 'FALHA [REC5]: categoria da recorrência não aplicada';
+  end if;
+
+  -- [REC6] pausar tudo => aplicar não cria nada.
+  perform public.alternar_recorrencia(v_rec, false);
+  perform public.alternar_recorrencia(v_rec2, false);
+  v_res := public.aplicar_recorrencias();
+  if (v_res->>'transacoes_criadas')::int <> 0 then
+    raise exception 'FALHA [REC6]: recorrência pausada ainda materializou';
+  end if;
+
+  -- [REC7] reativar realinha proxima_data para o futuro (pausa não lança
+  --        retroativo) e excluir é soft-delete.
+  perform public.alternar_recorrencia(v_rec, true);
+  if (select proxima_data from public.recorrencias where id = v_rec)
+       < (now() at time zone 'America/Sao_Paulo')::date then
+    raise exception 'FALHA [REC7]: reativação não realinhou proxima_data';
+  end if;
+  -- RLS esconde soft-deletados do authenticated: sumir da listagem é a
+  -- prova da exclusão (ler deleted_at aqui devolveria NULL sempre).
+  perform public.excluir_recorrencia(v_rec);
+  if exists (select 1 from public.recorrencias where id = v_rec) then
+    raise exception 'FALHA [REC7]: recorrência excluída ainda visível';
+  end if;
+
+  raise notice 'OK: todos os asserts do assistente (blocos A-G: edição, categorias, importação, cofrinhos, carteira, boletos, estorno/recorrência de boletos e recorrências) passaram.';
 end $$;
 
 rollback;

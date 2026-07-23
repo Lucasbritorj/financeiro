@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
 // Tipografia Ateliê (modelo §2): serifa com caráter no herói/títulos,
@@ -10,8 +10,8 @@ const fraunces = Fraunces({
   style: ["normal", "italic"],
 });
 
-const hanken = Hanken_Grotesk({
-  variable: "--font-hanken",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -38,7 +38,7 @@ export default function RootLayout({
     <html
       lang="pt-BR"
       suppressHydrationWarning
-      className={`${fraunces.variable} ${hanken.variable} ${plexMono.variable} h-full antialiased`}
+      className={`${fraunces.variable} ${inter.variable} ${plexMono.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />

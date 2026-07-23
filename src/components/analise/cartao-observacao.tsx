@@ -22,11 +22,17 @@ const COR_ENFASE = {
   telha: "var(--telha)",
 } as const;
 
-export default function CartaoObservacao({ observacao }: { observacao: Observacao }) {
+export default function CartaoObservacao({
+  observacao,
+  interativo = false,
+}: {
+  observacao: Observacao;
+  interativo?: boolean;
+}) {
   const cor = COR[observacao.severidade];
   return (
     <article
-      className="vidro-soberano flex gap-4 p-5"
+      className={`vidro-soberano flex gap-4 p-5 ${interativo ? "card-hover" : ""}`}
       style={{ borderLeft: `3px solid ${cor}` }}
     >
       <div className="min-w-0 flex-1">

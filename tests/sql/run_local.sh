@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Suite SQL local: Postgres efêmero em Docker + shim Supabase + migrações
-# na ordem + verificacao_nucleo.sql. Verde = "OK: N/N asserts" no notice.
+# na ordem + asserts (núcleo, assistente, isolamento cross-tenant).
+# Verde = "OK: N/N asserts" no notice de cada arquivo.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
@@ -35,7 +36,7 @@ for f in supabase/migrations/*.sql; do
 done
 
 # raise notice sai no stderr do psql — capturar junto.
-for teste in verificacao_nucleo verificacao_assistente; do
+for teste in verificacao_nucleo verificacao_assistente verificacao_isolamento verificacao_importacao_guard; do
   echo "== asserts: supabase/tests/$teste.sql"
   saida=$(docker exec -i "$CONTAINER" psql -U postgres -d app -v ON_ERROR_STOP=1 \
     <"supabase/tests/$teste.sql" 2>&1) || { echo "$saida"; echo "SQL SUITE VERMELHA ($teste)"; exit 1; }

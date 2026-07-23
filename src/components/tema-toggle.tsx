@@ -8,6 +8,10 @@ export default function TemaToggle() {
   const [claro, setClaro] = useState(false);
 
   useEffect(() => {
+    // Sincroniza o botão com o atributo aplicado pelo script inline de tema.
+    // É pós-hidratação DE PROPÓSITO: ler no init causaria mismatch de
+    // hidratação (servidor não conhece o tema salvo). Exceção legítima à regra.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setClaro(document.documentElement.getAttribute("data-tema") === "claro");
   }, []);
 

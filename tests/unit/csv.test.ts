@@ -74,3 +74,75 @@ test("parseCsvExtrato: cabeçalho irreconhecível descarta tudo", () => {
   assert.equal(r.linhas.length, 0);
   assert.equal(r.descartadas, 1);
 });
+
+// --- Bancos do usuário: Bradesco, Itaú, Caixa, Banco do Brasil ---
+
+test("Bradesco: colunas Débito/Crédito separadas + preâmbulo -> sinal correto", () => {
+  const csv = [
+    "Extrato de Conta Corrente;;;;;",
+    "Agência: 1234 Conta: 56789-0;;;;;",
+    ";;;;;",
+    "Data;Histórico;Docto.;Crédito (R$);Débito (R$);Saldo (R$)",
+    "05/07/2026;COMPRA CARTAO SUPERMERCADO;000123;;620,00;1.380,00",
+    "06/07/2026;PIX RECEBIDO JOAO;000456;150,00;;1.530,00",
+  ].join("\n");
+  const r = parseCsvExtrato(csv, "bradesco");
+  assert.equal(r.linhas.length, 2);
+  // BUG ORIGINAL: despesa de débito vinha como +receita. Agora sai negativa.
+  assert.deepEqual(r.linhas[0], {
+    data: "2026-07-05",
+    valor: -62000,
+    descricao: "COMPRA CARTAO SUPERMERCADO",
+  });
+  assert.equal(r.linhas[1].valor, 15000); // crédito = entrada
+});
+
+test("Itaú: coluna Valor única já com sinal", () => {
+  const csv = [
+    "data;lançamento;ag./origem;valor;saldo",
+    "05/07/2026;REST FULANO;1234/56;-41,00;959,00",
+    "01/07/2026;SALARIO EMPRESA;0000/00;8.500,00;9.459,00",
+  ].join("\n");
+  const r = parseCsvExtrato(csv, "itau");
+  assert.equal(r.linhas.length, 2);
+  assert.equal(r.linhas[0].valor, -4100);
+  assert.equal(r.linhas[1].valor, 850000);
+});
+
+test("Caixa: sufixo D/C na célula de valor + preâmbulo", () => {
+  const csv = [
+    "Conta: 1234 000123456-7",
+    "Período: 01/07/2026 a 31/07/2026",
+    "Data Mov.;Nr. Doc.;Histórico;Valor;Saldo",
+    "05/07/2026;000001;COMPRA DEBITO PADARIA;12,50 D;1.987,50",
+    "06/07/2026;000002;DEPOSITO DINHEIRO;100,00 C;2.087,50",
+  ].join("\n");
+  const r = parseCsvExtrato(csv, "caixa");
+  assert.equal(r.linhas.length, 2);
+  assert.equal(r.linhas[0].valor, -1250); // "D" = débito = saída
+  assert.equal(r.linhas[1].valor, 10000); // "C" = crédito = entrada
+});
+
+test("Banco do Brasil: Valor único com sinal + preâmbulo", () => {
+  const csv = [
+    "Banco do Brasil - Extrato de Conta Corrente",
+    "Data;Histórico;Valor;Saldo",
+    "05/07/2026;COMPRA CARTAO;-75,90;1.500,00",
+    "07/07/2026;TED RECEBIDA;1.200,00;2.700,00",
+  ].join("\n");
+  const r = parseCsvExtrato(csv, "bb");
+  assert.equal(r.linhas.length, 2);
+  assert.equal(r.linhas[0].valor, -7590);
+  assert.equal(r.linhas[1].valor, 120000);
+});
+
+test("parser não altera texto já decodificado (acentos preservados)", () => {
+  const csv = [
+    "Data;Histórico;Valor",
+    "05/07/2026;Alimentação no Café;-30,00",
+    "06/07/2026;Contas do Mês;-250,00",
+  ].join("\n");
+  const r = parseCsvExtrato(csv, "generico");
+  assert.equal(r.linhas[0].descricao, "Alimentação no Café");
+  assert.equal(r.linhas[1].descricao, "Contas do Mês");
+});

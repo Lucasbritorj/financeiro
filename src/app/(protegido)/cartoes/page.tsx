@@ -18,7 +18,7 @@ export default async function CartoesPage() {
       <h1 className="text-xl font-semibold">Cartões de crédito</h1>
       <NovoCartaoForm />
       {cartoes.length === 0 ? (
-        <p className="text-sm" style={{ color: "var(--texto-suave)" }}>
+        <p className="text-sm" style={{ color: "var(--grafite)" }}>
           Nenhum cartão cadastrado ainda.
         </p>
       ) : (
@@ -35,10 +35,10 @@ export default async function CartoesPage() {
                   perigo
                 />
               </div>
-              <p className="numero-soberano mt-1 text-sm" style={{ color: "var(--acento)" }}>
+              <p className="numero-soberano mt-1 text-sm" style={{ color: "var(--verde)" }}>
                 Limite {formatarCentavos(c.limite_total)}
               </p>
-              <p className="text-sm" style={{ color: "var(--texto-suave)" }}>
+              <p className="text-sm" style={{ color: "var(--grafite)" }}>
                 Fecha dia {c.dia_fechamento} · Vence dia {c.dia_vencimento}
               </p>
             </li>
