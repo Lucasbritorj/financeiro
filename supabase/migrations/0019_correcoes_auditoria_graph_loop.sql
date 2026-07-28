@@ -440,3 +440,21 @@ begin
     'status',          'A_PAGAR');
 end;
 $$;
+
+-- =====================================================================
+-- S-06 (baixo) — default de movimentacoes_cofrinho.data não pode depender
+-- do TimeZone da sessão (implícito). CLAUDE.md exige America/Sao_Paulo
+-- explícito para qualquer data de regra de negócio; `current_date` lê o
+-- TimeZone GUC da sessão, e Supabase hospedado roda UTC por padrão —
+-- perto da virada do dia, UTC e America/Sao_Paulo discordam sobre qual é
+-- "hoje". Hoje é INALCANÇÁVEL em produção: aportar_cofrinho e
+-- resgatar_cofrinho (0010) sempre passam `data` explícito
+-- (coalesce(p_data, (now() at time zone 'America/Sao_Paulo')::date)), e
+-- não existe outro caminho de escrita para esta tabela (DML direto
+-- revogado). É mina latente para qualquer INSERT futuro que confie no
+-- default da coluna em vez de replicar o coalesce. ALTER COLUMN SET
+-- DEFAULT é idempotente por natureza (só troca a expressão-padrão, não
+-- reescreve linhas existentes) — dispensa drop-then-add.
+-- =====================================================================
+alter table public.movimentacoes_cofrinho
+  alter column data set default ((now() at time zone 'America/Sao_Paulo')::date);
