@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import CofrinhoCard from "@/components/cofrinho-card";
 import NovoCofrinhoForm from "@/components/novo-cofrinho-form";
 import type { MovimentacaoCofrinho } from "@/lib/cofrinhos";
+import { hojeSaoPaulo } from "@/lib/data";
 
 const ORDEM_HORIZONTE = ["CURTO", "MEDIO", "LONGO"] as const;
 const ROTULO_HORIZONTE: Record<string, string> = {
@@ -9,10 +10,6 @@ const ROTULO_HORIZONTE: Record<string, string> = {
   MEDIO: "Médio prazo",
   LONGO: "Longo prazo",
 };
-
-function hojeSaoPaulo(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
-}
 
 type CofrinhoRow = {
   id: string;

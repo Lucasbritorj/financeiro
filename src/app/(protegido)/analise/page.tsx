@@ -3,6 +3,7 @@ import { formatarCentavos } from "@/lib/money";
 import { analisarFinancas } from "@/lib/analise";
 import { nomeMes, type TransacaoInsight } from "@/lib/insights";
 import CartaoObservacao from "@/components/analise/cartao-observacao";
+import { hojeSaoPaulo } from "@/lib/data";
 
 // Assistente de análise: leitura determinística dos gastos e ganhos.
 // Não é chat — são observações geradas por regras sobre os agregados dos
@@ -11,9 +12,6 @@ function mesCorrenteSaoPaulo(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" })
     .format(new Date())
     .slice(0, 7);
-}
-function hojeSaoPaulo(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 }
 function inicioJanela(mesISO: string): string {
   const [ano, mes] = mesISO.split("-").map(Number);

@@ -7,16 +7,11 @@ import { paraCentavos } from "@/lib/money";
 import { mensagemDeErro } from "@/lib/erros";
 import { MAX_PARCELAS_UI } from "@/lib/constantes";
 import { mensagemPosTransacao } from "@/lib/nova-transacao";
+import { hojeSaoPaulo } from "@/lib/data";
 import { useToast } from "@/components/feedback";
 
 type CartaoOpcao = { id: string; nome: string };
 type CategoriaOpcao = { id: string; nome: string; tipo: string };
-
-function hojeSaoPaulo(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Sao_Paulo",
-  }).format(new Date());
-}
 
 export default function NovaTransacaoForm({
   cartoes,

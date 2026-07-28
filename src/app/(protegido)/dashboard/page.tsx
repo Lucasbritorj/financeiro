@@ -25,6 +25,7 @@ import CartaoObservacao from "@/components/analise/cartao-observacao";
 import SemearCategorias from "@/components/semear-categorias";
 import LetreiroBcb from "@/components/dashboard/letreiro-bcb";
 import AplicadorRecorrencias from "@/components/dashboard/aplicador-recorrencias";
+import { hojeSaoPaulo } from "@/lib/data";
 
 // Base temporal do dashboard = data_compra (visão caixa "quanto gastei no
 // mês"). Fuso de negócio São Paulo (CLAUDE.md).
@@ -32,9 +33,6 @@ function mesCorrenteSaoPaulo(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" })
     .format(new Date())
     .slice(0, 7);
-}
-function hojeSaoPaulo(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 }
 function ehMesValido(m: unknown): m is string {
   return typeof m === "string" && /^\d{4}-\d{2}$/.test(m);

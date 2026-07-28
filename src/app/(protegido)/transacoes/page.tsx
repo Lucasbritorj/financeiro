@@ -10,13 +10,10 @@ import {
   queryDosFiltros,
   temFiltro,
 } from "@/lib/filtros-transacoes";
+import { hojeSaoPaulo } from "@/lib/data";
 
 const COLUNAS =
   "id, descricao, valor_total, tipo, forma_pagamento, data_compra, data_vencimento, num_parcelas, created_at, categoria_id";
-
-function hojeSaoPaulo(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
-}
 
 function diasAtras(hoje: string, dias: number): string {
   const d = new Date(`${hoje}T00:00:00Z`);

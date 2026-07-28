@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import BotaoAcaoRpc from "@/components/botao-acao-rpc";
 import { formatarCentavos, formatarCompetencia, formatarData } from "@/lib/money";
 import { LIMITE_FATURAS_LISTA } from "@/lib/constantes";
+import { hojeSaoPaulo } from "@/lib/data";
 
 const CLASSE_SELO: Record<string, string> = {
   ABERTA: "selo selo-aberta",
@@ -19,10 +20,6 @@ type ContaAPagar = {
   status: string;
   valor: number;
 };
-
-function hojeSaoPaulo(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
-}
 
 export default async function ContasAPagarPage() {
   const supabase = await createClient();

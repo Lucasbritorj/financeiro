@@ -1,4 +1,5 @@
 import { formatarCentavos, formatarData, formatarCompetencia } from "@/lib/money";
+import { hojeSaoPaulo } from "@/lib/data";
 import BotaoAcaoRpc from "@/components/botao-acao-rpc";
 
 // Regime de CAIXA: o que está de fato na carteira agora, e as CONTAS A PAGAR
@@ -15,10 +16,6 @@ export type ContaAPagar = {
   status: string; // ABERTA | FECHADA | A_PAGAR
   valor: number;
 };
-
-function hojeSaoPaulo(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
-}
 
 export default function CarteiraCaixa({
   saldoCaixa,

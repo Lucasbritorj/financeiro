@@ -19,12 +19,7 @@ import {
   type ComandoTransacao,
 } from "@/lib/comando";
 import { useToast } from "@/components/feedback";
-
-function hojeSaoPaulo(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Sao_Paulo",
-  }).format(new Date());
-}
+import { hojeSaoPaulo } from "@/lib/data";
 
 const FORMA_ROTULO: Record<ComandoTransacao["forma"], string> = {
   CREDITO: "Crédito",
