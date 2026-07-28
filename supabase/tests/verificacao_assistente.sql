@@ -35,6 +35,7 @@ declare
   v_rec      uuid;
   v_rec2     uuid;
   v_cat_g    uuid;
+  v_regra_h  uuid;
 begin
   -- ============ BLOCO A: editar_transacao ============
   v_cartao := (public.criar_cartao('Cartão A', 1000000, 10, 20)->>'cartao_id')::uuid;
@@ -556,7 +557,166 @@ begin
     raise exception 'FALHA [REC7]: recorrência excluída ainda visível';
   end if;
 
-  raise notice 'OK: todos os asserts do assistente (blocos A-G: edição, categorias, importação, cofrinhos, carteira, boletos, estorno/recorrência de boletos e recorrências) passaram.';
+  -- ============================================================
+  -- BLOCO H — RPCs client-facing sem nenhuma cobertura anterior (S-02):
+  -- arquivar_cofrinho, atualizar_linha_importacao, descartar_importacao,
+  -- editar_categoria, excluir_regra_categorizacao.
+  -- ============================================================
+  -- [H1] editar_categoria: renomeia, troca cor e orçamento.
+  v_cat_id := (public.criar_categoria('Categoria H', '#111111', null, 'DESPESA', null, 50000)->>'categoria_id')::uuid;
+  perform public.editar_categoria(v_cat_id, 'Categoria H Editada', '#222222', null, 80000, false);
+  if (select nome from public.categorias where id = v_cat_id) <> 'Categoria H Editada'
+     or (select cor from public.categorias where id = v_cat_id) <> '#222222'
+     or (select orcamento_mensal from public.categorias where id = v_cat_id) <> 80000 then
+    raise exception 'FALHA [H1]: editar_categoria não aplicou nome/cor/orçamento';
+  end if;
+
+  -- [H1b] p_limpar_orcamento remove o orçamento (mesmo com p_orcamento_mensal nulo).
+  perform public.editar_categoria(v_cat_id, null, null, null, null, true);
+  if (select orcamento_mensal from public.categorias where id = v_cat_id) is not null then
+    raise exception 'FALHA [H1b]: editar_categoria com p_limpar_orcamento não zerou o orçamento';
+  end if;
+
+  -- [H2] editar_categoria em id inexistente => FW404.
+  begin
+    perform public.editar_categoria(gen_random_uuid(), 'X');
+    raise exception 'FALHA [H2]: editar_categoria aceitou id inexistente';
+  exception when sqlstate 'FW404' then null;
+  end;
+
+  -- [H3] excluir_regra_categorizacao: exclui; RLS esconde soft-deletado (some da listagem).
+  v_res := public.criar_regra_categorizacao('PADRAOH', v_cat_id, 60);
+  v_regra_h := (v_res->>'regra_id')::uuid;
+  perform public.excluir_regra_categorizacao(v_regra_h);
+  if exists (select 1 from public.regras_categorizacao where id = v_regra_h) then
+    raise exception 'FALHA [H3]: regra excluída ainda visível';
+  end if;
+
+  -- [H4] excluir_regra_categorizacao em regra já excluída => FW404 (idempotência dura).
+  begin
+    perform public.excluir_regra_categorizacao(v_regra_h);
+    raise exception 'FALHA [H4]: excluir_regra_categorizacao aceitou regra já excluída';
+  exception when sqlstate 'FW404' then null;
+  end;
+
+  -- [H5] atualizar_linha_importacao: marca ignorar=true e aplica categoria.
+  v_res := public.criar_importacao('CSV', jsonb_build_array(
+    jsonb_build_object('data','2026-03-10','valor',-999,'descricao','Linha H')));
+  v_imp := (v_res->>'importacao_id')::uuid;
+  select id into v_linha from public.importacao_linhas where importacao_id = v_imp limit 1;
+  perform public.atualizar_linha_importacao(v_linha, true, v_cat_id, false);
+  if (select ignorar from public.importacao_linhas where id = v_linha) is distinct from true
+     or (select categoria_sugerida from public.importacao_linhas where id = v_linha) is distinct from v_cat_id then
+    raise exception 'FALHA [H5]: atualizar_linha_importacao não aplicou ignorar/categoria';
+  end if;
+
+  -- [H5b] p_limpar_categoria remove a categoria_sugerida.
+  perform public.atualizar_linha_importacao(v_linha, null, null, true);
+  if (select categoria_sugerida from public.importacao_linhas where id = v_linha) is not null then
+    raise exception 'FALHA [H5b]: atualizar_linha_importacao não limpou categoria_sugerida';
+  end if;
+
+  -- [H6] descartar_importacao: REVISAO -> DESCARTADA; confirmar depois => FW409.
+  perform public.descartar_importacao(v_imp);
+  if (select status from public.importacoes where id = v_imp) <> 'DESCARTADA' then
+    raise exception 'FALHA [H6]: descartar_importacao não marcou DESCARTADA';
+  end if;
+  begin
+    perform public.confirmar_importacao(v_imp);
+    raise exception 'FALHA [H6b]: confirmar_importacao aceitou importação descartada';
+  exception when sqlstate 'FW409' then null;
+  end;
+
+  -- [H6c] descartar_importacao de novo (já DESCARTADA, não está mais em REVISAO) => FW404.
+  begin
+    perform public.descartar_importacao(v_imp);
+    raise exception 'FALHA [H6c]: descartar_importacao aceitou importação já descartada';
+  exception when sqlstate 'FW404' then null;
+  end;
+
+  -- [H7] arquivar_cofrinho: arquiva, bloqueia aporte, desarquiva.
+  v_cof := (public.criar_cofrinho('Cofrinho H', 50000, 'CURTO')->>'cofrinho_id')::uuid;
+  perform public.arquivar_cofrinho(v_cof, true);
+  if (select arquivado from public.cofrinhos where id = v_cof) is distinct from true then
+    raise exception 'FALHA [H7]: arquivar_cofrinho não marcou arquivado';
+  end if;
+  begin
+    perform public.aportar_cofrinho(v_cof, 100);
+    raise exception 'FALHA [H7b]: aportar_cofrinho aceitou cofrinho arquivado';
+  exception when sqlstate 'FW404' then null;
+  end;
+  perform public.arquivar_cofrinho(v_cof, false);
+  if (select arquivado from public.cofrinhos where id = v_cof) is distinct from false then
+    raise exception 'FALHA [H7c]: arquivar_cofrinho(false) não desarquivou';
+  end if;
+
+  -- [H8] arquivar_cofrinho em id inexistente => FW404.
+  begin
+    perform public.arquivar_cofrinho(gen_random_uuid());
+    raise exception 'FALHA [H8]: arquivar_cofrinho aceitou id inexistente';
+  exception when sqlstate 'FW404' then null;
+  end;
+
+  -- ============================================================
+  -- BLOCO I — regressão S-01 e S-04 (auditoria graph-loop, 2026-07-27).
+  -- Ver supabase/migrations/0019_correcoes_auditoria_graph_loop.sql.
+  -- ============================================================
+  -- [S01-1] excluir_categoria desvincula recorrencias.categoria_id, não só regras.
+  declare
+    v_cat_s01 uuid;
+    v_rec_s01 uuid;
+  begin
+    v_cat_s01 := (public.criar_categoria('Categoria S01', null, null, 'DESPESA')->>'categoria_id')::uuid;
+    v_rec_s01 := (public.criar_recorrencia('Recorrência S01', 1000, 'DESPESA', 'PIX', 10, v_cat_s01)->>'recorrencia_id')::uuid;
+    perform public.excluir_categoria(v_cat_s01);
+    if (select categoria_id from public.recorrencias where id = v_rec_s01) is not null then
+      raise exception 'FALHA [S01-1]: excluir_categoria não desvinculou recorrencias.categoria_id';
+    end if;
+  end;
+
+  -- [S01-2] aplicar_recorrencias isola falha por ocorrência: uma recorrência
+  -- com categoria órfã (referência forjada, para não depender só do fix (a)
+  -- acima) não impede outra recorrência sem relação nenhuma de materializar,
+  -- e a falha aparece isolada em `falhas` no retorno — nunca aborta a chamada.
+  declare
+    v_cat_s01b uuid;
+    v_rec_a    uuid;
+    v_rec_b    uuid;
+    v_inicio   date := (date_trunc('month', now() at time zone 'America/Sao_Paulo') - interval '1 month')::date;
+    v_res_s01  jsonb;
+  begin
+    v_cat_s01b := (public.criar_categoria('Categoria S01b', null, null, 'DESPESA')->>'categoria_id')::uuid;
+    v_rec_a := (public.criar_recorrencia('Recorrência S01b-A', 1000, 'DESPESA', 'PIX', 1, v_cat_s01b, v_inicio)->>'recorrencia_id')::uuid;
+    v_rec_b := (public.criar_recorrencia('Recorrência S01b-B', 2000, 'DESPESA', 'PIX', 1, null, v_inicio)->>'recorrencia_id')::uuid;
+
+    reset role;
+    update public.categorias set deleted_at = now() where id = v_cat_s01b;
+    set local role authenticated;
+
+    v_res_s01 := public.aplicar_recorrencias();
+    if not exists (select 1 from public.transacoes_origem
+                    where descricao = 'Recorrência S01b-B' and deleted_at is null) then
+      raise exception 'FALHA [S01-2a]: recorrência B não materializou apesar de não ter relação com o erro de A';
+    end if;
+    if jsonb_array_length(v_res_s01->'falhas') <> 1
+       or (v_res_s01->'falhas'->0->>'recorrencia_id')::uuid <> v_rec_a then
+      raise exception 'FALHA [S01-2b]: falha de A não apareceu isolada no retorno: %', v_res_s01;
+    end if;
+  end;
+
+  -- [S04-1] criar_boleto: vencimento a 18 meses sem competência explícita não
+  -- é mais rejeitado citando um campo ("competência") que o chamador não tocou.
+  declare
+    v_res_s04    jsonb;
+    v_venc_s04   date := ((now() at time zone 'America/Sao_Paulo')::date + interval '18 months')::date;
+  begin
+    v_res_s04 := public.criar_boleto('Boleto S04', 5000, v_venc_s04, null, null);
+    if (v_res_s04->>'competencia')::date <> date_trunc('month', v_venc_s04)::date then
+      raise exception 'FALHA [S04-1]: competência do boleto não derivou do vencimento (%)', v_res_s04;
+    end if;
+  end;
+
+  raise notice 'OK: todos os asserts do assistente (blocos A-I: edição, categorias, importação, cofrinhos, carteira, boletos, estorno/recorrência de boletos, recorrências, RPCs sem cobertura anterior e regressão S-01/S-04) passaram.';
 end $$;
 
 rollback;
