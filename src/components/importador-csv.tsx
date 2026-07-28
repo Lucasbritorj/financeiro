@@ -12,6 +12,8 @@ import {
   type PresetBanco,
   type LinhaImportacao,
   type ResultadoParse,
+  validarTamanhoArquivoImportacao,
+  validarTetoLinhasImportacao,
 } from "@/lib/csv";
 import { parseOfxExtrato } from "@/lib/ofx";
 import { parsePdfExtrato } from "@/lib/pdf-extrato";
@@ -117,6 +119,12 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
     const arquivo = e.target.files?.[0];
     if (!arquivo) return;
     setErro(null);
+    const erroTamanho = validarTamanhoArquivoImportacao(arquivo.size);
+    if (erroTamanho) {
+      setErro(erroTamanho);
+      e.target.value = "";
+      return;
+    }
     const ext = arquivo.name.split(".").pop()?.toLowerCase() ?? "";
     let resultado: ResultadoParse;
     let origem: OrigemImportacao;
@@ -150,6 +158,12 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
           ? "Nenhuma linha reconhecida. Confira o banco selecionado ou use o preset Genérico."
           : `Nenhum lançamento reconhecido no ${origem}. Exporte o extrato em CSV/OFX pelo banco se persistir.`,
       );
+      e.target.value = "";
+      return;
+    }
+    const erroTeto = validarTetoLinhasImportacao(resultado.linhas.length);
+    if (erroTeto) {
+      setErro(erroTeto);
       e.target.value = "";
       return;
     }

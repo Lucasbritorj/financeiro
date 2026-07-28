@@ -19,3 +19,8 @@ export const TAMANHO_PAGINA_TRANSACOES = 20;
 
 /** Espelha o teto de linhas por importação do servidor (criar_importacao). */
 export const LIMITE_LINHAS_IMPORTACAO = 1000;
+
+/** Teto de tamanho do arquivo escolhido na importação, checado no cliente
+ * antes de ler o conteúdo. Defesa complementar ao teto de linhas: barra um
+ * arquivo hostil (ou corrompido) cedo, sem gastar CPU decodificando/parseando. */
+export const LIMITE_BYTES_IMPORTACAO = 10 * 1024 * 1024; // 10 MB

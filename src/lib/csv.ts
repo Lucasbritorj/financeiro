@@ -12,6 +12,7 @@
 // OFC continua sendo o caminho recomendado (sinal padronizado em <TRNAMT>).
 
 import { paraCentavosAssinado } from "./money.ts";
+import { LIMITE_BYTES_IMPORTACAO, LIMITE_LINHAS_IMPORTACAO } from "./constantes.ts";
 
 export type LinhaImportacao = {
   data: string; // ISO "YYYY-MM-DD"
@@ -267,4 +268,32 @@ export function parseMatrizExtrato(matriz: string[][]): ResultadoParse {
   const cab = localizarCabecalho(naoVazias);
   if (!cab) return { linhas: [], descartadas: naoVazias.length - 1 };
   return extrairLinhas(naoVazias, cab.idx, cab.mapa);
+}
+
+/**
+ * Erro se o total de linhas parseadas estourar o teto que a RPC
+ * criar_importacao aceita; null quando dentro do limite. Chamada antes de
+ * enviar o staging pra não gastar uma viagem ao servidor com um payload que
+ * vai ser rejeitado — e pra não tentar processar centenas de milhares de
+ * linhas de uma vez no cliente (T-04).
+ */
+export function validarTetoLinhasImportacao(totalLinhas: number): string | null {
+  if (totalLinhas > LIMITE_LINHAS_IMPORTACAO) {
+    return `O arquivo tem ${totalLinhas} linhas reconhecidas; o teto por importação é ${LIMITE_LINHAS_IMPORTACAO}. Divida o arquivo em partes menores.`;
+  }
+  return null;
+}
+
+/**
+ * Erro se o arquivo escolhido estourar o teto de tamanho aceito na
+ * importação; null quando dentro do limite. Checagem prévia, antes de ler o
+ * conteúdo do arquivo (T-04).
+ */
+export function validarTamanhoArquivoImportacao(tamanhoBytes: number): string | null {
+  if (tamanhoBytes > LIMITE_BYTES_IMPORTACAO) {
+    const mb = (tamanhoBytes / (1024 * 1024)).toFixed(1);
+    const tetoMb = (LIMITE_BYTES_IMPORTACAO / (1024 * 1024)).toFixed(0);
+    return `O arquivo tem ${mb} MB; o teto por importação é ${tetoMb} MB.`;
+  }
+  return null;
 }

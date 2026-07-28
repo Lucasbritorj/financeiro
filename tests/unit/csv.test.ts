@@ -6,7 +6,10 @@ import {
   normalizarData,
   valorParaCentavosAssinado,
   parseCsvExtrato,
+  validarTetoLinhasImportacao,
+  validarTamanhoArquivoImportacao,
 } from "../../src/lib/csv.ts";
+import { LIMITE_LINHAS_IMPORTACAO, LIMITE_BYTES_IMPORTACAO } from "../../src/lib/constantes.ts";
 
 test("splitCsvLinha respeita aspas com separador interno", () => {
   assert.deepEqual(splitCsvLinha('2026-07-01,"Mercado, do bairro",-50.00', ","), [
@@ -145,4 +148,22 @@ test("parser não altera texto já decodificado (acentos preservados)", () => {
   const r = parseCsvExtrato(csv, "generico");
   assert.equal(r.linhas[0].descricao, "Alimentação no Café");
   assert.equal(r.linhas[1].descricao, "Contas do Mês");
+});
+
+// --- T-04: LIMITE_LINHAS_IMPORTACAO era declarado mas nunca importado/checado
+// em lugar nenhum — um CSV de 500.000 linhas era aceito e parseado no cliente.
+
+test("validarTetoLinhasImportacao: aceita até o teto do servidor, barra acima (T-04)", () => {
+  assert.equal(validarTetoLinhasImportacao(LIMITE_LINHAS_IMPORTACAO), null);
+  assert.equal(validarTetoLinhasImportacao(LIMITE_LINHAS_IMPORTACAO - 1), null);
+  assert.equal(validarTetoLinhasImportacao(0), null);
+  const erro500k = validarTetoLinhasImportacao(500000);
+  assert.match(erro500k ?? "", /500000/);
+  assert.match(erro500k ?? "", new RegExp(String(LIMITE_LINHAS_IMPORTACAO)));
+});
+
+test("validarTamanhoArquivoImportacao: aceita até o teto de bytes, barra acima (T-04)", () => {
+  assert.equal(validarTamanhoArquivoImportacao(LIMITE_BYTES_IMPORTACAO), null);
+  assert.equal(validarTamanhoArquivoImportacao(1024), null);
+  assert.ok(validarTamanhoArquivoImportacao(LIMITE_BYTES_IMPORTACAO + 1) !== null);
 });
