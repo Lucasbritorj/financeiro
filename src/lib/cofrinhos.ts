@@ -38,6 +38,10 @@ export function ritmoReal(
   janelaMeses = 3
 ): number {
   const corte = new Date(hojeISO);
+  // Normaliza o dia pra 1 ANTES de setUTCMonth: preservando o dia original,
+  // setUTCMonth transborda pro mês seguinte quando o dia não existe no mês
+  // destino (29/30/31 caindo em fevereiro, por ex.) — T-01.
+  corte.setUTCDate(1);
   corte.setUTCMonth(corte.getUTCMonth() - janelaMeses);
   const corteISO = corte.toISOString().slice(0, 10);
   let liquido = 0;
@@ -74,6 +78,11 @@ export function dataProjetada(
   if (real <= 0) return null;
   const meses = Math.ceil(falta / real);
   const d = new Date(hojeISO);
+  // Mesmo motivo do corte em ritmoReal: normaliza o dia pra 1 antes de somar
+  // meses, senão dia 29/30/31 transborda pro mês seguinte quando o mês
+  // destino é mais curto (T-01). O resultado só usa "YYYY-MM" mesmo, então
+  // zerar o dia aqui não perde informação nenhuma.
+  d.setUTCDate(1);
   d.setUTCMonth(d.getUTCMonth() + meses);
   return d.toISOString().slice(0, 7);
 }
