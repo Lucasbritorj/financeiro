@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { paraCentavos } from "@/lib/money";
 import { mensagemDeErro } from "@/lib/erros";
 import { MAX_PARCELAS_UI } from "@/lib/constantes";
+import { mensagemPosTransacao } from "@/lib/nova-transacao";
 import { useToast } from "@/components/feedback";
 
 type CartaoOpcao = { id: string; nome: string };
@@ -117,15 +118,18 @@ export default function NovaTransacaoForm({
     // Categoria escolhida à mão prevalece sobre a autocategorização por
     // regra (trigger 0008); vazio = deixa a regra decidir. Passo separado
     // para não tocar na assinatura da RPC crítica de escrita.
+    let erroCategoria: { message: string; hint?: string | null } | null = null;
     if (categoriaId && resultado?.transacao_id) {
-      await supabase.rpc("definir_categoria_transacao", {
+      const resp = await supabase.rpc("definir_categoria_transacao", {
         p_transacao_id: resultado.transacao_id,
         p_categoria_id: categoriaId,
       });
+      erroCategoria = resp.error;
     }
     setPendente(false);
 
-    notificar(`Transação registrada: ${resultado?.parcelas_criadas ?? 1} parcela(s).`, "sucesso");
+    const pos = mensagemPosTransacao(resultado?.parcelas_criadas, erroCategoria);
+    notificar(pos.texto, pos.tipo);
     setDescricao("");
     setValor("");
     setNumParcelas("1");
