@@ -1,189 +1,257 @@
 {
- "namespaces": {
-  "auditoria": {
-   "commit3_nucleo": {
-    "note": "veredito watchdog commit 3",
-    "updated_at": "2026-07-04T00:21:37+00:00",
-    "v": {
-     "artefatos": "migrations 0002/0003/0004 + verificacao_nucleo.sql + CLAUDE.md",
-     "data": "2026-07-03",
-     "findings_minor": [
-      "CON-02: raises de validacao pre-existentes em 0002 sem errcode FW400/401/404 (so FW429 novo tem). Fix futuro: padronizar + asserts.",
-      "EST-03: p_data_pagamento e data_pagamento sao timestamptz (nao timestamp naive) — decisao aceita, coerente com colunas temporais do schema."
-     ],
-     "iteration": 1,
-     "protocol": "audit-verdict/1.0",
-     "sha256_0002": "9414021d4afa8ba0f56cdb9c8855a482d127920739aff95ca124ec9977da3613",
-     "sha256_0003": "44422567603f0b098f6c14d7470a6a08a0a752ffb0bc1cbee31e4c183518d2f4",
-     "sha256_0004": "a69fc7ecd786e34e23315d3e1b88fc9d3ab8e2c8698188b3082174fd5978e0e6",
-     "verdict": "APROVADO"
+  "namespaces": {
+    "auditoria": {
+      "commit3_nucleo": {
+        "note": "veredito watchdog commit 3",
+        "updated_at": "2026-07-04T00:21:37+00:00",
+        "v": {
+          "artefatos": "migrations 0002/0003/0004 + verificacao_nucleo.sql + CLAUDE.md",
+          "data": "2026-07-03",
+          "findings_minor": [
+            "CON-02: raises de validacao pre-existentes em 0002 sem errcode FW400/401/404 (so FW429 novo tem). Fix futuro: padronizar + asserts.",
+            "EST-03: p_data_pagamento e data_pagamento sao timestamptz (nao timestamp naive) — decisao aceita, coerente com colunas temporais do schema."
+          ],
+          "iteration": 1,
+          "protocol": "audit-verdict/1.0",
+          "sha256_0002": "9414021d4afa8ba0f56cdb9c8855a482d127920739aff95ca124ec9977da3613",
+          "sha256_0003": "44422567603f0b098f6c14d7470a6a08a0a752ffb0bc1cbee31e4c183518d2f4",
+          "sha256_0004": "a69fc7ecd786e34e23315d3e1b88fc9d3ab8e2c8698188b3082174fd5978e0e6",
+          "verdict": "APROVADO"
+        }
+      },
+      "commit4_blindagem": {
+        "note": "veredito watchdog commit 4",
+        "updated_at": "2026-07-04T01:00:15+00:00",
+        "v": {
+          "artefatos": "0002/0003/0005 + tests + frontend + CLAUDE.md",
+          "data": "2026-07-03",
+          "findings_minor": [
+            "CON-02: filtros user_id defesa-em-profundidade nas queries DEFINER — APLICADOS pos-veredito (fix_instruction do proprio auditor).",
+            "PROC-02: CLAUDE.md dizia 9 asserts vs 14 reais — CORRIGIDO (numero fixo removido)."
+          ],
+          "iteration": 1,
+          "nota": "shas do veredito anteriores aos 4 fixes minor; fixes sao 1-linha das fix_instructions.",
+          "protocol": "audit-verdict/1.0",
+          "verdict": "APROVADO"
+        }
+      },
+      "commit5_loop_geral": {
+        "note": "veredito watchdog commit 5",
+        "updated_at": "2026-07-04T09:33:54+00:00",
+        "v": {
+          "artefatos": "infra teste local + guards temporais + perf paginas + money/erros/constantes",
+          "data": "2026-07-04",
+          "findings_minor_aplicados": [
+            "CON-02 view sem bound: .in('id', ids) aplicado em faturas/page.tsx",
+            "CON-02 runner sem teardown em falha: trap EXIT aplicado (TEARDOWN_OK provado)",
+            "CON-02 asserts so no teto: pisos 1999-12-31 adicionados em [15][16]"
+          ],
+          "gates": "unit 10/10; tsc 0; lint 0; build ok; audit 0 vulns; SQL 17/17 em postgres:16 real",
+          "iteration": 1,
+          "protocol": "audit-verdict/1.0",
+          "verdict": "APROVADO"
+        }
+      },
+      "commit6_backend_completo": {
+        "note": "veredito watchdog commit 6",
+        "updated_at": "2026-07-04T15:54:55+00:00",
+        "v": {
+          "artefatos": "0006 (updated_at universal, excluir_transacao/cartao, fechar_faturas) + asserts 18-21 + CI",
+          "data": "2026-07-04",
+          "gates": "SQL 21/21 postgres real; unit 10/10; tsc 0; lint 0; audit 0; build ok",
+          "historico": [
+            "iteration 1: REJEITADO — PROC-02 major (assert 18 declarava updated_at sem verificar) + CON-02 minor (cobertura vacua de fatura deletada no fechamento).",
+            "rework: trigger updated_at com clock_timestamp() (now() congela por transacao); assert 18 verifica avanco real sob reset role; assert 21 prova fatura soft-deletada intocada."
+          ],
+          "iteration": 2,
+          "protocol": "audit-verdict/1.0",
+          "verdict": "APROVADO"
+        }
+      },
+      "graph_loop_2026_07_27": {
+        "note": "veredito auditoria graph-loop (fan-out 3 workers + gate red-green)",
+        "updated_at": "2026-07-27T20:45:00+00:00",
+        "v": {
+          "protocol": "audit-verdict/1.0",
+          "data": "2026-07-27",
+          "branch": "audit/graph-loop-2026-07-27",
+          "base": "abdf913",
+          "metodologia": "graph-loop: gate de verificabilidade, fan-out por classe de defeito, cada achado provado por repro executado, fix validado por teste vermelho-antes/verde-depois, um commit por achado",
+          "escopo": [
+            "financeiro-web (TypeScript + SQL)",
+            "financeiro-legado-desktop (Python)"
+          ],
+          "baseline": {
+            "npm_test": "91/91",
+            "tsc_noEmit": "limpo",
+            "legado_test_suite": "quebrado por ModuleNotFoundError: yfinance"
+          },
+          "final": {
+            "npm_test": "104/104",
+            "tsc_noEmit": "limpo",
+            "sql_suite_pglite": "verde (shim + 19 migrations + 4 arquivos de teste)",
+            "legado_test_suite": "19/19 PASS"
+          },
+          "achados_corrigidos": {
+            "web_typescript": [
+              "T-01 alto: setUTCMonth transborda mes em cofrinhos.ts dias 29-31",
+              "T-02 alto: ReDoS O(n2) em RE_VALOR_TOKEN de pdf-extrato.ts",
+              "T-03 medio: Math.round(n*100) quebra round-half-up em money.ts",
+              "T-04 medio: LIMITE_LINHAS_IMPORTACAO declarado e nunca aplicado",
+              "T-05 medio: erro de definir_categoria_transacao descartado em nova-transacao-form",
+              "T-06 baixo: hojeSaoPaulo duplicada em 8 arquivos"
+            ],
+            "web_sql": [
+              "S-01 alto: aplicar_recorrencias abortava tudo por categoria excluida (blast radius)",
+              "S-02 medio: 5 RPCs sem teste + isolamento cross-tenant ausente em 7 tabelas",
+              "S-03 medio: nenhum bundle APLICAR cobria 0017/0018",
+              "S-04 medio: competencia derivada validada contra +1 ano vs +5 anos do vencimento",
+              "S-05 baixo: tetos anti-abuso com count(*) sem lock (TOCTOU)",
+              "S-06 baixo: default current_date em movimentacoes_cofrinho.data sob TimeZone de sessao"
+            ],
+            "legado_python": [
+              "L-08 alto: parcelamento era codigo morto (comparacao 'Credit Card' vs 'Credito')",
+              "L-12 alto: bot Telegram fail-open sem TELEGRAM_USER_ID configurado",
+              "L-10 alto: parser nao lia separador de milhar pt-BR (1.500,50 virava 1,00)",
+              "L-07 alto: parcelas perdiam centavos (100/3 somava 99,99)",
+              "L-15 alto: formula injection no export Excel",
+              "L-16 alto: uma celula invalida abortava o import inteiro",
+              "L-06 alto: f-string em query de get_monthly_summary (injecao provada)",
+              "L-01..L-05 segredos: .gitignore ausente, fragmentos de chave em print, chave no widget de UI",
+              "L-09/L-11/L-13/L-14/L-17: UTC do SQLite, import obrigatorio de yfinance, requests sem timeout, bare except, client Gemini sem timeout"
+            ]
+          },
+          "nao_provado_por_execucao": [
+            "S-05: corrida TOCTOU real nao reproduzivel (PGlite e conexao logica unica)",
+            "L-04: correcoes em main.py validadas por leitura (GUI nao roda sem display/customtkinter)",
+            "npm run build e npm run test:sql via Docker nao executados neste ambiente (psql/Docker ausentes)"
+          ],
+          "acao_pendente_do_usuario": [
+            "ROTACIONAR GEMINI_API_KEY: esteve em texto plano em .env sem .gitignore e foi impressa parcialmente por check_models.py durante uso normal",
+            "aplicar migration 0019 no Supabase via supabase/APLICAR_0017_0019.sql",
+            "revisar E-01..E-06 do legado (decisoes de produto/arquitetura escaladas, nao aplicadas)"
+          ],
+          "sha256_0019": "0592abf68d2c90e2b062c54c3f5af2abc5630eea0a43d3afab2a20e234f63850",
+          "sha256_bundle_0017_0019": "ec091779bec674ad58b899bc577e953783b09346eb426e8a598006ccaaca1c4a",
+          "verdict": "APROVADO_COM_ACAO_PENDENTE"
+        }
+      }
+    },
+    "producao": {
+      "e2e_visual_pendente": {
+        "note": "follow-up",
+        "updated_at": "2026-07-05T14:20:24+00:00",
+        "v": "E2E de API em producao passou (signup/RPC/view/42501). Pendente: teste visual humano do dashboard e fluxo de signup com confirm email ligado. Conta de teste e2e criada via plus-address do dono (lucasfbrito23+e2e*@gmail.com) com dados soft-deletados."
+      },
+      "infra": {
+        "note": "deploy 2026-07-05",
+        "updated_at": "2026-07-05T14:20:24+00:00",
+        "v": "Supabase: projeto bqkichuwmugkjumpvrio (sa-east-1, PG17). Migracoes 0001-0006 aplicadas via Management API (endpoint database/query, exige User-Agent custom senao Cloudflare 1010). 21/21 asserts no banco real. pg_cron job fechar-faturas 03:10. Auth: senha min 8, confirm email LIGADO (autoconfirm so em teste). Vercel: projeto prj_Ih8Yyx5hizimYww0AIYCcNfAK5rE team team_nk65XiSED9TDRfEvnsrpSCRe, dominio financeiro-web-sepia.vercel.app, env vars em production+preview. GitHub: Lucasbritorj/financeiro-web privado, default branch master, PR #1 = auditoria."
+      },
+      "segredos_rotacao": {
+        "note": "higiene pos-deploy",
+        "updated_at": "2026-07-05T14:20:24+00:00",
+        "v": "Tokens usados no deploy 2026-07-05 (revogar apos estabilizar): Supabase PAT sbp_ (dashboard/account/tokens), GitHub OAuth device (settings/applications), Vercel token vcp_ (vercel.com/account/tokens). Nenhum segredo commitado; anon key e publica por design."
+      }
+    },
+    "regras_negocio": {
+      "api_escrita_completa": {
+        "note": "commit 6",
+        "updated_at": "2026-07-04T15:54:55+00:00",
+        "v": "API de escrita (todas SECURITY DEFINER, FW4xx+hint): processar_transacao_completa, processar_pagamento_fatura, criar_cartao, excluir_transacao (FW409 se parcela PAGA — historico se estorna, nao se apaga), excluir_cartao (FW409 se pendencias). fechar_faturas(date) e administrativa: revogada ate de authenticated; agendar pg_cron diario."
+      },
+      "blindagem_privilegios": {
+        "note": "commit 4 tarefa 1",
+        "updated_at": "2026-07-04T01:00:15+00:00",
+        "v": "Least privilege (0005): authenticated/anon so tem SELECT nas 4 tabelas; INSERT/UPDATE/DELETE direto = 42501. Policies de DELETE dropadas. RPCs sao SECURITY DEFINER (bypassam RLS!) com search_path='' e escopo user_id=auth.uid() em codigo. Nova RPC: revoke execute de public/anon, grant a authenticated. Nunca reconceder DML direto."
+      },
+      "ciclo_fatura": {
+        "note": "commit 6",
+        "updated_at": "2026-07-04T15:54:56+00:00",
+        "v": "Ciclo completo: ABERTA (nasce) -> FECHADA (fechar_faturas no corte da competencia: dia_fechamento clampado ao ultimo dia do mes) -> PAGA (processar_pagamento_fatura). ABERTA tambem pode ir direto a PAGA (antecipacao). Compra em competencia nao-ABERTA = FW409."
+      },
+      "codigos_erro_sql": {
+        "note": "protocolo_de_erro na camada SQL",
+        "updated_at": "2026-07-04T00:10:23+00:00",
+        "v": "RAISE com errcode estavel + hint (= error_code + remediation do tool-contract): FW400 input invalido, FW401 nao autenticado, FW404 nao encontrado, FW409 estado conflitante, FW429 limite excedido."
+      },
+      "dashboard_premium": {
+        "note": "commit 7 frontend fase 1",
+        "updated_at": "2026-07-04T16:05:21+00:00",
+        "v": "Dashboard /dashboard (commit 7): design system Sovereign Glass com escopo .soberano (abissal #06080A, noise SVG 2%, vidro com glow radial via --mx/--my sem re-render). Numeros SEMPRE com .numero-soberano (Geist Mono ja no projeto + tabular-nums). Grafico = lightweight-charts v5 (chart.addSeries(AreaSeries,...), crosshair Magnet) sobre fluxo acumulado por competencia — SEM candlestick: nao ha dado de mercado, serie real e fluxo de caixa. Framer Motion springs stiffness 300 damping 30. Dados: React Query (chave fluxo-caixa) + canal Realtime em parcelas invalidando cache + refetchInterval 60s como fallback. Agregacao pura em src/lib/fluxo.ts (testada): agregarFluxoMensal + detectarAnomalia (saidas > 1.5x media historica, min 2 meses)."
+      },
+      "divisao_centesimal": {
+        "note": "invariante matematica",
+        "updated_at": "2026-07-04T00:10:22+00:00",
+        "v": "Parcela = floor(total/n); resto na 1a parcela. Invariante SUM(parcelas) = valor_total conferida na RPC. Fatura por competencia idempotente via ON CONFLICT."
+      },
+      "escrita_rpc": {
+        "note": "arquitetura de escrita",
+        "updated_at": "2026-07-04T00:10:22+00:00",
+        "v": "Frontend proibido de insert/update relacional direto. Escrita so via RPC atomica: processar_transacao_completa (compra) e processar_pagamento_fatura (pagamento)."
+      },
+      "fechamento_fatura": {
+        "note": "regra de corte + Falha do Dia 31",
+        "updated_at": "2026-07-04T00:10:22+00:00",
+        "v": "Compra dia >= dia_fechamento entra na competencia do mes seguinte. Dia inexistente no mes (31/fev): clampa no ultimo dia, nunca rola. Vencimento no mes seguinte se dia_vencimento <= dia_fechamento."
+      },
+      "limite_credito": {
+        "note": "commit 3 tarefa 2",
+        "updated_at": "2026-07-04T00:10:23+00:00",
+        "v": "Guard na RPC: comprometido = SUM(parcelas PENDENTE ativas de DESPESA do cartao, join via transacoes_origem). comprometido + novo > limite_total => erro FW429. Cartao lockado com FOR UPDATE (anti-corrida). RECEITA nao consome limite."
+      },
+      "maquina_estados_fatura": {
+        "note": "commit 3 tarefa 3 + decisao timestamptz",
+        "updated_at": "2026-07-04T00:21:37+00:00",
+        "v": "processar_pagamento_fatura(fatura_id, data_pagamento timestamptz): fatura != PAGA vira PAGA; parcelas ativas viram PAGA com data_pagamento (timestamptz, decisao auditada EST-03) e updated_at. Fatura ja PAGA => erro FW409. ABERTA pode ser paga (antecipacao). FOR UPDATE serializa repagamento."
+      },
+      "moeda_centavos": {
+        "note": "convencao monetaria inviolavel",
+        "updated_at": "2026-07-04T00:10:22+00:00",
+        "v": "Dinheiro = centavos bigint no DB e RPCs. Decimal/float so na borda da UI (src/lib/money.ts). BRL."
+      },
+      "paracentavos_decimais": {
+        "note": "commit 5 fase 4",
+        "updated_at": "2026-07-04T09:33:54+00:00",
+        "v": "paraCentavos rejeita >2 casas decimais (NaN) em vez de arredondar em silencio: 100,555 / 1.2345 / 0,001 sao invalidos. Formatos legitimos pt-BR/US/milhar cobertos em tests/unit/money.test.ts."
+      },
+      "sanidade_temporal": {
+        "note": "commit 5 fase 2",
+        "updated_at": "2026-07-04T09:33:54+00:00",
+        "v": "Guards FW400: data_compra e data_pagamento aceitas entre 2000-01-01 e amanha (+1 dia tolera fuso do cliente; compra usa America/Sao_Paulo). Retroativo legitimo passa; typo de ano nao."
+      },
+      "soft_delete": {
+        "note": "delecao logica",
+        "updated_at": "2026-07-04T00:10:22+00:00",
+        "v": "DELETE fisico proibido. Exclusao = deleted_at. Leituras e indices unicos com WHERE deleted_at IS NULL. Cascata transacao->parcelas via trigger."
+      },
+      "teste_local": {
+        "note": "infra de verificacao commit 5",
+        "updated_at": "2026-07-04T09:33:54+00:00",
+        "v": "Suite SQL local: npm run test:sql (Docker postgres:16-alpine + tests/sql/00_shim_auth.sql replicando roles/auth.uid()/default privileges do Supabase; migracoes em ordem; verificacao_nucleo.sql 17 asserts). Unit: npm test (node:test roda .ts nativo no Node 24; tsconfig allowImportingTsExtensions). Shim NUNCA vai para producao."
+      },
+      "timezone": {
+        "note": "calculos de data",
+        "updated_at": "2026-07-04T00:10:22+00:00",
+        "v": "Fuso de negocio America/Sao_Paulo para data_compra, fechamento e competencia."
+      },
+      "travas_motor": {
+        "note": "commit 4 tarefas 2-3",
+        "updated_at": "2026-07-04T01:00:15+00:00",
+        "v": "Teto servidor: num_parcelas [1,120] FW400; cartoes ativos max 20/usuario FW429 (criar_cartao). Fail fast FW409: compra cujo parcelamento toca fatura PAGA ou FECHADA e rejeitada antes de qualquer INSERT — pagamento antecipado nao reabre ciclo."
+      },
+      "updated_at_trigger": {
+        "note": "commit 6",
+        "updated_at": "2026-07-04T15:54:55+00:00",
+        "v": "updated_at nas 4 tabelas mantido por trg_touch_updated_at com clock_timestamp() (now() congela na transacao). RPC nova NAO seta updated_at a mao."
+      },
+      "view_consolidada": {
+        "note": "commit 4 tarefa 4",
+        "updated_at": "2026-07-04T01:00:15+00:00",
+        "v": "vw_faturas_consolidadas = fonte unica do total de fatura: RECEITA abate (sinal na view, parcela guarda modulo), COALESCE 0, filtra deleted_at. security_invoker=true OBRIGATORIO em toda view (default do Postgres roda como dono e vaza RLS). Frontend le total da view, nao soma parcelas."
+      }
     }
-   },
-   "commit4_blindagem": {
-    "note": "veredito watchdog commit 4",
-    "updated_at": "2026-07-04T01:00:15+00:00",
-    "v": {
-     "artefatos": "0002/0003/0005 + tests + frontend + CLAUDE.md",
-     "data": "2026-07-03",
-     "findings_minor": [
-      "CON-02: filtros user_id defesa-em-profundidade nas queries DEFINER — APLICADOS pos-veredito (fix_instruction do proprio auditor).",
-      "PROC-02: CLAUDE.md dizia 9 asserts vs 14 reais — CORRIGIDO (numero fixo removido)."
-     ],
-     "iteration": 1,
-     "nota": "shas do veredito anteriores aos 4 fixes minor; fixes sao 1-linha das fix_instructions.",
-     "protocol": "audit-verdict/1.0",
-     "verdict": "APROVADO"
-    }
-   },
-   "commit5_loop_geral": {
-    "note": "veredito watchdog commit 5",
-    "updated_at": "2026-07-04T09:33:54+00:00",
-    "v": {
-     "artefatos": "infra teste local + guards temporais + perf paginas + money/erros/constantes",
-     "data": "2026-07-04",
-     "findings_minor_aplicados": [
-      "CON-02 view sem bound: .in('id', ids) aplicado em faturas/page.tsx",
-      "CON-02 runner sem teardown em falha: trap EXIT aplicado (TEARDOWN_OK provado)",
-      "CON-02 asserts so no teto: pisos 1999-12-31 adicionados em [15][16]"
-     ],
-     "gates": "unit 10/10; tsc 0; lint 0; build ok; audit 0 vulns; SQL 17/17 em postgres:16 real",
-     "iteration": 1,
-     "protocol": "audit-verdict/1.0",
-     "verdict": "APROVADO"
-    }
-   },
-   "commit6_backend_completo": {
-    "note": "veredito watchdog commit 6",
-    "updated_at": "2026-07-04T15:54:55+00:00",
-    "v": {
-     "artefatos": "0006 (updated_at universal, excluir_transacao/cartao, fechar_faturas) + asserts 18-21 + CI",
-     "data": "2026-07-04",
-     "gates": "SQL 21/21 postgres real; unit 10/10; tsc 0; lint 0; audit 0; build ok",
-     "historico": [
-      "iteration 1: REJEITADO — PROC-02 major (assert 18 declarava updated_at sem verificar) + CON-02 minor (cobertura vacua de fatura deletada no fechamento).",
-      "rework: trigger updated_at com clock_timestamp() (now() congela por transacao); assert 18 verifica avanco real sob reset role; assert 21 prova fatura soft-deletada intocada."
-     ],
-     "iteration": 2,
-     "protocol": "audit-verdict/1.0",
-     "verdict": "APROVADO"
-    }
-   }
   },
-  "producao": {
-   "e2e_visual_pendente": {
-    "note": "follow-up",
-    "updated_at": "2026-07-05T14:20:24+00:00",
-    "v": "E2E de API em producao passou (signup/RPC/view/42501). Pendente: teste visual humano do dashboard e fluxo de signup com confirm email ligado. Conta de teste e2e criada via plus-address do dono (lucasfbrito23+e2e*@gmail.com) com dados soft-deletados."
-   },
-   "infra": {
-    "note": "deploy 2026-07-05",
-    "updated_at": "2026-07-05T14:20:24+00:00",
-    "v": "Supabase: projeto bqkichuwmugkjumpvrio (sa-east-1, PG17). Migracoes 0001-0006 aplicadas via Management API (endpoint database/query, exige User-Agent custom senao Cloudflare 1010). 21/21 asserts no banco real. pg_cron job fechar-faturas 03:10. Auth: senha min 8, confirm email LIGADO (autoconfirm so em teste). Vercel: projeto prj_Ih8Yyx5hizimYww0AIYCcNfAK5rE team team_nk65XiSED9TDRfEvnsrpSCRe, dominio financeiro-web-sepia.vercel.app, env vars em production+preview. GitHub: Lucasbritorj/financeiro-web privado, default branch master, PR #1 = auditoria."
-   },
-   "segredos_rotacao": {
-    "note": "higiene pos-deploy",
-    "updated_at": "2026-07-05T14:20:24+00:00",
-    "v": "Tokens usados no deploy 2026-07-05 (revogar apos estabilizar): Supabase PAT sbp_ (dashboard/account/tokens), GitHub OAuth device (settings/applications), Vercel token vcp_ (vercel.com/account/tokens). Nenhum segredo commitado; anon key e publica por design."
-   }
-  },
-  "regras_negocio": {
-   "api_escrita_completa": {
-    "note": "commit 6",
-    "updated_at": "2026-07-04T15:54:55+00:00",
-    "v": "API de escrita (todas SECURITY DEFINER, FW4xx+hint): processar_transacao_completa, processar_pagamento_fatura, criar_cartao, excluir_transacao (FW409 se parcela PAGA — historico se estorna, nao se apaga), excluir_cartao (FW409 se pendencias). fechar_faturas(date) e administrativa: revogada ate de authenticated; agendar pg_cron diario."
-   },
-   "blindagem_privilegios": {
-    "note": "commit 4 tarefa 1",
-    "updated_at": "2026-07-04T01:00:15+00:00",
-    "v": "Least privilege (0005): authenticated/anon so tem SELECT nas 4 tabelas; INSERT/UPDATE/DELETE direto = 42501. Policies de DELETE dropadas. RPCs sao SECURITY DEFINER (bypassam RLS!) com search_path='' e escopo user_id=auth.uid() em codigo. Nova RPC: revoke execute de public/anon, grant a authenticated. Nunca reconceder DML direto."
-   },
-   "ciclo_fatura": {
-    "note": "commit 6",
-    "updated_at": "2026-07-04T15:54:56+00:00",
-    "v": "Ciclo completo: ABERTA (nasce) -> FECHADA (fechar_faturas no corte da competencia: dia_fechamento clampado ao ultimo dia do mes) -> PAGA (processar_pagamento_fatura). ABERTA tambem pode ir direto a PAGA (antecipacao). Compra em competencia nao-ABERTA = FW409."
-   },
-   "codigos_erro_sql": {
-    "note": "protocolo_de_erro na camada SQL",
-    "updated_at": "2026-07-04T00:10:23+00:00",
-    "v": "RAISE com errcode estavel + hint (= error_code + remediation do tool-contract): FW400 input invalido, FW401 nao autenticado, FW404 nao encontrado, FW409 estado conflitante, FW429 limite excedido."
-   },
-   "dashboard_premium": {
-    "note": "commit 7 frontend fase 1",
-    "updated_at": "2026-07-04T16:05:21+00:00",
-    "v": "Dashboard /dashboard (commit 7): design system Sovereign Glass com escopo .soberano (abissal #06080A, noise SVG 2%, vidro com glow radial via --mx/--my sem re-render). Numeros SEMPRE com .numero-soberano (Geist Mono ja no projeto + tabular-nums). Grafico = lightweight-charts v5 (chart.addSeries(AreaSeries,...), crosshair Magnet) sobre fluxo acumulado por competencia — SEM candlestick: nao ha dado de mercado, serie real e fluxo de caixa. Framer Motion springs stiffness 300 damping 30. Dados: React Query (chave fluxo-caixa) + canal Realtime em parcelas invalidando cache + refetchInterval 60s como fallback. Agregacao pura em src/lib/fluxo.ts (testada): agregarFluxoMensal + detectarAnomalia (saidas > 1.5x media historica, min 2 meses)."
-   },
-   "divisao_centesimal": {
-    "note": "invariante matematica",
-    "updated_at": "2026-07-04T00:10:22+00:00",
-    "v": "Parcela = floor(total/n); resto na 1a parcela. Invariante SUM(parcelas) = valor_total conferida na RPC. Fatura por competencia idempotente via ON CONFLICT."
-   },
-   "escrita_rpc": {
-    "note": "arquitetura de escrita",
-    "updated_at": "2026-07-04T00:10:22+00:00",
-    "v": "Frontend proibido de insert/update relacional direto. Escrita so via RPC atomica: processar_transacao_completa (compra) e processar_pagamento_fatura (pagamento)."
-   },
-   "fechamento_fatura": {
-    "note": "regra de corte + Falha do Dia 31",
-    "updated_at": "2026-07-04T00:10:22+00:00",
-    "v": "Compra dia >= dia_fechamento entra na competencia do mes seguinte. Dia inexistente no mes (31/fev): clampa no ultimo dia, nunca rola. Vencimento no mes seguinte se dia_vencimento <= dia_fechamento."
-   },
-   "limite_credito": {
-    "note": "commit 3 tarefa 2",
-    "updated_at": "2026-07-04T00:10:23+00:00",
-    "v": "Guard na RPC: comprometido = SUM(parcelas PENDENTE ativas de DESPESA do cartao, join via transacoes_origem). comprometido + novo > limite_total => erro FW429. Cartao lockado com FOR UPDATE (anti-corrida). RECEITA nao consome limite."
-   },
-   "maquina_estados_fatura": {
-    "note": "commit 3 tarefa 3 + decisao timestamptz",
-    "updated_at": "2026-07-04T00:21:37+00:00",
-    "v": "processar_pagamento_fatura(fatura_id, data_pagamento timestamptz): fatura != PAGA vira PAGA; parcelas ativas viram PAGA com data_pagamento (timestamptz, decisao auditada EST-03) e updated_at. Fatura ja PAGA => erro FW409. ABERTA pode ser paga (antecipacao). FOR UPDATE serializa repagamento."
-   },
-   "moeda_centavos": {
-    "note": "convencao monetaria inviolavel",
-    "updated_at": "2026-07-04T00:10:22+00:00",
-    "v": "Dinheiro = centavos bigint no DB e RPCs. Decimal/float so na borda da UI (src/lib/money.ts). BRL."
-   },
-   "paracentavos_decimais": {
-    "note": "commit 5 fase 4",
-    "updated_at": "2026-07-04T09:33:54+00:00",
-    "v": "paraCentavos rejeita >2 casas decimais (NaN) em vez de arredondar em silencio: 100,555 / 1.2345 / 0,001 sao invalidos. Formatos legitimos pt-BR/US/milhar cobertos em tests/unit/money.test.ts."
-   },
-   "sanidade_temporal": {
-    "note": "commit 5 fase 2",
-    "updated_at": "2026-07-04T09:33:54+00:00",
-    "v": "Guards FW400: data_compra e data_pagamento aceitas entre 2000-01-01 e amanha (+1 dia tolera fuso do cliente; compra usa America/Sao_Paulo). Retroativo legitimo passa; typo de ano nao."
-   },
-   "soft_delete": {
-    "note": "delecao logica",
-    "updated_at": "2026-07-04T00:10:22+00:00",
-    "v": "DELETE fisico proibido. Exclusao = deleted_at. Leituras e indices unicos com WHERE deleted_at IS NULL. Cascata transacao->parcelas via trigger."
-   },
-   "teste_local": {
-    "note": "infra de verificacao commit 5",
-    "updated_at": "2026-07-04T09:33:54+00:00",
-    "v": "Suite SQL local: npm run test:sql (Docker postgres:16-alpine + tests/sql/00_shim_auth.sql replicando roles/auth.uid()/default privileges do Supabase; migracoes em ordem; verificacao_nucleo.sql 17 asserts). Unit: npm test (node:test roda .ts nativo no Node 24; tsconfig allowImportingTsExtensions). Shim NUNCA vai para producao."
-   },
-   "timezone": {
-    "note": "calculos de data",
-    "updated_at": "2026-07-04T00:10:22+00:00",
-    "v": "Fuso de negocio America/Sao_Paulo para data_compra, fechamento e competencia."
-   },
-   "travas_motor": {
-    "note": "commit 4 tarefas 2-3",
-    "updated_at": "2026-07-04T01:00:15+00:00",
-    "v": "Teto servidor: num_parcelas [1,120] FW400; cartoes ativos max 20/usuario FW429 (criar_cartao). Fail fast FW409: compra cujo parcelamento toca fatura PAGA ou FECHADA e rejeitada antes de qualquer INSERT — pagamento antecipado nao reabre ciclo."
-   },
-   "updated_at_trigger": {
-    "note": "commit 6",
-    "updated_at": "2026-07-04T15:54:55+00:00",
-    "v": "updated_at nas 4 tabelas mantido por trg_touch_updated_at com clock_timestamp() (now() congela na transacao). RPC nova NAO seta updated_at a mao."
-   },
-   "view_consolidada": {
-    "note": "commit 4 tarefa 4",
-    "updated_at": "2026-07-04T01:00:15+00:00",
-    "v": "vw_faturas_consolidadas = fonte unica do total de fatura: RECEITA abate (sinal na view, parcela guarda modulo), COALESCE 0, filtra deleted_at. security_invoker=true OBRIGATORIO em toda view (default do Postgres roda como dono e vaza RLS). Frontend le total da view, nao soma parcelas."
-   }
-  }
- },
- "protocol": "state-memory/1.0",
- "updated_at": "2026-07-05T14:20:24+00:00"
+  "protocol": "state-memory/1.0",
+  "updated_at": "2026-07-27T20:45:00+00:00"
 }
