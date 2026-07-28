@@ -458,3 +458,260 @@ $$;
 -- =====================================================================
 alter table public.movimentacoes_cofrinho
   alter column data set default ((now() at time zone 'America/Sao_Paulo')::date);
+
+-- =====================================================================
+-- S-05 (baixo) — tetos anti-abuso sem lock (TOCTOU sob READ COMMITTED).
+-- select count(*) into v_qtd sem FOR UPDATE nem advisory lock: duas (ou
+-- mais) chamadas concorrentes do MESMO usuário à mesma RPC podem ler o
+-- MESMO count antes de qualquer uma commitar seu INSERT — todas passam
+-- no teto (ex.: teto de 20 cartões vira 21, 22... conforme o grau de
+-- paralelismo). FOR UPDATE não resolve aqui: o teto conta linhas
+-- EXISTENTES, e ainda não há linha do novo registro para travar — a
+-- trava precisa ser numa chave lógica compartilhada, não numa linha.
+--
+-- pg_advisory_xact_lock(hashtext(...)) serializa chamadas concorrentes do
+-- MESMO usuário à MESMA rpc (chave = '<rpc>:<user_id>'); RPCs diferentes
+-- ou usuários diferentes não colidem (exceto colisão de hash de 32 bits —
+-- teórica, sem custo de correção, só uma serialização a mais numa
+-- coincidência rara). Lock é escopo de TRANSAÇÃO (_xact_): liberado
+-- automaticamente no fim, sem risco de ficar preso mesmo se a função
+-- levantar exceção depois de adquiri-lo.
+--
+-- NÃO PROVADO por execução: PGlite (harness local desta auditoria) é uma
+-- conexão lógica única — não há como abrir duas sessões concorrentes para
+-- reproduzir a corrida de verdade (limitação documentada da própria
+-- ferramenta, não desta migration). O que a suíte local prova é que a
+-- trava NÃO QUEBRA o caminho feliz: as 4 RPCs abaixo continuam
+-- funcionando e os asserts existentes que as exercitam (núcleo [1],
+-- assistente B1/B5/B6/D1, isolamento) continuam verdes.
+-- =====================================================================
+create or replace function public.criar_cartao(
+  p_nome           text,
+  p_limite_total   bigint,   -- centavos
+  p_dia_fechamento int,
+  p_dia_vencimento int
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_qtd     int;
+  v_id      uuid;
+begin
+  if v_user_id is null then
+    raise exception 'Não autenticado.'
+      using errcode = 'FW401', hint = 'Sessão ausente/expirada. Não retente; reautentique.';
+  end if;
+  if coalesce(trim(p_nome), '') = '' then
+    raise exception 'nome é obrigatório.'
+      using errcode = 'FW400', hint = 'Informe um nome para o cartão.';
+  end if;
+  if p_limite_total is null or p_limite_total <= 0 then
+    raise exception 'limite_total deve ser positivo, em centavos. Recebido: %', p_limite_total
+      using errcode = 'FW400', hint = 'Envie o limite em centavos (inteiro > 0).';
+  end if;
+  if coalesce(p_dia_fechamento, 0) not between 1 and 31
+     or coalesce(p_dia_vencimento, 0) not between 1 and 31 then
+    raise exception 'Dias de fechamento/vencimento devem estar entre 1 e 31.'
+      using errcode = 'FW400', hint = 'Ajuste os dias para o intervalo [1, 31].';
+  end if;
+
+  -- S-05: serializa concorrência do MESMO usuário nesta MESMA rpc antes
+  -- de ler o count usado pelo teto anti-abuso.
+  perform pg_advisory_xact_lock(hashtext('criar_cartao:' || v_user_id::text));
+
+  -- Anti-abuso: teto de cartões ativos por usuário.
+  select count(*) into v_qtd
+  from public.cartoes_credito
+  where user_id = v_user_id and deleted_at is null;
+  if v_qtd >= 20 then
+    raise exception 'Teto de 20 cartões ativos atingido.'
+      using errcode = 'FW429', hint = 'Exclua (soft delete) um cartão antes de criar outro.';
+  end if;
+
+  insert into public.cartoes_credito
+    (user_id, nome, limite_total, dia_fechamento, dia_vencimento)
+  values
+    (v_user_id, trim(p_nome), p_limite_total, p_dia_fechamento, p_dia_vencimento)
+  returning id into v_id;
+
+  return jsonb_build_object('cartao_id', v_id);
+end;
+$$;
+
+create or replace function public.criar_categoria(
+  p_nome             text,
+  p_cor              text default null,
+  p_icone            text default null,
+  p_tipo             text default 'DESPESA',
+  p_categoria_pai    uuid default null,
+  p_orcamento_mensal bigint default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_qtd int;
+  v_id  uuid;
+begin
+  if v_user_id is null then
+    raise exception 'Não autenticado.'
+      using errcode = 'FW401', hint = 'Sessão ausente/expirada. Não retente; reautentique.';
+  end if;
+  if coalesce(trim(p_nome), '') = '' then
+    raise exception 'nome é obrigatório.'
+      using errcode = 'FW400', hint = 'Informe um nome para a categoria.';
+  end if;
+  if p_tipo not in ('DESPESA','RECEITA') then
+    raise exception 'tipo inválido: %', p_tipo
+      using errcode = 'FW400', hint = 'Use DESPESA ou RECEITA.';
+  end if;
+  if p_orcamento_mensal is not null and p_orcamento_mensal <= 0 then
+    raise exception 'orcamento_mensal deve ser positivo em centavos ou nulo.'
+      using errcode = 'FW400', hint = 'Envie centavos (inteiro > 0) ou omita.';
+  end if;
+  if p_categoria_pai is not null and not exists (
+      select 1 from public.categorias
+      where id = p_categoria_pai and user_id = v_user_id and deleted_at is null) then
+    raise exception 'categoria_pai % não encontrada para este usuário.', p_categoria_pai
+      using errcode = 'FW404', hint = 'Confira o id da categoria-mãe.';
+  end if;
+
+  -- S-05: serializa concorrência do MESMO usuário nesta MESMA rpc antes
+  -- de ler o count usado pelo teto anti-abuso.
+  perform pg_advisory_xact_lock(hashtext('criar_categoria:' || v_user_id::text));
+
+  select count(*) into v_qtd
+  from public.categorias where user_id = v_user_id and deleted_at is null;
+  if v_qtd >= 60 then
+    raise exception 'Teto de 60 categorias ativas atingido.'
+      using errcode = 'FW429', hint = 'Exclua uma categoria antes de criar outra.';
+  end if;
+
+  insert into public.categorias
+    (user_id, nome, cor, icone, tipo, categoria_pai, orcamento_mensal)
+  values
+    (v_user_id, trim(p_nome), p_cor, p_icone, p_tipo, p_categoria_pai, p_orcamento_mensal)
+  returning id into v_id;
+
+  return jsonb_build_object('categoria_id', v_id);
+exception
+  when unique_violation then
+    raise exception 'Já existe categoria ativa com o nome "%".', trim(p_nome)
+      using errcode = 'FW409', hint = 'Use outro nome ou edite a existente.';
+end;
+$$;
+
+create or replace function public.criar_regra_categorizacao(
+  p_padrao       text,
+  p_categoria_id uuid,
+  p_prioridade   int default 100
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_qtd int;
+  v_id  uuid;
+begin
+  if v_user_id is null then
+    raise exception 'Não autenticado.'
+      using errcode = 'FW401', hint = 'Sessão ausente/expirada. Não retente; reautentique.';
+  end if;
+  if coalesce(trim(p_padrao), '') = '' or length(trim(p_padrao)) < 2 then
+    raise exception 'padrao deve ter ao menos 2 caracteres.'
+      using errcode = 'FW400', hint = 'Padrões de 1 caractere casariam com quase tudo.';
+  end if;
+  if not exists (select 1 from public.categorias
+                 where id = p_categoria_id and user_id = v_user_id and deleted_at is null) then
+    raise exception 'Categoria % não encontrada para este usuário.', p_categoria_id
+      using errcode = 'FW404', hint = 'Confira o id da categoria.';
+  end if;
+
+  -- S-05: serializa concorrência do MESMO usuário nesta MESMA rpc antes
+  -- de ler o count usado pelo teto anti-abuso.
+  perform pg_advisory_xact_lock(hashtext('criar_regra_categorizacao:' || v_user_id::text));
+
+  select count(*) into v_qtd
+  from public.regras_categorizacao where user_id = v_user_id and deleted_at is null;
+  if v_qtd >= 200 then
+    raise exception 'Teto de 200 regras ativas atingido.'
+      using errcode = 'FW429', hint = 'Exclua regras antes de criar outra.';
+  end if;
+
+  insert into public.regras_categorizacao (user_id, padrao, categoria_id, prioridade)
+  values (v_user_id, trim(p_padrao), p_categoria_id, coalesce(p_prioridade, 100))
+  returning id into v_id;
+
+  return jsonb_build_object('regra_id', v_id);
+end;
+$$;
+
+create or replace function public.criar_cofrinho(
+  p_nome       text,
+  p_valor_alvo bigint,
+  p_horizonte  text,
+  p_data_alvo  date default null,
+  p_icone      text default null,
+  p_cor        text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_qtd int;
+  v_id  uuid;
+begin
+  if v_user_id is null then
+    raise exception 'Não autenticado.'
+      using errcode = 'FW401', hint = 'Sessão ausente/expirada. Não retente; reautentique.';
+  end if;
+  if coalesce(trim(p_nome), '') = '' then
+    raise exception 'nome é obrigatório.'
+      using errcode = 'FW400', hint = 'Dê um nome ao cofrinho (ex.: Reserva de emergência).';
+  end if;
+  if p_valor_alvo is null or p_valor_alvo <= 0 then
+    raise exception 'valor_alvo deve ser positivo, em centavos. Recebido: %', p_valor_alvo
+      using errcode = 'FW400', hint = 'Envie o alvo em centavos (inteiro > 0).';
+  end if;
+  if p_horizonte not in ('CURTO','MEDIO','LONGO') then
+    raise exception 'horizonte inválido: %', p_horizonte
+      using errcode = 'FW400', hint = 'Use CURTO, MEDIO ou LONGO.';
+  end if;
+  if p_data_alvo is not null
+     and p_data_alvo <= (now() at time zone 'America/Sao_Paulo')::date then
+    raise exception 'data_alvo deve ser futura: %', p_data_alvo
+      using errcode = 'FW400', hint = 'Escolha uma data após hoje ou omita.';
+  end if;
+
+  -- S-05: serializa concorrência do MESMO usuário nesta MESMA rpc antes
+  -- de ler o count usado pelo teto anti-abuso.
+  perform pg_advisory_xact_lock(hashtext('criar_cofrinho:' || v_user_id::text));
+
+  select count(*) into v_qtd
+  from public.cofrinhos
+  where user_id = v_user_id and deleted_at is null and not arquivado;
+  if v_qtd >= 30 then
+    raise exception 'Teto de 30 cofrinhos ativos atingido.'
+      using errcode = 'FW429', hint = 'Arquive um cofrinho antes de criar outro.';
+  end if;
+
+  insert into public.cofrinhos (user_id, nome, valor_alvo, horizonte, data_alvo, icone, cor)
+  values (v_user_id, trim(p_nome), p_valor_alvo, p_horizonte, p_data_alvo, p_icone, p_cor)
+  returning id into v_id;
+
+  return jsonb_build_object('cofrinho_id', v_id);
+end;
+$$;
