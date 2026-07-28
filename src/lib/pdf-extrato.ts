@@ -15,8 +15,21 @@ import { paraCentavosAssinado } from "./money.ts";
 
 const RE_DATA_TOKEN = /\b(\d{2}[/-]\d{2}[/-]\d{4}|\d{4}-\d{2}-\d{2}|\d{2}\/\d{2})\b/;
 // "1.234,56", "1234,56", "R$ 89,90", "(89,90)", "89,90-", "89,90 D", "89,90 C"
+// 2ª alternativa com \d{1,9} (não \d+ irrestrito): sem teto, uma linha hostil
+// com uma corrida longa de dígitos sem vírgula faz o motor de regex tentar
+// casar a partir de cada posição, consumir tudo e retroceder dígito a dígito
+// até falhar — O(n²) — e o PDF roda no browser sem worker nem timeout (T-02).
+// 9 dígitos já cobre valores na casa dos bilhões; nenhum extrato real precisa
+// de mais que isso nesta alternativa (a com separador de milhar não tem esse
+// teto porque cada grupo exige um "." literal, sem ambiguidade de backtracking).
 const RE_VALOR_TOKEN =
-  /\(?-?\s?(?:R\$\s?)?\d{1,3}(?:\.\d{3})*,\d{2}\)?(?:\s?[DCdc])?(?=\s|$)|-?\d+,\d{2}(?:\s?[DCdc])?(?=\s|$)/g;
+  /\(?-?\s?(?:R\$\s?)?\d{1,3}(?:\.\d{3})*,\d{2}\)?(?:\s?[DCdc])?(?=\s|$)|-?\d{1,9},\d{2}(?:\s?[DCdc])?(?=\s|$)/g;
+
+// Teto de caracteres por linha extraída do PDF, aplicado ANTES de rodar
+// RE_VALOR_TOKEN nela. Extrato real não tem linha de dezenas/centenas de KB;
+// acima disso é ruído hostil (ou erro de extração do pdfjs) — descarta sem
+// gastar regex custosa em cima, como defesa complementar ao teto acima (T-02).
+const MAX_TAMANHO_LINHA = 2000;
 
 /** Completa "dd/mm" com o ano de referência (extratos omitem o ano). */
 function dataDaLinha(token: string, anoReferencia: number): string | null {
@@ -52,6 +65,7 @@ export function parsePdfExtrato(
   let descartadas = 0;
   for (const bruta of linhasTexto) {
     const linha = bruta.trim().replace(/\s{2,}/g, " ");
+    if (linha.length > MAX_TAMANHO_LINHA) continue; // ruído hostil, não conta como descartada
     const mData = linha.match(RE_DATA_TOKEN);
     if (!mData) continue; // ruído esperado (cabeçalho/rodapé), não conta
     const data = dataDaLinha(mData[1], anoReferencia);

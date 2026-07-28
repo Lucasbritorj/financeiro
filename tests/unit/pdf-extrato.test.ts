@@ -40,3 +40,23 @@ test("parsePdfExtrato: linha de saldo e data sem valor são descartadas contadas
   assert.equal(r.linhas.length, 0);
   assert.equal(r.descartadas, 2);
 });
+
+// T-02: RE_VALOR_TOKEN tinha uma alternativa com \d+ (sem vírgula garantida)
+// que causa backtracking O(n²) quando a linha tem uma corrida longa de
+// dígitos sem vírgula (PDF hostil, sem worker/timeout no browser). Medido:
+// n=25000 -> ~192ms; n=200000 -> ~12s. Teste de tempo é frágil por natureza,
+// então usamos um teto BEM generoso (1s): a versão corrigida processa isso
+// em poucos ms, então qualquer coisa perto de 1s já denuncia volta do
+// backtracking quadrático (ou de alguma outra regressão de performance
+// equivalente), sem exigir precisão de benchmark.
+test("parsePdfExtrato: linha hostil com corrida longa de dígitos sem vírgula não trava (T-02)", () => {
+  const digitos = "1".repeat(200000);
+  const linha = `01/01/2026 ${digitos}`;
+  const inicio = Date.now();
+  parsePdfExtrato([linha], 2026);
+  const duracaoMs = Date.now() - inicio;
+  assert.ok(
+    duracaoMs < 1000,
+    `esperado < 1000ms, levou ${duracaoMs}ms (backtracking O(n²) da regex de valor?)`,
+  );
+});
