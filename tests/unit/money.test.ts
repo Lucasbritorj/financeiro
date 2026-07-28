@@ -88,3 +88,20 @@ test("formatarCompetencia e formatarData", () => {
   assert.equal(formatarCompetencia("2026-02-01"), "fev/2026");
   assert.equal(formatarData("2026-02-28"), "28/02/2026");
 });
+
+// T-03: Math.round(n * 100) quebra o round-half-up prometido pro caso
+// X,XX5 porque n*100 em float não é exato (0.145*100 === 14.499999999999998,
+// por ex.) — o arredondamento decide pelo float errado e viesa sempre pra
+// baixo. Os três valores abaixo são casos reais desse viés.
+test("paraCentavosAssinado: X,XX5 arredonda meio-para-cima mesmo quando n*100 perde precisão em float (T-03)", () => {
+  assert.equal(paraCentavosAssinado("0,145"), 15); // 0.145*100 === 14.499999999999998 em float
+  assert.equal(paraCentavosAssinado("1,265"), 127); // 1.265*100 === 126.49999999999999 em float
+  assert.equal(paraCentavosAssinado("2,175"), 218); // 2.175*100 === 217.49999999999997 em float
+});
+
+test("paraCentavosAssinado: round-trip com centavosParaDecimalEditavel de 0 a 999999 centavos não pode regredir (T-03)", () => {
+  for (let c = 0; c <= 999999; c++) {
+    const volta = paraCentavosAssinado(centavosParaDecimalEditavel(c));
+    assert.equal(volta, c === 0 ? null : c, `round-trip falhou para ${c} centavos`);
+  }
+});

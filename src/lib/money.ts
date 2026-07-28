@@ -31,9 +31,34 @@ export function paraCentavosAssinado(entrada: string): number | null {
   }
   const n = Number(s);
   if (!Number.isFinite(n)) return null;
-  // Além de 2 casas: arredonda ao centavo (meio para cima).
-  const centavos = Math.round(n * 100) * sinal;
+  // Além de 2 casas: arredonda ao centavo (meio para cima), decidido pelos
+  // DÍGITOS da própria string normalizada — não por `n * 100` em float, que
+  // perde precisão e pode arredondar o dígito decisor pro lado errado (ex.:
+  // 0.145 * 100 === 14.499999999999998, vira 14 em vez do correto 15).
+  const centavos = centavosPorDigitos(s, n) * sinal;
   return centavos === 0 ? null : centavos;
+}
+
+/**
+ * Arredonda para centavos a partir dos dígitos da string decimal já
+ * normalizada (sem sinal, "." como separador decimal, sem separador de
+ * milhar): usa BigInt sobre a parte inteira + 2 decimais, e olha só o 3º
+ * dígito decimal (o decisor) pra decidir "meio para cima" — é
+ * matematicamente exato, porque nenhum dígito depois do decisor derruba uma
+ * comparação já decidida contra X,XX5. Elimina o float da decisão (T-03).
+ * Entrada fora do formato dígitos[.dígitos] (raro; ex. notação científica)
+ * cai no fallback via float, preservando o comportamento anterior nesse caso.
+ */
+function centavosPorDigitos(s: string, nFallback: number): number {
+  const m = /^(\d+)(?:\.(\d+))?$/.exec(s);
+  if (!m) return Math.round(nFallback * 100);
+  const [, inteiro, fracao = ""] = m;
+  const frac3 = (fracao + "000").slice(0, 3);
+  // BigInt(100)/BigInt(1) em vez de literais 100n/1n: literal BigInt exige
+  // target >= ES2020 no tsc, e este projeto compila com target ES2017.
+  let centavos = BigInt(inteiro) * BigInt(100) + BigInt(frac3.slice(0, 2));
+  if (frac3[2] >= "5") centavos += BigInt(1);
+  return Number(centavos);
 }
 
 /** Entrada de valor POSITIVO da UI -> centavos. NaN se inválido/<= 0. */
