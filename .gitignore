@@ -45,3 +45,6 @@ next-env.d.ts
 memory/*.bak
 memory/*.tmp
 __pycache__/
+
+.vercel
+.env*

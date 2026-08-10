@@ -1,7 +1,23 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SairBotao from "@/components/sair-botao";
+import NavLinks from "@/components/nav-links";
+import TemaToggle from "@/components/tema-toggle";
+import FeedbackProvider from "@/components/feedback";
+import ComandoMenu from "@/components/comando-menu";
+
+// Nav principal = fluxo do assistente. Contas a pagar (faturas + boletos) é
+// fluxo primário — gasto fixo mensal. Cartões ficam na nav secundária.
+const NAV_PRINCIPAL = [
+  { href: "/dashboard", rotulo: "Dashboard" },
+  { href: "/analise", rotulo: "Análise" },
+  { href: "/transacoes", rotulo: "Transações" },
+  { href: "/faturas", rotulo: "Contas a pagar" },
+  { href: "/categorias", rotulo: "Categorias" },
+  { href: "/importar", rotulo: "Importar" },
+  { href: "/cofrinhos", rotulo: "Cofrinhos" },
+];
+const NAV_SECUNDARIA = [{ href: "/cartoes", rotulo: "Cartões" }];
 
 export default async function ProtegidoLayout({
   children,
@@ -15,29 +31,31 @@ export default async function ProtegidoLayout({
   if (!user) redirect("/login");
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      <header className="border-b border-zinc-200 bg-white">
-        <nav className="mx-auto flex max-w-4xl items-center gap-5 px-4 py-3">
-          <span className="font-semibold">Financeiro</span>
-          <Link href="/dashboard" className="text-sm hover:underline">
-            Dashboard
-          </Link>
-          <Link href="/transacoes" className="text-sm hover:underline">
-            Transações
-          </Link>
-          <Link href="/faturas" className="text-sm hover:underline">
-            Faturas
-          </Link>
-          <Link href="/cartoes" className="text-sm hover:underline">
-            Cartões
-          </Link>
-          <div className="ml-auto flex items-center gap-3 text-sm text-zinc-500">
-            <span className="hidden sm:inline">{user.email}</span>
+    <FeedbackProvider>
+    <div className="min-h-screen">
+      <header
+        className="cabecalho-atelie sticky top-0 z-20 border-b"
+        style={{ borderColor: "var(--borda)" }}
+      >
+        <nav className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-5 gap-y-1 px-4 py-3">
+          <span className="serifa mr-1 text-lg font-semibold" style={{ color: "var(--giz)" }}>
+            Ateliê
+          </span>
+          <NavLinks itens={NAV_PRINCIPAL} />
+          <span aria-hidden style={{ color: "var(--borda-forte)" }}>
+            ·
+          </span>
+          <NavLinks itens={NAV_SECUNDARIA} variante="secundaria" />
+          <div className="ml-auto flex items-center gap-3 text-sm" style={{ color: "var(--grafite)" }}>
+            <span className="hidden md:inline">{user.email}</span>
+            <ComandoMenu />
+            <TemaToggle />
             <SairBotao />
           </div>
         </nav>
       </header>
-      <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>
+      <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
     </div>
+    </FeedbackProvider>
   );
 }

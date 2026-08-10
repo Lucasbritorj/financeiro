@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { mensagemDeErro } from "@/lib/erros";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,20 +25,20 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
       setPendente(false);
       if (error) {
-        setErro(error.message);
+        setErro(mensagemDeErro(error));
         return;
       }
-      router.push("/transacoes");
+      router.push("/dashboard");
       router.refresh();
     } else {
       const { data, error } = await supabase.auth.signUp({ email, password: senha });
       setPendente(false);
       if (error) {
-        setErro(error.message);
+        setErro(mensagemDeErro(error));
         return;
       }
       if (data.session) {
-        router.push("/transacoes");
+        router.push("/dashboard");
         router.refresh();
       } else {
         setAviso("Cadastro criado. Confirme o e-mail antes de entrar.");
@@ -46,10 +47,13 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 text-zinc-900">
-      <div className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-6">
-        <h1 className="mb-1 text-lg font-semibold">Financeiro</h1>
-        <p className="mb-4 text-sm text-zinc-500">
+    <main className="flex min-h-screen items-center justify-center px-4">
+      <div className="vidro-soberano w-full max-w-sm p-8">
+        <p className="eyebrow">seu dinheiro, com clareza</p>
+        <h1 className="serifa mt-1 text-3xl font-semibold" style={{ color: "var(--giz)" }}>
+          Ateliê
+        </h1>
+        <p className="mb-6 mt-3 text-sm" style={{ color: "var(--grafite)" }}>
           {modo === "entrar" ? "Entre na sua conta" : "Crie sua conta"}
         </p>
         <form onSubmit={enviar} className="grid gap-3">
@@ -60,7 +64,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5"
+              className="campo-soberano"
             />
           </label>
           <label className="text-sm">
@@ -70,23 +74,28 @@ export default function LoginPage() {
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               required
-              minLength={6}
-              className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5"
+              minLength={8}
+              className="campo-soberano"
             />
           </label>
-          {erro && <p className="text-sm text-red-600">{erro}</p>}
-          {aviso && <p className="text-sm text-emerald-700">{aviso}</p>}
-          <button
-            type="submit"
-            disabled={pendente}
-            className="rounded bg-zinc-900 px-4 py-2 text-sm text-white hover:bg-zinc-700 disabled:opacity-50"
-          >
+          {erro && (
+            <p className="text-sm" style={{ color: "var(--telha)" }}>
+              {erro}
+            </p>
+          )}
+          {aviso && (
+            <p className="text-sm" style={{ color: "var(--verde)" }}>
+              {aviso}
+            </p>
+          )}
+          <button type="submit" disabled={pendente} className="botao-soberano mt-1 text-sm">
             {pendente ? "Aguarde..." : modo === "entrar" ? "Entrar" : "Cadastrar"}
           </button>
         </form>
         <button
           onClick={() => setModo(modo === "entrar" ? "cadastrar" : "entrar")}
-          className="mt-3 text-sm text-zinc-500 hover:underline"
+          className="mt-4 text-sm transition-colors hover:text-[var(--ouro)]"
+          style={{ color: "var(--grafite)" }}
         >
           {modo === "entrar" ? "Não tem conta? Cadastre-se" : "Já tem conta? Entre"}
         </button>

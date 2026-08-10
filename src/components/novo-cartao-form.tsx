@@ -47,7 +47,7 @@ export default function NovoCartaoForm() {
   }
 
   return (
-    <form onSubmit={enviar} className="rounded-lg border border-zinc-200 bg-white p-4">
+    <form onSubmit={enviar} className="vidro-soberano p-4">
       <h2 className="mb-3 font-medium">Novo cartão</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-sm">
@@ -56,7 +56,7 @@ export default function NovoCartaoForm() {
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             required
-            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5"
+            className="campo-soberano"
             placeholder="Ex.: Nubank"
           />
         </label>
@@ -67,7 +67,7 @@ export default function NovoCartaoForm() {
             onChange={(e) => setLimite(e.target.value)}
             required
             inputMode="decimal"
-            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5"
+            className="campo-soberano"
             placeholder="5.000,00"
           />
         </label>
@@ -80,7 +80,7 @@ export default function NovoCartaoForm() {
             value={diaFechamento}
             onChange={(e) => setDiaFechamento(e.target.value)}
             required
-            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5"
+            className="campo-soberano"
           />
         </label>
         <label className="text-sm">
@@ -92,15 +92,15 @@ export default function NovoCartaoForm() {
             value={diaVencimento}
             onChange={(e) => setDiaVencimento(e.target.value)}
             required
-            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5"
+            className="campo-soberano"
           />
         </label>
       </div>
-      {erro && <p className="mt-2 text-sm text-red-600">{erro}</p>}
+      {erro && <p className="mt-2 text-sm" style={{ color: "var(--telha)" }}>{erro}</p>}
       <button
         type="submit"
         disabled={pendente}
-        className="mt-3 rounded bg-zinc-900 px-4 py-1.5 text-sm text-white hover:bg-zinc-700 disabled:opacity-50"
+        className="botao-soberano mt-3 text-sm"
       >
         {pendente ? "Salvando..." : "Salvar cartão"}
       </button>
