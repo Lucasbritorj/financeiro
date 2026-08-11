@@ -28,6 +28,8 @@ type LinhaRevisao = {
   categoria_sugerida: string | null;
   duplicada: boolean;
   ignorar: boolean;
+  /** 0020: NOVO grava; DUPLICADO nunca grava; AMBIGUO exige opt-in. */
+  classificacao: "NOVO" | "DUPLICADO" | "AMBIGUO";
 };
 
 type Etapa =
@@ -190,7 +192,7 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
     // Relê o staging já com dedupe/categoria calculados pelo servidor.
     const { data: linhasData, error: erroLinhas } = await createClient()
       .from("importacao_linhas")
-      .select("id, data, valor, descricao, categoria_sugerida, duplicada, ignorar")
+      .select("id, data, valor, descricao, categoria_sugerida, duplicada, ignorar, classificacao")
       .eq("importacao_id", res.importacao_id)
       .order("data", { ascending: false });
     if (erroLinhas) {
@@ -317,8 +319,15 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
     );
   }
 
-  const aImportar = etapa.linhas.filter((l) => !l.ignorar).length;
-  const duplicadas = etapa.linhas.filter((l) => l.duplicada).length;
+  // DUPLICADO nunca grava, mesmo desmarcado — a regra vive em
+  // confirmar_importacao (0020). A contagem aqui espelha o servidor em vez de
+  // prometer algo que o banco vai recusar.
+  const aImportar = etapa.linhas.filter(
+    (l) => !l.ignorar && l.classificacao !== "DUPLICADO",
+  ).length;
+  const novos = etapa.linhas.filter((l) => l.classificacao === "NOVO").length;
+  const duplicadas = etapa.linhas.filter((l) => l.classificacao === "DUPLICADO").length;
+  const ambiguos = etapa.linhas.filter((l) => l.classificacao === "AMBIGUO").length;
 
   return (
     <div className="grid gap-4">
@@ -328,11 +337,18 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
       >
         <span>
           <b style={{ color: "var(--giz)" }}>{etapa.linhas.length}</b> linhas ·{" "}
+          <b style={{ color: "var(--giz)" }}>{novos}</b> nova(s) ·{" "}
           <b style={{ color: "var(--giz)" }}>{aImportar}</b> serão importadas
         </span>
         {duplicadas > 0 && (
           <span style={{ color: "var(--ouro)" }}>
-            {duplicadas} possível(is) duplicada(s) — desmarcadas por padrão
+            {duplicadas} já existe(m) no seu histórico — não serão gravadas
+          </span>
+        )}
+        {ambiguos > 0 && (
+          <span style={{ color: "var(--ouro)" }}>
+            {ambiguos} com mesma data e valor de algo que você já tem, mas
+            descrição diferente — marque para importar mesmo assim
           </span>
         )}
         {etapa.descartadasParse > 0 && (

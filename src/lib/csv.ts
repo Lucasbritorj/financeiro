@@ -18,6 +18,13 @@ export type LinhaImportacao = {
   data: string; // ISO "YYYY-MM-DD"
   valor: number; // centavos, com sinal
   descricao: string;
+  /**
+   * Identificador do provedor quando o formato traz um (FITID do OFX/OFC,
+   * id da Pluggy). Tem precedência sobre o fingerprint na dedup do servidor:
+   * é o banco afirmando "esta é a mesma transação", não uma heurística nossa.
+   * CSV, XLSX e PDF não têm — ficam com o fingerprint de 0020.
+   */
+  id_externo?: string;
 };
 
 export type PresetBanco =

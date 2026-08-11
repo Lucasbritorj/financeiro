@@ -65,7 +65,11 @@ export function parseOfxExtrato(conteudo: string): ResultadoParse {
       descartadas++;
       continue;
     }
-    linhas.push({ data, valor, descricao });
+    // FITID é o identificador que o próprio banco dá ao lançamento e é
+    // estável entre exportações do mesmo extrato — dedup por ele é fato,
+    // não heurística. Antes era descartado aqui; a 0020 passou a usá-lo.
+    const fitid = valorTag(bloco, "FITID");
+    linhas.push(fitid ? { data, valor, descricao, id_externo: fitid } : { data, valor, descricao });
   }
   return { linhas, descartadas };
 }

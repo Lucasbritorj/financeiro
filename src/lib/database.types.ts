@@ -104,6 +104,8 @@ export type Database = {
           data_compra: string;
           data_vencimento: string | null;
           num_parcelas: number;
+          id_externo: string | null;
+          fingerprint: string | null;
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
@@ -120,6 +122,8 @@ export type Database = {
           data_compra: string;
           data_vencimento?: string | null;
           num_parcelas?: number;
+          id_externo?: string | null;
+          fingerprint?: string | null;
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
@@ -136,6 +140,8 @@ export type Database = {
           data_compra?: string;
           data_vencimento?: string | null;
           num_parcelas?: number;
+          id_externo?: string | null;
+          fingerprint?: string | null;
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
@@ -341,6 +347,9 @@ export type Database = {
           categoria_sugerida: string | null;
           duplicada: boolean;
           ignorar: boolean;
+          id_externo: string | null;
+          fingerprint: string | null;
+          classificacao: "NOVO" | "DUPLICADO" | "AMBIGUO";
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
@@ -355,6 +364,9 @@ export type Database = {
           categoria_sugerida?: string | null;
           duplicada?: boolean;
           ignorar?: boolean;
+          id_externo?: string | null;
+          fingerprint?: string | null;
+          classificacao?: "NOVO" | "DUPLICADO" | "AMBIGUO";
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
@@ -369,6 +381,9 @@ export type Database = {
           categoria_sugerida?: string | null;
           duplicada?: boolean;
           ignorar?: boolean;
+          id_externo?: string | null;
+          fingerprint?: string | null;
+          classificacao?: "NOVO" | "DUPLICADO" | "AMBIGUO";
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;

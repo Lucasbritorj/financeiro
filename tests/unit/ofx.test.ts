@@ -36,15 +36,21 @@ test("parseOfxExtrato: SGML sem fechamento, MEMO/NAME, entidades e descarte", ()
   const r = parseOfxExtrato(OFX_SGML);
   assert.equal(r.linhas.length, 2);
   assert.equal(r.descartadas, 1);
+  // ATÉ A 0020 este teste afirmava só {data, valor, descricao} — o FITID da
+  // fixture era lido e jogado fora. Hoje ele sai como id_externo e vira a
+  // chave de dedup preferida no servidor. A expectativa mudou porque o
+  // comportamento mudou de propósito; não é regressão.
   assert.deepEqual(r.linhas[0], {
     data: "2026-07-05",
     valor: -8990,
     descricao: "IFOOD *RESTAURANTE",
+    id_externo: "2026070501",
   });
   assert.deepEqual(r.linhas[1], {
     data: "2026-07-01",
     valor: 450000,
     descricao: "SALARIO ACME & CIA",
+    id_externo: "2026070102",
   });
 });
 
@@ -70,4 +76,32 @@ test("dataOfxParaIso e valorOfxParaCentavos: casos de borda", () => {
   // Regressão: valor com separador de milhar agora é aceito (antes: null).
   assert.equal(valorOfxParaCentavos("1.234,56"), 123456);
   assert.equal(valorOfxParaCentavos("-1.234,56"), -123456);
+});
+
+// 0020: FITID é o identificador que o banco dá ao lançamento e é estável
+// entre exportações do mesmo extrato. Antes era descartado pelo parser, o que
+// obrigava a dedup a cair no fingerprint heurístico mesmo quando havia um id
+// autoritativo disponível.
+test("parseOfxExtrato: FITID vira id_externo quando existe", () => {
+  const ofx = `<STMTTRN><DTPOSTED>20260702</DTPOSTED><TRNAMT>-15,50</TRNAMT><MEMO>PADARIA</MEMO><FITID>2026070200123</FITID></STMTTRN>`;
+  const r = parseOfxExtrato(ofx);
+  assert.deepEqual(r.linhas, [
+    { data: "2026-07-02", valor: -1550, descricao: "PADARIA", id_externo: "2026070200123" },
+  ]);
+});
+
+test("parseOfxExtrato: sem FITID a linha NÃO ganha id_externo undefined", () => {
+  const ofx = `<STMTTRN><DTPOSTED>20260702</DTPOSTED><TRNAMT>-15,50</TRNAMT><MEMO>PADARIA</MEMO></STMTTRN>`;
+  const r = parseOfxExtrato(ofx);
+  // Sem a chave, e não com valor undefined: o RPC recebe o JSON e
+  // `"id_externo": undefined` viraria ausente de qualquer forma, mas a
+  // ausência explícita mantém o contrato honesto e o deepEqual estável.
+  assert.deepEqual(r.linhas, [{ data: "2026-07-02", valor: -1550, descricao: "PADARIA" }]);
+  assert.equal("id_externo" in r.linhas[0], false);
+});
+
+test("parseOfxExtrato: FITID vazio é tratado como ausente", () => {
+  const ofx = `<STMTTRN><DTPOSTED>20260702</DTPOSTED><TRNAMT>-15,50</TRNAMT><MEMO>PADARIA</MEMO><FITID></FITID></STMTTRN>`;
+  const r = parseOfxExtrato(ofx);
+  assert.equal("id_externo" in r.linhas[0], false);
 });
