@@ -106,6 +106,7 @@ export type Database = {
           num_parcelas: number;
           id_externo: string | null;
           fingerprint: string | null;
+          source: string | null;
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
@@ -124,6 +125,7 @@ export type Database = {
           num_parcelas?: number;
           id_externo?: string | null;
           fingerprint?: string | null;
+          source?: string | null;
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
@@ -142,6 +144,7 @@ export type Database = {
           num_parcelas?: number;
           id_externo?: string | null;
           fingerprint?: string | null;
+          source?: string | null;
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
@@ -312,6 +315,7 @@ export type Database = {
           user_id: string;
           origem: string;
           status: string;
+          arquivo_sha256: string | null;
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
@@ -321,6 +325,7 @@ export type Database = {
           user_id: string;
           origem?: string;
           status?: string;
+          arquivo_sha256?: string | null;
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
@@ -330,6 +335,7 @@ export type Database = {
           user_id?: string;
           origem?: string;
           status?: string;
+          arquivo_sha256?: string | null;
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
@@ -736,7 +742,7 @@ export type Database = {
         Returns: Json;
       };
       criar_importacao: {
-        Args: { p_origem: string; p_linhas: Json };
+        Args: { p_origem: string; p_linhas: Json; p_arquivo_sha256?: string | null };
         Returns: Json;
       };
       atualizar_linha_importacao: {

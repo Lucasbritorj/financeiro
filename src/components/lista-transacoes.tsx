@@ -23,13 +23,19 @@ export type TransacaoLista = {
   num_parcelas: number;
   created_at: string;
   categoria_id: string | null;
+  /**
+   * 0021. NULL = histórico anterior à coluna (proveniência desconhecida);
+   * MANUAL = lançado à mão. Só os demais rendem badge — marcar "MANUAL" em
+   * tudo que foi digitado é ruído, e marcar NULL seria mentira.
+   */
+  source: string | null;
 };
 
 type CategoriaOpcao = { id: string; nome: string; tipo: string };
 type CartaoOpcao = { id: string; nome: string };
 
 const COLUNAS =
-  "id, descricao, valor_total, tipo, forma_pagamento, data_compra, data_vencimento, num_parcelas, created_at, categoria_id";
+  "id, descricao, valor_total, tipo, forma_pagamento, data_compra, data_vencimento, num_parcelas, created_at, categoria_id, source";
 
 export default function ListaTransacoes({
   inicial,
@@ -228,7 +234,18 @@ export default function ListaTransacoes({
               onChange={() => alternarSelecao(t.id)}
               aria-label={`Selecionar ${t.descricao}`}
             />
-            <span className="font-medium">{t.descricao}</span>
+            <span className="font-medium">
+              {t.descricao}
+              {t.source && t.source !== "MANUAL" && (
+                <span
+                  className="ml-2 rounded px-1.5 py-0.5 align-middle text-[10px] font-normal uppercase tracking-wide"
+                  style={{ color: "var(--grafite)", border: "1px solid var(--grafite)" }}
+                  title={`Importado de ${t.source}`}
+                >
+                  {t.source}
+                </span>
+              )}
+            </span>
             <span className="text-xs" style={{ color: "var(--grafite)" }}>
               {t.forma_pagamento === "BOLETO"
                 ? `Boleto${t.data_vencimento ? ` · vence ${formatarData(t.data_vencimento)}` : ""}`

@@ -12,8 +12,11 @@ import {
 } from "@/lib/filtros-transacoes";
 import { hojeSaoPaulo } from "@/lib/data";
 
+// ATENÇÃO: existe uma cópia desta lista em components/lista-transacoes.tsx
+// (o "carregar mais" do cliente). As duas precisam andar juntas — omitir uma
+// coluna aqui faz a primeira página vir sem o campo e a segunda com ele.
 const COLUNAS =
-  "id, descricao, valor_total, tipo, forma_pagamento, data_compra, data_vencimento, num_parcelas, created_at, categoria_id";
+  "id, descricao, valor_total, tipo, forma_pagamento, data_compra, data_vencimento, num_parcelas, created_at, categoria_id, source";
 
 function diasAtras(hoje: string, dias: number): string {
   const d = new Date(`${hoje}T00:00:00Z`);

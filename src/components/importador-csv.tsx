@@ -51,6 +51,26 @@ async function lerTexto(arquivo: File): Promise<string> {
   }
 }
 
+/**
+ * sha256 do arquivo CRU (bytes, não do texto decodificado): reenviar o mesmo
+ * arquivo é identificado antes de qualquer parse. Hash sobre o texto decaria
+ * junto com a heurística de encoding — dois decodes diferentes do mesmo byte
+ * dariam hashes diferentes.
+ *
+ * `crypto.subtle` exige secure context (https ou localhost). Fora dele
+ * devolvemos null e o servidor simplesmente não faz o short-circuit — a dedup
+ * por linha da 0020/0021 continua valendo.
+ */
+async function sha256DoArquivo(arquivo: File): Promise<string | null> {
+  if (!globalThis.crypto?.subtle) return null;
+  try {
+    const buf = await crypto.subtle.digest("SHA-256", await arquivo.arrayBuffer());
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  } catch {
+    return null;
+  }
+}
+
 // XLSX -> matriz de strings (1ª aba). exceljs entra por import dinâmico:
 // só quem importa planilha paga o peso do bundle.
 async function matrizDoXlsx(arquivo: File): Promise<string[][]> {
@@ -116,6 +136,8 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
   const [etapa, setEtapa] = useState<Etapa>({ fase: "upload" });
   const [pendente, setPendente] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // Arquivo já importado não é erro: é um resultado esperado e informativo.
+  const [aviso, setAviso] = useState<string | null>(null);
 
   async function aoEscolherArquivo(e: React.ChangeEvent<HTMLInputElement>) {
     const arquivo = e.target.files?.[0];
@@ -169,7 +191,12 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
       e.target.value = "";
       return;
     }
-    await enviarStaging(resultado.linhas, resultado.descartadas, origem);
+    await enviarStaging(
+      resultado.linhas,
+      resultado.descartadas,
+      origem,
+      await sha256DoArquivo(arquivo),
+    );
     e.target.value = "";
   }
 
@@ -177,18 +204,35 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
     linhas: LinhaImportacao[],
     descartadasParse: number,
     origem: OrigemImportacao,
+    arquivoSha256: string | null,
   ) {
     setPendente(true);
+    setAviso(null);
     const { data, error } = await createClient().rpc("criar_importacao", {
       p_origem: origem,
       p_linhas: linhas,
+      p_arquivo_sha256: arquivoSha256,
     });
     setPendente(false);
     if (error) {
       setErro(mensagemDeErro(error));
       return;
     }
-    const res = data as { importacao_id: string };
+    const res = data as {
+      importacao_id: string;
+      arquivo_ja_importado?: boolean;
+      status_anterior?: string;
+    };
+    // Short-circuit da 0021: arquivo idêntico já enviado. O servidor não criou
+    // staging novo, então não há o que revisar — fica na tela de upload.
+    if (res.arquivo_ja_importado) {
+      setAviso(
+        res.status_anterior === "CONFIRMADA"
+          ? "Este arquivo já foi importado e confirmado. Nada foi duplicado."
+          : "Este arquivo já está aguardando revisão em outra importação. Termine ou descarte aquela antes de subir de novo.",
+      );
+      return;
+    }
     // Relê o staging já com dedupe/categoria calculados pelo servidor.
     const { data: linhasData, error: erroLinhas } = await createClient()
       .from("importacao_linhas")
@@ -307,6 +351,11 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
           {erro && (
             <p className="text-sm" style={{ color: "var(--telha)" }}>
               {erro}
+            </p>
+          )}
+          {aviso && (
+            <p className="text-sm" style={{ color: "var(--ouro)" }}>
+              {aviso}
             </p>
           )}
           {pendente && (
