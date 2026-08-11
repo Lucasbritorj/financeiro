@@ -10,6 +10,13 @@ export type TransacaoInsight = {
   valor_total: number;
   tipo: "DESPESA" | "RECEITA";
   data_compra: string; // ISO "YYYY-MM-DD"
+  /**
+   * 0023. LIQUIDACAO_FATURA = pagamento de fatura de cartão: saída de caixa
+   * que quita consumo JÁ contado nas parcelas. Não pode somar de novo aqui,
+   * senão a compra conta no mês da compra e o pagamento no mês do pagamento.
+   * Opcional no tipo para não quebrar chamador antigo — ausente = CONSUMO.
+   */
+  natureza?: "CONSUMO" | "LIQUIDACAO_FATURA" | null;
   categoria: {
     id: string;
     nome: string;
@@ -65,8 +72,19 @@ export function ultimoMesComDados(transacoes: TransacaoInsight[]): string | null
   return max;
 }
 
+/**
+ * Liquidação de fatura não é consumo: é a quitação de consumo já somado nas
+ * compras do cartão. Contar aqui dobraria o valor, em meses diferentes.
+ * `natureza` ausente ou null = CONSUMO (dado anterior à 0023).
+ */
+function ehConsumo(t: TransacaoInsight): boolean {
+  return (t.natureza ?? "CONSUMO") === "CONSUMO";
+}
+
 function doMes(transacoes: TransacaoInsight[], mesISO: string) {
-  return transacoes.filter((t) => t.data_compra.slice(0, 7) === mesISO);
+  return transacoes.filter(
+    (t) => t.data_compra.slice(0, 7) === mesISO && ehConsumo(t),
+  );
 }
 
 export function resumoDoMes(transacoes: TransacaoInsight[], mesISO: string) {

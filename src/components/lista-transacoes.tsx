@@ -29,13 +29,15 @@ export type TransacaoLista = {
    * tudo que foi digitado é ruído, e marcar NULL seria mentira.
    */
   source: string | null;
+  /** 0023. LIQUIDACAO_FATURA não soma nas despesas — ver badge no render. */
+  natureza: string | null;
 };
 
 type CategoriaOpcao = { id: string; nome: string; tipo: string };
 type CartaoOpcao = { id: string; nome: string };
 
 const COLUNAS =
-  "id, descricao, valor_total, tipo, forma_pagamento, data_compra, data_vencimento, num_parcelas, created_at, categoria_id, source";
+  "id, descricao, valor_total, tipo, forma_pagamento, data_compra, data_vencimento, num_parcelas, created_at, categoria_id, source, natureza";
 
 export default function ListaTransacoes({
   inicial,
@@ -236,6 +238,15 @@ export default function ListaTransacoes({
             />
             <span className="font-medium">
               {t.descricao}
+              {t.natureza === "LIQUIDACAO_FATURA" && (
+                <span
+                  className="ml-2 rounded px-1.5 py-0.5 align-middle text-[10px] font-normal uppercase tracking-wide"
+                  style={{ color: "var(--ouro)", border: "1px solid var(--ouro)" }}
+                  title="Pagamento de fatura de cartão. Não soma nas despesas — as compras já foram contadas quando aconteceram."
+                >
+                  Liquidação de fatura
+                </span>
+              )}
               {t.source && t.source !== "MANUAL" && (
                 <span
                   className="ml-2 rounded px-1.5 py-0.5 align-middle text-[10px] font-normal uppercase tracking-wide"

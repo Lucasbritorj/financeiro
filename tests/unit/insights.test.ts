@@ -143,3 +143,50 @@ test("ultimoMesComDados acha a competência mais recente", () => {
   assert.equal(ultimoMesComDados(transacoes), "2026-07");
   assert.equal(ultimoMesComDados([]), null);
 });
+
+// 0023 — conciliação fatura × extrato.
+// Pagamento de fatura importado do extrato NÃO é consumo novo: quita compras
+// que já somaram no mês em que aconteceram. Sem este filtro, a compra conta
+// no mês da compra e o pagamento no mês do pagamento — dobro, em meses
+// diferentes, o que não parece duplicata e passa despercebido.
+const COMPRA_CREDITO: TransacaoInsight = {
+  descricao: "COMPRA TESTE",
+  valor_total: 50000,
+  tipo: "DESPESA",
+  data_compra: "2026-03-05",
+  natureza: "CONSUMO",
+  categoria: null,
+};
+const LIQUIDACAO: TransacaoInsight = {
+  descricao: "PAGAMENTO FATURA CARTAO",
+  valor_total: 50000,
+  tipo: "DESPESA",
+  data_compra: "2026-04-10",
+  natureza: "LIQUIDACAO_FATURA",
+  categoria: null,
+};
+
+test("resumoDoMes: liquidação de fatura não soma no mês do pagamento", () => {
+  const base = [COMPRA_CREDITO, LIQUIDACAO];
+  assert.equal(resumoDoMes(base, "2026-03").saidas, 50000);
+  assert.equal(resumoDoMes(base, "2026-04").saidas, 0);
+  // O total dos dois meses é o consumo real, não o dobro.
+  const total =
+    resumoDoMes(base, "2026-03").saidas + resumoDoMes(base, "2026-04").saidas;
+  assert.equal(total, 50000);
+});
+
+test("resumoDoMes: natureza ausente ou null conta como CONSUMO (dado pré-0023)", () => {
+  const semCampo = { ...COMPRA_CREDITO } as TransacaoInsight;
+  delete (semCampo as { natureza?: unknown }).natureza;
+  assert.equal(resumoDoMes([semCampo], "2026-03").saidas, 50000);
+  assert.equal(
+    resumoDoMes([{ ...COMPRA_CREDITO, natureza: null }], "2026-03").saidas,
+    50000,
+  );
+});
+
+test("gastoPorCategoria: liquidação não entra no donut", () => {
+  const g = gastoPorCategoria([COMPRA_CREDITO, LIQUIDACAO], "2026-04");
+  assert.deepEqual(g, []);
+});

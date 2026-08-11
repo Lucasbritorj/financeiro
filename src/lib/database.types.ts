@@ -107,6 +107,8 @@ export type Database = {
           id_externo: string | null;
           fingerprint: string | null;
           source: string | null;
+          natureza: "CONSUMO" | "LIQUIDACAO_FATURA";
+          fatura_liquidada_id: string | null;
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
@@ -126,6 +128,8 @@ export type Database = {
           id_externo?: string | null;
           fingerprint?: string | null;
           source?: string | null;
+          natureza?: "CONSUMO" | "LIQUIDACAO_FATURA";
+          fatura_liquidada_id?: string | null;
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
@@ -145,6 +149,8 @@ export type Database = {
           id_externo?: string | null;
           fingerprint?: string | null;
           source?: string | null;
+          natureza?: "CONSUMO" | "LIQUIDACAO_FATURA";
+          fatura_liquidada_id?: string | null;
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
@@ -356,6 +362,9 @@ export type Database = {
           id_externo: string | null;
           fingerprint: string | null;
           classificacao: "NOVO" | "DUPLICADO" | "AMBIGUO";
+          natureza_detectada: "CONSUMO" | "LIQUIDACAO_FATURA";
+          fatura_liquidada_id: string | null;
+          liquidacao_sugerida: boolean;
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
@@ -373,6 +382,9 @@ export type Database = {
           id_externo?: string | null;
           fingerprint?: string | null;
           classificacao?: "NOVO" | "DUPLICADO" | "AMBIGUO";
+          natureza_detectada?: "CONSUMO" | "LIQUIDACAO_FATURA";
+          fatura_liquidada_id?: string | null;
+          liquidacao_sugerida?: boolean;
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
@@ -390,6 +402,9 @@ export type Database = {
           id_externo?: string | null;
           fingerprint?: string | null;
           classificacao?: "NOVO" | "DUPLICADO" | "AMBIGUO";
+          natureza_detectada?: "CONSUMO" | "LIQUIDACAO_FATURA";
+          fatura_liquidada_id?: string | null;
+          liquidacao_sugerida?: boolean;
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
