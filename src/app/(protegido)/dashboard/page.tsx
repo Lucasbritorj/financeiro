@@ -84,7 +84,9 @@ export default async function DashboardPage({
     supabase
       .from("transacoes_origem")
       .select(
-        "descricao, valor_total, tipo, data_compra, categorias(id, nome, cor, orcamento_mensal)"
+        // `natureza` (0023) é o que impede o pagamento de fatura importado do
+        // extrato de somar junto com as compras que ele quita.
+        "descricao, valor_total, tipo, data_compra, natureza, categorias(id, nome, cor, orcamento_mensal)"
       )
       .gte("data_compra", inicioJanela)
       .lt("data_compra", `${deslocarMes(mes, 1)}-01`)
