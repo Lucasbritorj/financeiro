@@ -169,7 +169,7 @@ begin
   log := log || format('C6[fatura continua %s] ', (select status from public.faturas where id=v_fat));
 
   if falhas <> '' then raise exception 'FALHOU >>> %  [log: %]', falhas, log; end if;
-  raise notice 'PASSOU >>> %', log;
+  raise notice 'OK: todos os asserts passaram >>> %', log;
 end;
 $t$;
 
