@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatarCentavos, paraCentavos } from "@/lib/money";
 import { mensagemDeErro } from "@/lib/erros";
+import BotaoAcaoRpc from "@/components/botao-acao-rpc";
 import {
   progressoPct,
   ritmoNecessario,
@@ -166,6 +167,43 @@ export default function CofrinhoCard({
             {erro}
           </span>
         )}
+
+        {/*
+          Exclusão à direita, separada do fluxo de movimentar. O rótulo muda
+          com o saldo em vez de deixar o usuário descobrir o FW409 no erro:
+          com dinheiro guardado, o botão já diz que vai resgatar, e a
+          confirmação mostra quanto. Sem saldo, é só excluir.
+        */}
+        <span className="ml-auto">
+          {cofrinho.saldo_atual > 0 ? (
+            <BotaoAcaoRpc
+              acao={{
+                rpc: "excluir_cofrinho",
+                args: { p_cofrinho_id: cofrinho.id, p_resgatar_saldo: true },
+              }}
+              rotulo="Resgatar e excluir"
+              rotuloPendente="Excluindo..."
+              tituloConfirmacao={`Excluir "${cofrinho.nome}"`}
+              confirmacao={`Este cofrinho tem ${formatarCentavos(
+                cofrinho.saldo_atual,
+              )} guardados. O valor será resgatado e registrado no histórico, e o cofrinho sai da lista. Nada é apagado do banco.`}
+              sucesso={`"${cofrinho.nome}" excluído — ${formatarCentavos(
+                cofrinho.saldo_atual,
+              )} resgatados.`}
+              perigo
+            />
+          ) : (
+            <BotaoAcaoRpc
+              acao={{ rpc: "excluir_cofrinho", args: { p_cofrinho_id: cofrinho.id } }}
+              rotulo="Excluir"
+              rotuloPendente="Excluindo..."
+              tituloConfirmacao={`Excluir "${cofrinho.nome}"`}
+              confirmacao={`O cofrinho sai da lista e dos totais. O histórico de aportes fica guardado no banco, não é apagado.`}
+              sucesso={`"${cofrinho.nome}" excluído.`}
+              perigo
+            />
+          )}
+        </span>
       </form>
     </div>
   );

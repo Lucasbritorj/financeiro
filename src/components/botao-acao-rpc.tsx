@@ -21,7 +21,10 @@ export type AcaoRpc =
   | { rpc: "excluir_regra_categorizacao"; args: { p_regra_id: string } }
   | { rpc: "confirmar_importacao"; args: { p_importacao_id: string } }
   | { rpc: "descartar_importacao"; args: { p_importacao_id: string } }
-  | { rpc: "arquivar_cofrinho"; args: { p_cofrinho_id: string; p_arquivado?: boolean } };
+  | { rpc: "arquivar_cofrinho"; args: { p_cofrinho_id: string; p_arquivado?: boolean } }
+  // p_resgatar_saldo é o opt-in de "resgatar tudo e excluir": sem ele, saldo
+  // > 0 devolve FW409 e nada acontece. Dinheiro não some por omissão.
+  | { rpc: "excluir_cofrinho"; args: { p_cofrinho_id: string; p_resgatar_saldo?: boolean } };
 
 export default function BotaoAcaoRpc({
   acao,

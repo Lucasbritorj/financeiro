@@ -824,6 +824,10 @@ export type Database = {
         Args: { p_cofrinho_id: string; p_arquivado?: boolean };
         Returns: Json;
       };
+      excluir_cofrinho: {
+        Args: { p_cofrinho_id: string; p_resgatar_saldo?: boolean };
+        Returns: Json;
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
