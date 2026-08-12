@@ -17,28 +17,51 @@ begin;
 -- ---------------------------------------------------------------------
 -- Gate 1 — heurística de texto isolada. Precisão importa mais que
 -- cobertura: falso positivo aqui ESCONDE dinheiro do relatório, que é
--- falha silenciosa na direção errada. 14/14 na execução de 11/08.
+-- falha silenciosa na direção errada.
+--
+-- Os 14 primeiros casos rodaram no Postgres em 11/08 (14/14).
+-- Os 9 acrescentados pela 0025 (padrão Itaú + negativos novos) foram
+-- validados por RÉPLICA da normalização + regex fora do banco — 23/23,
+-- 0 regressão — mas AINDA NÃO rodaram no Postgres. Rode este arquivo
+-- antes de considerar a 0025 verificada.
 -- ---------------------------------------------------------------------
 do $regex$
-declare v_falhas text := '';
+declare v_falhas text := ''; v_n int := 0;
 begin
   for i in (
     select descricao, esperado from (values
+      -- verbo antes do substantivo (0023)
       ('PAGAMENTO FATURA CARTAO', true), ('Pagamento de fatura', true),
       ('PGTO FATURA', true),             ('PAGTO  FATURA!!', true),
       ('PAG FATURA CARTAO NUBANK', true),('PAGAMENTO CARTAO DE CREDITO', true),
       ('Fatura do cartão', true),        ('PAGAMENTO CARTAO', true),
+      -- 0025: substantivo + particípio, padrão Itaú visto em extrato real.
+      -- Antes deste patch, 0 de 535 linhas OFX eram detectadas.
+      ('FATURA PAGA Itau Uniclas', true),('FATURA PAGA ITAU UNICLAS', true),
+      ('fatura paga', true),             ('FATURA QUITADA', true),
+      ('Fatura Liquidada Bradesco', true),('FATURA  PAGA   ITAU', true),
+      -- negativos
       ('PAGAMENTO PADARIA', false),      ('PAGAMENTO BOLETO ENERGIA', false),
       ('COMPRA CARTAO DEBITO', false),   ('FATURA CELULAR VIVO', false),
-      ('TRANSFERENCIA PIX JOAO', false), ('PAGAMENTO SALARIO FUNCIONARIO', false)
+      ('TRANSFERENCIA PIX JOAO', false), ('PAGAMENTO SALARIO FUNCIONARIO', false),
+      -- fatura de OUTRO serviço não pode virar liquidação de cartão
+      ('FATURA ENERGIA CEMIG', false),
+      -- "fatura" precisa ser palavra inteira: FATURAMENTO não conta
+      ('FATURAMENTO PAGO CLIENTE', false),
+      -- ordem invertida com verbo fica de fora de propósito (0025):
+      -- não foi observada em extrato e afrouxaria sem evidência
+      ('PAGA FATURA', false)
     ) as t(descricao, esperado)
   ) loop
+    v_n := v_n + 1;
     if public.fn_parece_pagamento_fatura(i.descricao) <> i.esperado then
       v_falhas := v_falhas || format('%L esperava %s. ', i.descricao, i.esperado);
     end if;
   end loop;
   if v_falhas <> '' then raise exception 'REGEX FALHOU >>> %', v_falhas; end if;
-  raise notice 'regex 14/14 OK';
+  -- Contador dinâmico: a versão anterior tinha "14/14" fixo no texto e
+  -- ficou mentindo assim que a 0025 acrescentou casos.
+  raise notice 'regex %/% OK', v_n, v_n;
 end;
 $regex$;
 
