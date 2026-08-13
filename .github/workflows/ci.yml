@@ -21,6 +21,20 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      # O npm que acompanha o node flutua: `node-version: 24` trouxe 11.6.x em
+      # julho e 11.17.0 em agosto. Isso não é detalhe — em 13/08/2026 o
+      # package-lock.json foi reparado com npm 11.6.2, saiu verde na máquina de
+      # quem reparou e continuou vermelho aqui, porque o 11.17.0 exige entradas
+      # de topo para bundleDependencies que o 11.6.2 dispensa. Quem valida o
+      # lock precisa ser sempre a mesma versão, senão "npm ci verde" não
+      # responde "verde em qual npm?". A versão vive em packageManager, no
+      # package.json, para que o desenvolvedor local use a mesma.
+      - name: pin do npm declarado em packageManager
+        run: |
+          NPM_PIN=$(node -p "require('./package.json').packageManager.replace('npm@','')")
+          echo "pin declarado no package.json: $NPM_PIN"
+          npm i -g npm@$NPM_PIN
+          npm --version
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm run lint
