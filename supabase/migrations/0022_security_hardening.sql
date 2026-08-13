@@ -100,7 +100,35 @@ $fn$;
 -- O EXECUTE para anon/public é ruído de catálogo, não vulnerabilidade.
 -- Revogado por higiene (event trigger não consulta EXECUTE para disparar,
 -- então remover não afeta o funcionamento).
-revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
+-- GUARD ACRESCENTADO EM 13/08/2026 — por que uma migração já aplicada mudou:
+-- esta linha revogava uma função que NENHUMA migração criava. O objeto só
+-- existia no banco de produção, criado fora do controle de migrações, e por
+-- isso a 0022 funcionou lá e só lá. Em qualquer banco limpo (suíte local, job
+-- `sql` do CI) ela abortava com "function public.rls_auto_enable() does not
+-- exist", derrubando a suíte inteira antes do primeiro assert.
+--
+-- O guard não altera o efeito já produzido em produção: onde a função existe,
+-- o revoke acontece exatamente como antes. Onde não existe, a migração segue
+-- em vez de explodir, e a 0027 — que traz a função para o controle de
+-- migrações — aplica o mesmo revoke ao criá-la.
+--
+-- EXECUTE dinâmico de propósito: REVOKE escrito direto resolveria o nome da
+-- função na preparação do comando, o que reintroduziria a falha mesmo dentro
+-- do ramo não tomado.
+do $rls$
+begin
+  if exists (
+    select 1
+    from pg_catalog.pg_proc p
+    join pg_catalog.pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'rls_auto_enable'
+  ) then
+    execute 'revoke execute on function public.rls_auto_enable() from public, anon, authenticated';
+  else
+    raise notice '0022: rls_auto_enable() ainda não existe — revoke delegado à 0027.';
+  end if;
+end;
+$rls$;
 
 -- ---------------------------------------------------------------- 6. Verificação
 -- Roda dentro da própria migration: se algum privilégio perigoso sobreviver,
