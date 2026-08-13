@@ -35,13 +35,8 @@ for f in supabase/migrations/*.sql; do
   run_sql "$f"
 done
 
-# raise notice sai no stderr do psql — capturar junto.
-for teste in verificacao_nucleo verificacao_assistente verificacao_isolamento verificacao_importacao_guard; do
-  echo "== asserts: supabase/tests/$teste.sql"
-  saida=$(docker exec -i "$CONTAINER" psql -U postgres -d app -v ON_ERROR_STOP=1 \
-    <"supabase/tests/$teste.sql" 2>&1) || { echo "$saida"; echo "SQL SUITE VERMELHA ($teste)"; exit 1; }
-  echo "$saida"
-  echo "$saida" | grep -q "OK: .* asserts" || {
-    echo "SQL SUITE VERMELHA (notice de sucesso ausente em $teste)"; exit 1; }
-done
+# Asserts: lista unica em tests/sql/run_asserts.sh, derivada do glob.
+PSQL_CMD="docker exec -i $CONTAINER psql -U postgres -d app -v ON_ERROR_STOP=1" \
+  bash tests/sql/run_asserts.sh
+
 echo "SQL SUITE VERDE"
