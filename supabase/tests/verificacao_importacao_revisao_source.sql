@@ -129,7 +129,7 @@ begin
   log := log || format('razão %s->%s', base, depois);
 
   if falhas <> '' then raise exception 'FALHOU >>> %', falhas; end if;
-  raise notice 'PASSOU >>> %', log;
+  raise notice 'OK: todos os asserts passaram >>> %', log;
 end;
 $teste$;
 

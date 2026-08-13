@@ -26,9 +26,13 @@ begin;
 -- antes de considerar a 0025 verificada.
 -- ---------------------------------------------------------------------
 do $regex$
-declare v_falhas text := ''; v_n int := 0;
+-- `i` precisa ser declarado: só o FOR sobre intervalo de inteiros declara a
+-- variável sozinho; FOR sobre linhas exige record ou lista de escalares.
+declare v_falhas text := ''; v_n int := 0; i record;
 begin
-  for i in (
+  -- Sem parênteses em volta do SELECT: com eles o PL/pgSQL não compila
+  -- ("loop variable of loop over rows must be a record variable").
+  for i in
     select descricao, esperado from (values
       -- verbo antes do substantivo (0023)
       ('PAGAMENTO FATURA CARTAO', true), ('Pagamento de fatura', true),
@@ -52,7 +56,7 @@ begin
       -- não foi observada em extrato e afrouxaria sem evidência
       ('PAGA FATURA', false)
     ) as t(descricao, esperado)
-  ) loop
+  loop
     v_n := v_n + 1;
     if public.fn_parece_pagamento_fatura(i.descricao) <> i.esperado then
       v_falhas := v_falhas || format('%L esperava %s. ', i.descricao, i.esperado);
@@ -169,7 +173,7 @@ begin
   log := log || format('C6[fatura continua %s] ', (select status from public.faturas where id=v_fat));
 
   if falhas <> '' then raise exception 'FALHOU >>> %  [log: %]', falhas, log; end if;
-  raise notice 'PASSOU >>> %', log;
+  raise notice 'OK: todos os asserts passaram >>> %', log;
 end;
 $t$;
 
