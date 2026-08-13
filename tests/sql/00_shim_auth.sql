@@ -20,10 +20,43 @@ end $$;
 
 create schema if not exists auth;
 
+-- created_at é coluna de fábrica do auth.users do Supabase, e três asserts
+-- (excluir_cofrinho, importacao_dedup, importacao_revisao_source) ordenam por
+-- ela para pegar o usuário da massa. Faltava aqui só porque nenhum dos asserts
+-- que o runner antigo alcançava precisava dela.
+--
+-- Default é clock_timestamp(), não now(): now() congela no início da transação,
+-- então dois usuários criados na mesma massa empatariam e o "order by
+-- created_at limit 1" escolheria um dos dois de forma indefinida — teste
+-- intermitente. Mesmo motivo documentado em fn_touch_updated_at (0022).
 create table if not exists auth.users (
-  id    uuid primary key,
-  email text
+  id         uuid primary key,
+  email      text,
+  created_at timestamptz not null default clock_timestamp()
 );
+
+-- Reexecução do shim sobre banco que já tinha a tabela sem a coluna.
+alter table auth.users
+  add column if not exists created_at timestamptz not null default clock_timestamp();
+
+-- Usuário de fixture. Existe porque os asserts se dividem em dois contratos:
+--   * nucleo, assistente, isolamento e importacao_guard criam o próprio
+--     usuário inline (ids ...aa, ...bb, ...cf) dentro da transação;
+--   * excluir_cofrinho, importacao_dedup e importacao_revisao_source NÃO
+--     criam — leem `app.test_user_id` e, na falta dele, caem em
+--     `select id from auth.users order by created_at limit 1`.
+-- O segundo grupo nasceu rodando contra o projeto Supabase real, onde sempre
+-- há usuário. Contra Postgres limpo a tabela está vazia e eles abortam em
+-- "shim de auth não configurado". O cabeçalho de importacao_dedup já mandava
+-- rodar "com o shim de auth" — o shim é que nunca cumpriu essa parte.
+--
+-- Id fora da faixa usada pelos testes (...aa, ...bb, ...cf) para não colidir.
+-- Fica commitado (fora de transação de teste) e é sempre o mais antigo, então
+-- o "order by created_at limit 1" é determinístico: os usuários que os outros
+-- asserts criam nascem depois e desaparecem no rollback.
+insert into auth.users (id, email)
+values ('00000000-0000-0000-0000-0000000000fe', 'fixture@local.dev')
+on conflict (id) do nothing;
 
 -- Idêntico em contrato ao auth.uid() do Supabase: sub do JWT da sessão.
 create or replace function auth.uid()
