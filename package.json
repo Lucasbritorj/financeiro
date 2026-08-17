@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "gate": "node tests/gate/run.ts",
     "test": "node --test \"tests/unit/*.test.ts\"",
     "test:sql": "bash tests/sql/run_local.sh"
   },
