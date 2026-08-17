@@ -8,6 +8,16 @@ import {
   semComentario,
 } from "./_asserts-sql.ts";
 
+// CONTRATO
+//   Garante  — que as primitivas de _asserts-sql.ts leem SQL como o restante
+//              dos gates supõe: comentário sai, literal sobrevive.
+//   Falha se — comentário virar código (ou o contrário), dependeDoAmbiente
+//              deixar de reconhecer as duas marcas do grupo 2, ou
+//              noticesDeSucesso parar de extrair o literal de `raise notice`.
+//   Espelha  — nenhuma regra de produção direto: é a base de que os gates
+//              asserts-sql-contrato e asserts-sql-notice dependem.
+//   Vermelho — provado com entrada sintética em todos os casos abaixo.
+//
 // Os gates que vêm depois só valem o que este parser valer. Um erro aqui não
 // deixa um gate vermelho — deixa os três verdes para sempre, medindo nada.
 // Por isso o parser é testado com entrada sintética antes de qualquer assert
