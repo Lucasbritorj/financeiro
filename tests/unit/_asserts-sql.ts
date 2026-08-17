@@ -1,5 +1,14 @@
 // Base compartilhada dos gates estáticos da suíte SQL.
 //
+// CONTRATO
+//   Faz     — lê supabase/tests/*.sql e tests/sql/00_shim_auth.sql, remove
+//             comentário e expõe: semComentario, lerAsserts, dependeDoAmbiente,
+//             noticesDeSucesso, lerShim.
+//   Não faz — não executa SQL, não substitui tests/sql/run_asserts.sh e não
+//             prova que um notice é ALCANÇADO em runtime. É análise de texto.
+//   Escopo  — consumido pelos gates tests/unit/asserts-sql-*.test.ts. Uso fora
+//             de tests/unit é acidente, não contrato: não é API do app.
+//
 // Os asserts de supabase/tests seguem dois contratos de setup incompatíveis e
 // nada verifica o pareamento entre eles e tests/sql/00_shim_auth.sql. Cada gate
 // precisaria ler os mesmos arquivos e decidir as mesmas coisas; três parsers
