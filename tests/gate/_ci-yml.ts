@@ -249,6 +249,56 @@ export function lerUsosDoCi(yaml: string): readonly UsoDeAcao[] {
   return usos;
 }
 
+/**
+ * A `image:` de cada serviço em `services:` de um job, por nome de serviço.
+ *
+ * `{}` quando o job não declara `services:` — um job sem container não é
+ * anomalia, é o caso comum. O que seria anomalia é `services:` existir e não
+ * ter imagem nenhuma, e isso lança.
+ */
+export function lerServicosDoCi(yaml: string, job: string): Readonly<Record<string, string>> {
+  const linhas = emLinhas(yaml);
+
+  const iJobs = linhas.findIndex((l) => l.indent === 0 && l.texto.trim() === "jobs:");
+  if (iJobs < 0) falhar("não achei a chave `jobs:` na coluna 0.");
+
+  const dosJobs = blocoFilho(linhas, iJobs);
+  const iJob = dosJobs.findIndex((l) => !ehComentario(l) && l.texto.trim() === `${job}:`);
+  if (iJob < 0) falhar(`não achei o job \`${job}\` dentro de \`jobs:\`.`);
+
+  const doJob = blocoFilho(dosJobs, iJob);
+  const iServicos = acharChave(doJob, "services");
+  if (iServicos < 0) return {};
+
+  const dosServicos = blocoFilho(doJob, iServicos);
+  const uteis = dosServicos.filter((l) => !ehVazia(l) && !ehComentario(l));
+  if (uteis.length === 0) falhar(`o job \`${job}\` tem \`services:\` vazio.`);
+  const nivel = Math.min(...uteis.map((l) => l.indent));
+
+  const imagens: Record<string, string> = {};
+
+  for (let i = 0; i < dosServicos.length; i++) {
+    const linha = dosServicos[i];
+    if (ehVazia(linha) || ehComentario(linha) || linha.indent !== nivel) continue;
+    if (!/^[A-Za-z0-9_-]+:$/.test(linha.texto.trim())) continue;
+
+    const servico = linha.texto.trim().slice(0, -1);
+    const doServico = blocoFilho(dosServicos, i);
+    const iImagem = acharChave(doServico, "image");
+    if (iImagem < 0) falhar(`o serviço \`${servico}\` do job \`${job}\` não tem \`image:\`.`);
+
+    const { valor } = parDeChaveValor(doServico[iImagem].texto);
+    if (valor === "") falhar(`o serviço \`${servico}\` do job \`${job}\` tem \`image:\` vazia.`);
+    imagens[servico] = valor;
+  }
+
+  if (Object.keys(imagens).length === 0) {
+    falhar(`o job \`${job}\` tem \`services:\` sem nenhum serviço nomeado.`);
+  }
+
+  return imagens;
+}
+
 /** Lê um job do ci.yml. Lança quando a estrutura não é a esperada. */
 export function lerJobDoCi(yaml: string, job: string): JobCI {
   const linhas = emLinhas(yaml);
