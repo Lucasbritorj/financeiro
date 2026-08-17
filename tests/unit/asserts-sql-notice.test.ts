@@ -3,6 +3,16 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { lerAsserts, noticesDeSucesso, semComentario } from "./_asserts-sql.ts";
 
+// CONTRATO
+//   Garante  — que todo assert de supabase/tests anuncia sucesso num formato
+//              que o runner reconhece.
+//   Falha se — um arquivo não emitir, FORA de comentário, um `raise notice`
+//              que case com o padrão de sucesso do runner.
+//   Espelha  — `grep -q "OK: .* asserts"` de tests/sql/run_asserts.sh, lido do
+//              próprio arquivo em vez de copiado, para não divergir em silêncio.
+//   Vermelho — provado com notice sintético em outro formato, com "OK" sem a
+//              palavra asserts, e com notice existindo só dentro de comentário.
+//
 // tests/sql/run_asserts.sh não confia no código de saída do psql: ele exige que
 // a saída case com um padrão de sucesso, senão declara a suíte vermelha. Um
 // assert que roda inteiro mas anuncia o sucesso em outro formato derruba a

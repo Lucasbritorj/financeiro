@@ -2,6 +2,16 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { dependeDoAmbiente, lerAsserts, lerShim, type Shim } from "./_asserts-sql.ts";
 
+// CONTRATO
+//   Garante  — que todo assert de supabase/tests que depende do ambiente tem,
+//              em tests/sql/00_shim_auth.sql, o que esse contrato exige.
+//   Falha se — existir assert lendo `app.test_user_id` ou caindo no fallback
+//              `order by created_at` enquanto o shim não criar auth.users, não
+//              tiver created_at, ou não inserir usuário de fixture.
+//   Espelha  — o contrato de setup do shim, não um comando: é a condição para
+//              o grupo 2 rodar contra Postgres limpo em tests/sql/run_local.sh.
+//   Vermelho — provado com Shim sintético incompleto nos testes de faltasDoShim.
+//
 // Os asserts de supabase/tests se dividem em dois contratos de setup:
 //
 //   grupo 1 — criam o próprio usuário dentro da transação (ids ...aa, ...bb,
