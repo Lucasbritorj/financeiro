@@ -3,7 +3,8 @@
 //
 // CONTRATO
 //   Faz     — lê um job do ci.yml e devolve o bloco `env:` dele e a identidade
-//             de cada step que tem `run:`, na ordem em que aparecem.
+//             de cada step que tem `run:`, na ordem em que aparecem; e lê as
+//             referências `uses:` de todos os jobs do arquivo.
 //   Não faz — não é um parser de YAML. Entende a forma que este arquivo usa
 //             (mapa indentado por espaços, lista de steps com `- `, bloco
 //             literal `run: |`) e RECUSA o resto em voz alta.
@@ -26,6 +27,14 @@ const CAMINHO_CI = new URL(".github/workflows/ci.yml", RAIZ);
 
 /** Prefixo de toda recusa deste módulo, para os testes casarem sem ambiguidade. */
 export const ERRO = "ci.yml ilegível:";
+
+/** Uma referência `uses:` do ci.yml, com o job em que ela aparece. */
+export interface UsoDeAcao {
+  /** O nome do job dentro de `jobs:` — `node`, `sql`. */
+  readonly job: string;
+  /** A referência crua, como escrita: `actions/checkout@v6`. */
+  readonly ref: string;
+}
 
 export interface JobCI {
   /** O bloco `env:` do job. Vazio quando o job não declara nenhum. */
@@ -174,6 +183,70 @@ function identidadeDoStep(grupo: readonly Linha[]): string | null {
   if (!primeira) falhar("step com `run:` em bloco literal e nenhuma linha de comando.");
 
   return primeira.texto.trim();
+}
+
+/** A referência `uses:` do step, ou `null` quando ele não tem uma. */
+function usoDoStep(grupo: readonly Linha[]): string | null {
+  const uteis = grupo.filter((l) => !ehVazia(l) && !ehComentario(l));
+  if (uteis.length === 0) return null;
+  const nivel = Math.min(...uteis.map((l) => l.indent));
+
+  const linhaUses = uteis
+    .filter((l) => l.indent === nivel)
+    .find((l) => l.texto.trim().startsWith("uses:"));
+  if (!linhaUses) return null;
+
+  const { valor } = parDeChaveValor(linhaUses.texto);
+  if (valor === "") falhar("step com `uses:` vazio — não há ação para verificar.");
+
+  return valor;
+}
+
+/**
+ * Toda referência `uses:` do arquivo, de todos os jobs, na ordem em que
+ * aparecem.
+ *
+ * Varre os jobs em vez de receber um nome como `lerJobDoCi`: quem acrescenta um
+ * job novo ao ci.yml não precisa lembrar de acrescentá-lo ao gate — e é
+ * justamente o job que ninguém lembrou de conferir que envelhece primeiro. O
+ * job `sql` é a prova disso: ele carrega um `actions/checkout` que nenhuma
+ * verificação do alvo local jamais olhou.
+ */
+export function lerUsosDoCi(yaml: string): readonly UsoDeAcao[] {
+  const linhas = emLinhas(yaml);
+
+  const iJobs = linhas.findIndex((l) => l.indent === 0 && l.texto.trim() === "jobs:");
+  if (iJobs < 0) falhar("não achei a chave `jobs:` na coluna 0.");
+
+  const dosJobs = blocoFilho(linhas, iJobs);
+  const uteis = dosJobs.filter((l) => !ehVazia(l) && !ehComentario(l));
+  if (uteis.length === 0) falhar("`jobs:` não tem nenhum job.");
+  const nivel = Math.min(...uteis.map((l) => l.indent));
+
+  const usos: UsoDeAcao[] = [];
+
+  for (let i = 0; i < dosJobs.length; i++) {
+    const linha = dosJobs[i];
+    if (ehVazia(linha) || ehComentario(linha) || linha.indent !== nivel) continue;
+    if (!/^[A-Za-z0-9_-]+:$/.test(linha.texto.trim())) continue;
+
+    const job = linha.texto.trim().slice(0, -1);
+    const doJob = blocoFilho(dosJobs, i);
+
+    const iSteps = acharChave(doJob, "steps");
+    if (iSteps < 0) falhar(`o job \`${job}\` não tem \`steps:\`.`);
+
+    for (const grupo of gruposDeSteps(blocoFilho(doJob, iSteps))) {
+      const ref = usoDoStep(grupo);
+      if (ref !== null) usos.push({ job, ref });
+    }
+  }
+
+  // Lista vazia aqui seria um gate verde para sempre: nenhuma ação declarada é
+  // indistinguível de nenhuma ação verificada. Este arquivo prefere gritar.
+  if (usos.length === 0) falhar("nenhum step com `uses:` — nada para verificar.");
+
+  return usos;
 }
 
 /** Lê um job do ci.yml. Lança quando a estrutura não é a esperada. */
