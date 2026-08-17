@@ -116,6 +116,9 @@ export const FORA_DO_ALVO: readonly string[] = [
     "com Postgres já de pé.",
   "a sincronia de package.json com package-lock.json, que só `npm ci` verifica " +
     "(ver o motivo da etapa `npm ci` em tests/gate/etapas.ts).",
-  "as versões de `actions/checkout` e `actions/setup-node`, que são `uses` e " +
-    "não têm equivalente local.",
+  "a EXECUÇÃO de `actions/checkout` e `actions/setup-node`, que são `uses` e " +
+    "não têm equivalente local. O que passou a ser coberto é a VERSÃO delas: " +
+    "tests/unit/gate-ci-acoes.test.ts reprova major cujo runtime é Node 20, em " +
+    "qualquer job. Ler `@v6` no YAML não é rodar `@v6` — a diferença entre as " +
+    "duas coisas é esta linha.",
 ];

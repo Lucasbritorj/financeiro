@@ -16,8 +16,11 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # As versões destas duas são cobradas por tests/unit/gate-ci-acoes.test.ts:
+      # major abaixo do primeiro com runtime Node 24 é teste vermelho, não
+      # annotation silenciosa no run verde.
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -60,7 +63,7 @@ jobs:
       PGPASSWORD: test
       PGDATABASE: app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: shim + migrações em ordem
         run: |
           psql -v ON_ERROR_STOP=1 -q -f tests/sql/00_shim_auth.sql
