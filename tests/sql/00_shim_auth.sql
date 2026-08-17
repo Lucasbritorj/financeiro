@@ -20,10 +20,11 @@ end $$;
 
 create schema if not exists auth;
 
--- created_at é coluna de fábrica do auth.users do Supabase, e três asserts
--- (excluir_cofrinho, importacao_dedup, importacao_revisao_source) ordenam por
--- ela para pegar o usuário da massa. Faltava aqui só porque nenhum dos asserts
--- que o runner antigo alcançava precisava dela.
+-- created_at é coluna de fábrica do auth.users do Supabase, e quatro asserts
+-- (conciliacao_fatura, excluir_cofrinho, importacao_dedup,
+-- importacao_revisao_source) ordenam por ela para pegar o usuário da massa.
+-- Faltava aqui só porque nenhum dos asserts que o runner antigo alcançava
+-- precisava dela.
 --
 -- Default é clock_timestamp(), não now(): now() congela no início da transação,
 -- então dois usuários criados na mesma massa empatariam e o "order by
@@ -42,9 +43,15 @@ alter table auth.users
 -- Usuário de fixture. Existe porque os asserts se dividem em dois contratos:
 --   * nucleo, assistente, isolamento e importacao_guard criam o próprio
 --     usuário inline (ids ...aa, ...bb, ...cf) dentro da transação;
---   * excluir_cofrinho, importacao_dedup e importacao_revisao_source NÃO
---     criam — leem `app.test_user_id` e, na falta dele, caem em
+--   * conciliacao_fatura, excluir_cofrinho, importacao_dedup e
+--     importacao_revisao_source NÃO criam — leem `app.test_user_id` e, na
+--     falta dele, caem em
 --     `select id from auth.users order by created_at limit 1`.
+--
+-- São 4 e 4. A lista dizia 3 e omitia conciliacao_fatura, que entrou depois
+-- com o mesmo par de marcas (`app.test_user_id` na linha 77 e o fallback na
+-- 85). Conferir a lista a cada assert novo: quem depende do fixture depende
+-- deste arquivo, e a dependência só aparece aqui.
 -- O segundo grupo nasceu rodando contra o projeto Supabase real, onde sempre
 -- há usuário. Contra Postgres limpo a tabela está vazia e eles abortam em
 -- "shim de auth não configurado". O cabeçalho de importacao_dedup já mandava
