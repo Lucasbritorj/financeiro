@@ -149,9 +149,9 @@ export function lerShim(): Shim {
   const codigo = semComentario(readFileSync(CAMINHO_SHIM, "utf8"));
 
   const criaAuthUsers = /create\s+table\s+(if\s+not\s+exists\s+)?auth\.users/i.test(codigo);
-  const criaComCreatedAt = /create\s+table[^;]*auth\.users[^;]*created_at/is.test(codigo);
+  const criaComCreatedAt = /create\s+table[^;]*auth\.users[^;]*created_at/i.test(codigo);
   const alteraParaCreatedAt =
-    /alter\s+table\s+auth\.users[^;]*add\s+column[^;]*created_at/is.test(codigo);
+    /alter\s+table\s+auth\.users[^;]*add\s+column[^;]*created_at/i.test(codigo);
   const insereFixture = /insert\s+into\s+auth\.users\b/i.test(codigo);
 
   return {
