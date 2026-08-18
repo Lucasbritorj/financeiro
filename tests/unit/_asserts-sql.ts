@@ -6,8 +6,12 @@
 //             noticesDeSucesso, lerShim.
 //   Não faz — não executa SQL, não substitui tests/sql/run_asserts.sh e não
 //             prova que um notice é ALCANÇADO em runtime. É análise de texto.
-//   Escopo  — consumido pelos gates tests/unit/asserts-sql-*.test.ts. Uso fora
-//             de tests/unit é acidente, não contrato: não é API do app.
+//   Escopo  — consumido pelos gates tests/unit/asserts-sql-*.test.ts e, de
+//             `semComentario` só, por tests/gate/migracoes.ts. Uso fora de
+//             tests/ é acidente, não contrato: não é API do app.
+//             `semComentario` é a exceção deliberada: um segundo removedor de
+//             comentário SQL neste repositório discordaria deste em silêncio,
+//             que é o modo de falha declarado seis linhas abaixo.
 //
 // Os asserts de supabase/tests seguem dois contratos de setup incompatíveis e
 // nada verifica o pareamento entre eles e tests/sql/00_shim_auth.sql. Cada gate
