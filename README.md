@@ -13,14 +13,49 @@ fuso de negócio `America/Sao_Paulo`.
 ## Setup
 
 1. Crie um projeto em [supabase.com](https://supabase.com).
-2. No **SQL Editor**, execute na ordem (0002 e 0003 são `CREATE OR REPLACE`:
-   re-execute as versões atuais **antes** de 0005, que revoga o DML direto):
-   - `supabase/migrations/0001_nucleo_transacional.sql` (tabelas, índices, RLS, cascata de soft delete)
-   - `supabase/migrations/0002_processar_transacao_completa.sql` (motor de parcelamento + guard de limite + trava de fatura liquidada)
-   - `supabase/migrations/0003_processar_pagamento_fatura.sql` (colunas de auditoria + máquina de estados de pagamento)
-   - `supabase/migrations/0004_faturas_unique_parcial.sql` (unicidade só entre faturas ativas — soft delete não trava competência)
-   - `supabase/migrations/0005_blindagem_privilegios.sql` (least privilege: REVOKE de DML direto, fim do DELETE físico, RPC `criar_cartao`, view `vw_faturas_consolidadas`)
-   - `supabase/migrations/0006_ciclo_e_exclusao.sql` (updated_at universal + trigger, RPCs `excluir_transacao`/`excluir_cartao`, `fechar_faturas` para o ciclo ABERTA→FECHADA)
+2. No **SQL Editor**, execute **todas** as migrações de `supabase/migrations/`
+   em ordem numérica — são **27**, de `0001` a `0027`. Aplicar só o núcleo
+   (`0001`–`0006`) sobe um banco sem categorias, importação, cofrinhos,
+   análise, carteira, boletos nem recorrências: telas que o app oferece falham
+   contra objetos que não existem. Ordem importa — `0002` e `0003` são
+   `CREATE OR REPLACE`: re-execute as versões atuais **antes** de `0005`, que
+   revoga o DML direto.
+
+   *Núcleo transacional (transações, faturas, cartões):*
+   - `0001_nucleo_transacional.sql` (tabelas, índices, RLS, cascata de soft delete)
+   - `0002_processar_transacao_completa.sql` (motor de parcelamento + guard de limite + trava de fatura liquidada)
+   - `0003_processar_pagamento_fatura.sql` (colunas de auditoria + máquina de estados de pagamento)
+   - `0004_faturas_unique_parcial.sql` (unicidade só entre faturas ativas — soft delete não trava competência)
+   - `0005_blindagem_privilegios.sql` (least privilege: REVOKE de DML direto, fim do DELETE físico, RPC `criar_cartao`, view `vw_faturas_consolidadas`)
+   - `0006_ciclo_e_exclusao.sql` (updated_at universal + trigger, RPCs `excluir_transacao`/`excluir_cartao`, `fechar_faturas` para o ciclo ABERTA→FECHADA)
+
+   *Assistente (categorias, importação, cofrinhos, carteira, boletos, recorrências):*
+   - `0007_editar_transacao.sql`
+   - `0008_categorias_e_regras.sql`
+   - `0009_importacao.sql`
+   - `0010_cofrinhos.sql`
+   - `0011_substituir_transacao.sql`
+   - `0012_carteira_caixa.sql`
+   - `0013_boletos.sql`
+   - `0014_estorno_recorrencia_cron.sql`
+   - `0015_recorrencias.sql`
+   - `0016_importacao_formatos.sql`
+
+   *Endurecimento, auditoria e correções:*
+   - `0017_endurecimento_auditoria.sql`
+   - `0018_importacao_guard_valor.sql`
+   - `0019_correcoes_auditoria_graph_loop.sql`
+   - `0020_importacao_dedup.sql`
+   - `0021_importacao_revisao_source_sha.sql`
+   - `0022_security_hardening.sql`
+   - `0023_conciliacao_fatura_extrato.sql`
+   - `0024_excluir_cofrinho.sql`
+   - `0025_regex_fatura_paga_itau.sql`
+   - `0026_fingerprint_lancamento_manual.sql`
+   - `0027_rls_auto_enable_event_trigger.sql`
+
+   > Os bundles de `supabase/APLICAR.md` cobrem apenas até `0019`. De `0020`
+   > em diante, aplique os arquivos de `supabase/migrations/` direto.
 3. (Opcional) Execute `supabase/tests/verificacao_nucleo.sql` — 21 asserts
    cobrindo divisão centesimal, Falha do Dia 31, corte de fechamento,
    idempotência, limite de crédito, máquina de estados (pagar/fechar),
