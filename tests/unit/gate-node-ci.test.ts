@@ -1,7 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { lerCiYml, lerJobDoCi, type JobCI } from "../gate/_ci-yml.ts";
-import { ENV_DO_JOB, ETAPAS, type Etapa } from "../gate/etapas.ts";
+import {
+  ACOES_LOCAIS,
+  ENV_DO_JOB,
+  ETAPAS,
+  type AcaoLocal,
+  type Etapa,
+} from "../gate/etapas.ts";
 
 // CONTRATO
 //   Garante  — que o alvo local `npm run gate` continua sendo o job `node` do
@@ -237,6 +243,138 @@ test("RED: etapa que não roda o comando do CI e não declara motivo é queixa",
   const job = lerJobDoCi(YAML_MINIMO, "node");
 
   const queixas = divergencias(semMotivo, job);
+
+  assert.equal(queixas.length, 1);
+  assert.match(queixas[0], /não declara motivo/);
+});
+
+// ------------------------------------------------- as ações locais (local-only)
+
+// ACOES_LOCAIS é a categoria de verificação que existe SÓ no gate local. Ela
+// foi criada para que o preflight do lock não precisasse virar uma `Etapa` —
+// e uma `Etapa` sem step correspondente no ci.yml é "classificação órfã", que
+// as regras acima reprovam de propósito.
+//
+// A categoria nova abre dois furos próprios, e são estes quatro testes que os
+// fecham: uma ação com o nome de um step do CI vira etapa-gêmea disfarçada, e
+// uma ação ancorada numa etapa inexistente nunca é executada pelo runner —
+// cobertura prometida e não entregue, que é pior que lacuna declarada.
+
+/** As queixas do gate contra as ações locais, dadas as etapas e o job. */
+function queixasDeAcoes(
+  acoes: readonly AcaoLocal[],
+  etapas: readonly Etapa[],
+  doCi: readonly string[],
+): string[] {
+  const queixas: string[] = [];
+  const ancoras = new Set(etapas.map((e) => e.ci));
+
+  for (const acao of acoes) {
+    if (doCi.includes(acao.nome)) {
+      queixas.push(
+        `a ação local "${acao.nome}" tem o nome de um step do job \`node\`. ` +
+          `Ação local que se disfarça de etapa vira etapa-gêmea: ou o gate ` +
+          `roda a mesma coisa duas vezes, ou alguém acrescenta o step gêmeo no ` +
+          `ci.yml e o CI passa a pagar de novo o que já paga.`,
+      );
+    }
+
+    if (!ancoras.has(acao.reduzLacunaDe)) {
+      queixas.push(
+        `a ação local "${acao.nome}" ancora em "${acao.reduzLacunaDe}", que ` +
+          `não está em tests/gate/etapas.ts. Âncora órfã é ação que o runner ` +
+          `nunca executa — o gate prometeria a cobertura e não a entregaria.`,
+      );
+    }
+
+    if (acao.comando.length === 0) {
+      queixas.push(`a ação local "${acao.nome}" não declara comando.`);
+    }
+
+    if (acao.motivo.trim() === "") {
+      queixas.push(
+        `a ação local "${acao.nome}" não declara motivo. Rodar localmente o ` +
+          `que o CI não roda é legítimo — fazer isso em silêncio não é.`,
+      );
+    }
+  }
+
+  return queixas;
+}
+
+/** Ações locais sintéticas que pareiam com LOCAIS_MINIMAS e YAML_MINIMO. */
+const ACOES_MINIMAS: readonly AcaoLocal[] = [
+  {
+    nome: "preflight: lock em sincronia",
+    comando: ["npm", "ci", "--dry-run"],
+    motivo: "valida o lock sem escrever em disco",
+    reduzLacunaDe: "npm ci",
+  },
+];
+
+test("suíte real: as ações locais não são cobradas contra o ci.yml", () => {
+  const job = lerJobDoCi(lerCiYml(), "node");
+
+  // Sem ação nenhuma este teste passaria por vacuidade, e a asserção de baixo
+  // seria uma afirmação sobre um conjunto vazio.
+  assert.ok(ACOES_LOCAIS.length > 0, "não há ação local para este gate guardar");
+  assert.deepEqual(queixasDeAcoes(ACOES_LOCAIS, ETAPAS, job.etapasRun), []);
+});
+
+test("suíte real: a ação local não desloca o pareamento das etapas com o ci.yml", () => {
+  const job = lerJobDoCi(lerCiYml(), "node");
+
+  // O ponto do tipo separado: ACOES_LOCAIS pode crescer sem que o pareamento
+  // sinta. Se um dia alguém mover uma dessas para ETAPAS, é esta asserção que
+  // fica vermelha — como "classificação órfã".
+  assert.deepEqual(divergencias(ETAPAS, job), []);
+});
+
+test("suíte real: a lacuna do `npm ci` tem preflight ancorado nela", () => {
+  const preflight = ACOES_LOCAIS.find((acao) => acao.reduzLacunaDe === "npm ci");
+
+  assert.ok(
+    preflight,
+    "a etapa `npm ci` é a única do job `node` sem equivalente local, e é a " +
+      "que derrubou o CI de 13/08/2026. Se o preflight dela sumir, o gate " +
+      "volta a não ver lock dessincronizado — e volta em silêncio.",
+  );
+  assert.deepEqual(preflight.comando, ["npm", "ci", "--dry-run"]);
+});
+
+test("o gate não cobra nada quando as ações locais estão bem formadas", () => {
+  const job = lerJobDoCi(YAML_MINIMO, "node");
+
+  assert.deepEqual(queixasDeAcoes(ACOES_MINIMAS, LOCAIS_MINIMAS, job.etapasRun), []);
+});
+
+test("RED: ação local com o nome de um step do CI é queixa (etapa-gêmea)", () => {
+  const gemea: readonly AcaoLocal[] = [{ ...ACOES_MINIMAS[0], nome: "npm ci" }];
+  const job = lerJobDoCi(YAML_MINIMO, "node");
+
+  const queixas = queixasDeAcoes(gemea, LOCAIS_MINIMAS, job.etapasRun);
+
+  assert.equal(queixas.length, 1);
+  assert.match(queixas[0], /etapa-gêmea/);
+});
+
+test("RED: ação local ancorada em etapa inexistente é queixa", () => {
+  const solta: readonly AcaoLocal[] = [
+    { ...ACOES_MINIMAS[0], reduzLacunaDe: "npm run audit:ci" },
+  ];
+  const job = lerJobDoCi(YAML_MINIMO, "node");
+
+  const queixas = queixasDeAcoes(solta, LOCAIS_MINIMAS, job.etapasRun);
+
+  assert.equal(queixas.length, 1);
+  assert.match(queixas[0], /Âncora órfã/);
+});
+
+test("RED: ação local sem motivo é queixa", () => {
+  const muda: readonly AcaoLocal[] = [{ ...ACOES_MINIMAS[0], motivo: "   " }];
+  const job = lerJobDoCi(YAML_MINIMO, "node");
+
+  const queixas = queixasDeAcoes(muda, LOCAIS_MINIMAS, job.etapasRun);
 
   assert.equal(queixas.length, 1);
   assert.match(queixas[0], /não declara motivo/);

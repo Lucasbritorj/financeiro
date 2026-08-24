@@ -65,10 +65,13 @@ export const ETAPAS: readonly Etapa[] = [
     motivo:
       "apaga node_modules e exige rede a cada execução, o que tornaria o gate " +
       "caro demais para rodar antes de cada commit — e um gate que ninguém roda " +
-      "não guarda nada. É a lacuna conhecida deste alvo, e é a lacuna que mais " +
-      "custou neste repositório: o CI de 13/08/2026 (run 31745734787) morreu " +
-      "num package-lock.json dessincronizado que nenhuma das outras etapas vê. " +
-      "Por isso o runner imprime esta lacuna no resumo em vez de escondê-la.",
+      "não guarda nada. O comando do CI continua não rodando aqui. O que mudou " +
+      "é que a parte dele que mais custou a este repositório — a sincronia do " +
+      "package.json com o package-lock.json, que derrubou o CI de 13/08/2026 " +
+      "(run 31745734787) — passou a ser coberta pelo preflight ancorado nesta " +
+      "etapa (ver ACOES_LOCAIS abaixo), com `npm ci --dry-run`: a mesma " +
+      "validação de lock, sem escrever um byte em disco. A instalação de " +
+      "verdade segue fora do alvo, e segue declarada em FORA_DO_ALVO.",
   },
   {
     ci: "npx tsc --noEmit",
@@ -85,6 +88,61 @@ export const ETAPAS: readonly Etapa[] = [
   {
     ci: "npm run build",
     local: { tipo: "externo", comando: ["npm", "run", "build"] },
+  },
+];
+
+// ------------------------------------------------- ações locais (local-only)
+
+/**
+ * Uma verificação que o gate local roda e que o job `node` NÃO tem.
+ *
+ * Por que não é uma `Etapa`: `ETAPAS` é uma bijeção com os `run:` do ci.yml —
+ * tests/unit/gate-node-ci.test.ts cobra os dois sentidos, e entrada sem
+ * contraparte no YAML é "classificação órfã", vermelha de propósito. Uma
+ * verificação que só existe aqui não é uma etapa mal-pareada: é outra
+ * categoria. Enfiá-la em `ETAPAS` deixaria duas saídas, e as duas ruins —
+ * inventar um step gêmeo no ci.yml só para o pareamento fechar (fazendo o CI
+ * pagar de novo, num step separado, o que ele já paga dentro do `npm ci`), ou
+ * afrouxar o gate estático para tolerar órfã, que é justamente a divergência
+ * silenciosa que ele existe para pegar.
+ *
+ * `reduzLacunaDe` é a âncora: nomeia a etapa do CI cuja lacuna esta ação
+ * encolhe, e é o ponto da sequência onde o runner a executa. Não é enfeite —
+ * âncora que não existe em `ETAPAS` é ação que nunca roda, e isso é teste
+ * vermelho lá.
+ */
+export interface AcaoLocal {
+  /** A identidade da ação no resumo do runner. Nunca igual ao `ci:` de uma etapa. */
+  readonly nome: string;
+  readonly comando: readonly string[];
+  /** Por que ela existe localmente sem espelhar step do CI. Obrigatório. */
+  readonly motivo: string;
+  /** O `ci:` da etapa cuja lacuna ela reduz. Precisa existir em `ETAPAS`. */
+  readonly reduzLacunaDe: string;
+}
+
+/**
+ * As verificações que o gate local faz por conta própria.
+ *
+ * Rodam logo depois da etapa que ancoram — o preflight do lock roda depois do
+ * pin do npm justamente porque a resposta depende dele: 11.6.2 e 11.17.0
+ * discordam sobre o que é um package-lock.json válido, e validar o lock com o
+ * npm errado responderia a pergunta errada com a mesma cara de verde.
+ */
+export const ACOES_LOCAIS: readonly AcaoLocal[] = [
+  {
+    nome: "preflight: package.json em sincronia com package-lock.json",
+    comando: ["npm", "ci", "--dry-run"],
+    reduzLacunaDe: "npm ci",
+    motivo:
+      "`--dry-run` resolve o lock e reprova a dessincronia sem escrever nada: " +
+      "não apaga node_modules, não instala e não precisa de árvore montada — " +
+      "medido em 24/08/2026 num clone SEM node_modules, exit 0 em 1s, e o " +
+      "diretório continuou não existindo depois. É a metade barata do que o " +
+      "`npm ci` do CI faz: a validação do lock, não a instalação. Existe " +
+      "porque era a única etapa do job `node` sem nenhum equivalente local, e " +
+      "a que de fato derrubou o CI — dessincronizar o lock é vermelho em 8s no " +
+      "runner e era invisível aqui até o push.",
   },
 ];
 
@@ -114,8 +172,12 @@ export const FORA_DO_ALVO: readonly string[] = [
   "o job `sql` do ci.yml (migrações + asserts em Postgres real) — precisa de " +
     "container, e `npm run gate` não sobe banco. Localmente é `npm run test:sql`, " +
     "com Postgres já de pé.",
-  "a sincronia de package.json com package-lock.json, que só `npm ci` verifica " +
-    "(ver o motivo da etapa `npm ci` em tests/gate/etapas.ts).",
+  "a INSTALAÇÃO do `npm ci`: baixar os pacotes numa node_modules limpa, com " +
+    "rede, como o runner faz. A SINCRONIA de package.json com package-lock.json " +
+    "saiu desta lista — passou a ser coberta pelo preflight em ACOES_LOCAIS. O " +
+    "que continua fora é o resto: pacote publicado quebrado, script de install " +
+    "que falha, tarball sumido do registry. `--dry-run` resolve a árvore e não " +
+    "busca um byte de tarball, então nada disso aparece aqui.",
   "a EXECUÇÃO de `actions/checkout` e `actions/setup-node`, que são `uses` e " +
     "não têm equivalente local. O que passou a ser coberto é a VERSÃO delas: " +
     "tests/unit/gate-ci-acoes.test.ts reprova major cujo runtime é Node 20, em " +
