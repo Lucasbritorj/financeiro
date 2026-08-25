@@ -6,7 +6,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 CONTAINER=financeiro-web-pgtest
-IMAGEM=postgres:16-alpine
+IMAGEM=postgres:17-alpine
 
 docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
 docker run -d --name "$CONTAINER" \

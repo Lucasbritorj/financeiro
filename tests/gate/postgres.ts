@@ -48,21 +48,7 @@ export const DIVERGENCIA_DECLARADA: {
   readonly majorProducao: number;
   readonly motivo: string;
   readonly oQueExigeRemover: string;
-} | null = {
-  majorCi: 16,
-  majorProducao: 17,
-  motivo:
-    "a troca para postgres:17-alpine não tem veredito local: subir Postgres real " +
-    "exige container, e o único juiz honesto dela é o job `sql` do CI, que só " +
-    "roda depois do push. Trocar a imagem junto com esta declaração seria " +
-    "entregar uma mudança de risco médio sem nenhuma evidência — o modo de " +
-    "falha que já custou um patch revertido neste repositório. A divergência " +
-    "fica, declarada e datada (17/08/2026), até alguém rodar o job `sql` em 17.",
-  oQueExigeRemover:
-    "trocar `image: postgres:16-alpine` para 17 no ci.yml E `IMAGEM=` em " +
-    "tests/sql/run_local.sh, ver o job `sql` verde num push de teste, e então " +
-    "apagar esta declaração — o gate cobra que ela suma quando os majors baterem.",
-};
+} | null = null
 
 /**
  * O major de uma referência de imagem Docker do Postgres.

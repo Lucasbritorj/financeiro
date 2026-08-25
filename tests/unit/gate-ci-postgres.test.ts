@@ -134,11 +134,18 @@ test("suíte real: enquanto houver divergência declarada, ela diz o que exige r
   );
 });
 
+const FIXTURE_16_VS_17 = {
+  majorCi: 16,
+  majorProducao: 17,
+  motivo: "fixture de teste: declara 16 vs 17 para exercitar o ramo, nao o disco.",
+  oQueExigeRemover: "run_local.sh e ci.yml",
+} as const;
+
 // -------------------------------------------------------------- as regras, RED
 
 test("o gate não cobra nada quando CI, local e declaração contam a mesma história", () => {
   assert.deepEqual(
-    divergencias("postgres:16-alpine", "postgres:16-alpine", DIVERGENCIA_DECLARADA, 17),
+    divergencias("postgres:16-alpine", "postgres:16-alpine", FIXTURE_16_VS_17, 17),
     [],
   );
 });
@@ -162,7 +169,7 @@ test("RED: divergência com produção sem declaração é queixa", () => {
 });
 
 test("RED: declaração que não corresponde ao disco é queixa", () => {
-  const desatualizada = { ...DIVERGENCIA_DECLARADA!, majorCi: 15 };
+  const desatualizada = { ...FIXTURE_16_VS_17, majorCi: 15 };
 
   const queixas = divergencias(
     "postgres:16-alpine",
@@ -179,7 +186,7 @@ test("RED: declaração órfã depois de a divergência acabar é queixa", () =>
   const queixas = divergencias(
     "postgres:17-alpine",
     "postgres:17-alpine",
-    DIVERGENCIA_DECLARADA,
+    FIXTURE_16_VS_17,
     17,
   );
 
