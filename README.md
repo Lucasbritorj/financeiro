@@ -66,7 +66,11 @@ fuso de negócio `America/Sao_Paulo`.
    (`fechar_faturas` é administrativa — clientes não conseguem executá-la.)
 5. Copie `.env.example` para `.env.local` e preencha com os valores de
    **Settings → API** do projeto.
-6. Para testar rápido, desative **Confirm email** em Authentication → Providers → Email.
+6. **Confirm email** fica ligado por padrão (`enable_confirmations = true` em
+   `supabase/config.toml`, enforçado por `tests/unit/supabase-auth-config.test.ts`).
+   Para testar sem confirmar e-mail a cada cadastro, use o inbucket local em
+   http://127.0.0.1:54324 — ele intercepta todo e-mail enviado pelo `supabase start`
+   e mostra o link de confirmação, sem precisar desligar a checagem.
 7. `npm install && npm run dev` e acesse http://localhost:3000.
 
 ## Testes locais
@@ -107,7 +111,10 @@ Após aplicar migrações, regenere `src/lib/database.types.ts`
 - **View com `security_invoker`**: consultas analíticas respeitam a RLS.
 - **Headers HTTP** (`next.config.ts`): X-Frame-Options, nosniff,
   Referrer-Policy, Permissions-Policy.
-- **Checklist do painel Supabase em produção**: reative **Confirm email**;
-  configure **rate limits** de Auth (signup/signin); defina senha mínima >= 8;
-  ative **PITR/backups** no plano; nunca exponha a `service_role` key no
-  cliente (o app usa apenas a anon key + sessão).
+- **Checklist do painel Supabase em produção**: `Confirm email`, senha mínima
+  >= 8 e o rate limit de signup/signin (`sign_in_sign_ups`) são enforçados em
+  `supabase/config.toml` por `tests/unit/supabase-auth-config.test.ts` — o
+  teste garante que o **arquivo versionado** está correto, não que o projeto
+  remoto está: só reflete em produção depois de `supabase config push`. Fora
+  do que o teste cobre: ative **PITR/backups** no plano; nunca exponha a
+  `service_role` key no cliente (o app usa apenas a anon key + sessão).
