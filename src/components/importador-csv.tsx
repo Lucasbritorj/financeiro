@@ -17,26 +17,19 @@ import {
 } from "@/lib/csv";
 import { parseOfxExtrato } from "@/lib/ofx";
 import { parsePdfExtrato } from "@/lib/pdf-extrato";
+import {
+  extensaoDoArquivo,
+  origemPorExtensao,
+  calcularResumoRevisao,
+  type LinhaRevisao,
+  type OrigemImportacao,
+} from "@/lib/importacao-preview";
 
 type CategoriaOpcao = { id: string; nome: string; tipo: string };
-
-type LinhaRevisao = {
-  id: string;
-  data: string;
-  valor: number;
-  descricao: string;
-  categoria_sugerida: string | null;
-  duplicada: boolean;
-  ignorar: boolean;
-  /** 0020: NOVO grava; DUPLICADO nunca grava; AMBIGUO exige opt-in. */
-  classificacao: "NOVO" | "DUPLICADO" | "AMBIGUO";
-};
 
 type Etapa =
   | { fase: "upload" }
   | { fase: "revisao"; importacaoId: string; linhas: LinhaRevisao[]; descartadasParse: number };
-
-type OrigemImportacao = "CSV" | "OFX" | "OFC" | "XLSX" | "PDF";
 
 // Bancos BR exportam CSV/OFX em Windows-1252 (superset do ISO-8859-1) tão
 // often quanto em UTF-8. Tenta UTF-8 estrito (fatal): se os bytes não forem
@@ -149,23 +142,19 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
       e.target.value = "";
       return;
     }
-    const ext = arquivo.name.split(".").pop()?.toLowerCase() ?? "";
+    const ext = extensaoDoArquivo(arquivo.name);
+    const origem = origemPorExtensao(ext);
     let resultado: ResultadoParse;
-    let origem: OrigemImportacao;
     setPendente(true);
     try {
-      if (ext === "ofx" || ext === "ofc") {
+      if (origem === "OFX" || origem === "OFC") {
         resultado = parseOfxExtrato(await lerTexto(arquivo));
-        origem = ext.toUpperCase() as OrigemImportacao;
-      } else if (ext === "xlsx") {
+      } else if (origem === "XLSX") {
         resultado = parseMatrizExtrato(await matrizDoXlsx(arquivo));
-        origem = "XLSX";
-      } else if (ext === "pdf") {
+      } else if (origem === "PDF") {
         resultado = parsePdfExtrato(await linhasDoPdf(arquivo), new Date().getFullYear());
-        origem = "PDF";
       } else {
         resultado = parseCsvExtrato(await lerTexto(arquivo), preset);
-        origem = "CSV";
       }
     } catch (err) {
       setPendente(false);
@@ -368,15 +357,7 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
     );
   }
 
-  // DUPLICADO nunca grava, mesmo desmarcado — a regra vive em
-  // confirmar_importacao (0020). A contagem aqui espelha o servidor em vez de
-  // prometer algo que o banco vai recusar.
-  const aImportar = etapa.linhas.filter(
-    (l) => !l.ignorar && l.classificacao !== "DUPLICADO",
-  ).length;
-  const novos = etapa.linhas.filter((l) => l.classificacao === "NOVO").length;
-  const duplicadas = etapa.linhas.filter((l) => l.classificacao === "DUPLICADO").length;
-  const ambiguos = etapa.linhas.filter((l) => l.classificacao === "AMBIGUO").length;
+  const { aImportar, novos, duplicadas, ambiguos } = calcularResumoRevisao(etapa.linhas);
 
   return (
     <div className="grid gap-4">
