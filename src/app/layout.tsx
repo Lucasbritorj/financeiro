@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import { RegistrarServiceWorker } from "@/components/registrar-service-worker";
 
 // Tipografia Ateliê (modelo §2): serifa com caráter no herói/títulos,
 // grotesca no corpo, mono tabular nos números.
@@ -24,6 +25,19 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Ateliê — seu dinheiro, com clareza",
   description: "Assistente financeiro pessoal: categorias, insights e planejamento",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Ateliê",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#161311",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 // Aplica o tema salvo ANTES do paint (sem flash). Escuro é o padrão.
@@ -43,7 +57,10 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <RegistrarServiceWorker />
+        {children}
+      </body>
     </html>
   );
 }

@@ -48,6 +48,10 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    // sw.js/manifest/icons precisam ser servidos SEM redirect mesmo
+    // deslogado: o browser recusa registrar um service worker cuja URL
+    // devolve redirect (SecurityError), e o manifest é lido antes de
+    // qualquer sessão existir (instalar o PWA não exige login).
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|icons/|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
