@@ -9,7 +9,11 @@
 //   Não faz — não entende array, string multi-linha, tabela inline `{}`,
 //             nem comentário no fim da linha de valor.
 //   Escopo  — consumido por tests/unit/supabase-auth-config.test.ts.
-//   Vermelho— provado com TOML sintético no teste que usa este módulo.
+//   Vermelho— provado com TOML sintético em tests/unit/config-toml-parser.test.ts,
+//             que exercita os cinco `falhar()` daqui. Antes esta linha dizia que a
+//             prova estava "no teste que usa este módulo", e não estava: aquele
+//             teste só lê o config.toml real e válido, então nenhum caminho de
+//             recusa era executado.
 //
 // Mesma razão de _ci-yml.ts para não trazer dependência: node:fs basta para
 // ler três chaves, e isso é o que permite o teste rodar no `npm test` sem
