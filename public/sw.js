@@ -7,11 +7,16 @@
 //   cache-first, nunca precisam revalidar.
 // - Navegação (documentos HTML): network-first — sempre tenta a rede
 //   primeiro; cai pro cache só se a rede falhar (offline), como fallback
-//   de "última tela vista", não como estratégia de velocidade.
+//   de "última tela vista", não como estratégia de velocidade. E SÓ para
+//   rota pública: o HTML de (protegido) é SSR com os dados do usuário
+//   dentro, e o Cache Storage não separa por sessão — ver sw-rotas.js.
 // - Todo o resto passa direto (sem event.respondWith): SW não fica no
 //   caminho de nada que ele não entende explicitamente.
 
-const CACHE = "atelie-v1";
+importScripts("/sw-rotas.js");
+
+const CACHE = self.SWRotas.NOME_CACHE;
+const podeCachearNavegacao = self.SWRotas.podeCachearNavegacao;
 const ASSETS_ESTATICOS = /^\/_next\/static\//;
 
 self.addEventListener("install", () => {
@@ -48,13 +53,27 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
+    const cacheavel = podeCachearNavegacao(url.pathname);
     event.respondWith(
       fetch(request)
         .then((resposta) => {
-          caches.open(CACHE).then((cache) => cache.put(request, resposta.clone()));
+          // `resposta.ok` importa aqui pelo mesmo motivo da branch de assets:
+          // fetch só rejeita em falha de rede, então um 500 durante deploy
+          // resolveria normalmente e gravaria a página de erro como se fosse
+          // a "última tela boa" — que é justamente o que o fallback promete.
+          if (cacheavel && resposta.ok) {
+            caches.open(CACHE).then((cache) => cache.put(request, resposta.clone()));
+          }
           return resposta;
         })
-        .catch(() => caches.match(request).then((r) => r ?? caches.match("/"))),
+        // Rota protegida não tem fallback de cache: preferimos o erro de rede
+        // a servir o HTML de outra sessão. `caches.match("/")` é seguro porque
+        // "/" é público.
+        .catch(() =>
+          cacheavel
+            ? caches.match(request).then((r) => r ?? caches.match("/"))
+            : caches.match("/"),
+        ),
     );
   }
 });
