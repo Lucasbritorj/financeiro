@@ -48,10 +48,17 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // sw.js/manifest/icons precisam ser servidos SEM redirect mesmo
-    // deslogado: o browser recusa registrar um service worker cuja URL
+    // sw.js/sw-rotas.js/manifest/icons precisam ser servidos SEM redirect
+    // mesmo deslogado: o browser recusa registrar um service worker cuja URL
     // devolve redirect (SecurityError), e o manifest é lido antes de
     // qualquer sessão existir (instalar o PWA não exige login).
-    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|icons/|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    //
+    // sw-rotas.js entra aqui porque o sw.js o carrega por importScripts, que
+    // recusa redirect e recusa MIME que não seja JavaScript. Interceptado, ele
+    // devolve o HTML de /login e a avaliação do script inteiro lança: o SW não
+    // instala, o handler de `activate` não roda, e o cache gravado pela versão
+    // anterior nunca é purgado. A falha é silenciosa do lado do servidor — o
+    // /sw.js continua respondendo 200, e só o console do navegador acusa.
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|sw-rotas\\.js|manifest\\.webmanifest|icons/|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
