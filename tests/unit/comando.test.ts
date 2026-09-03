@@ -7,6 +7,7 @@ import {
   type ComandoTransacao,
   type ComandoInvalido,
 } from "../../src/lib/comando.ts";
+import { MAX_PARCELAS_UI } from "../../src/lib/constantes.ts";
 
 const HOJE = "2026-07-09";
 const CTX: ContextoComando = {
@@ -136,4 +137,66 @@ test("sugerirRotas: prefixo filtra, vazio lista tudo", () => {
     sugerirRotas("abrir importar").map((r) => r.rota),
     ["/importar"],
   );
+});
+
+// --- Caracterização: ramos que a suíte não alcançava antes do refactor de
+// parseComando. Escritos contra o comportamento vigente, não contra o desejado:
+// servem de rede para a extração dos extratores.
+
+test("comando: 'anteontem' volta dois dias", () => {
+  assert.equal(transacao("30 feira anteontem").dataCompra, "2026-07-07");
+});
+
+test("comando: teto de parcelas é o limite, não o limite menos um", () => {
+  assert.equal(transacao(`500 tv em ${MAX_PARCELAS_UI}x`).numParcelas, MAX_PARCELAS_UI);
+  assert.match(invalido(`500 tv em ${MAX_PARCELAS_UI + 1}x`).motivo, /parcelas/);
+});
+
+test("comando: '0x' é parcela abaixo do mínimo", () => {
+  assert.match(invalido("500 tv em 0x").motivo, /mínimo 1/);
+});
+
+test("comando: 'em N vezes' equivale a 'Nx'", () => {
+  const c = transacao("500 notebook em 4 vezes no nubank");
+  assert.equal(c.numParcelas, 4);
+  assert.equal(c.descricao, "notebook");
+});
+
+test("comando: 'dia N' inexistente no mês corrente é recusado", () => {
+  // Julho tem 31 dias; 32 nunca casa o regex de 1-2 dígitos válidos.
+  assert.match(invalido("60 presente dia 31", { ...CTX, hoje: "2026-06-09" }).motivo, /não existe/);
+});
+
+test("comando: cartão precedido de 'na' também é consumido", () => {
+  const c = transacao("200 mercado na nubank");
+  assert.equal(c.cartaoId, "c1");
+  assert.equal(c.descricao, "mercado");
+});
+
+test("comando: nome de cartão mais longo ganha do mais curto", () => {
+  const ctx: ContextoComando = {
+    hoje: HOJE,
+    cartoes: [
+      { id: "curto", nome: "Inter" },
+      { id: "longo", nome: "Inter Gold" },
+    ],
+  };
+  assert.equal(transacao("300 tênis no inter gold", ctx).cartaoId, "longo");
+  assert.equal(transacao("300 tênis no inter", ctx).cartaoId, "curto");
+});
+
+test("comando: data explícita com ano de 4 dígitos", () => {
+  assert.equal(transacao("60 presente 15/08/2027").dataCompra, "2027-08-15");
+});
+
+test("comando: 'crédito' explícito mantém o cartão nomeado", () => {
+  const c = transacao("400 tv no crédito no inter gold");
+  assert.equal(c.forma, "CREDITO");
+  assert.equal(c.cartaoId, "c2");
+});
+
+test("comando: receita à vista explícita não conflita", () => {
+  const c = transacao("recebi 200 freela pix");
+  assert.equal(c.tipoTransacao, "RECEITA");
+  assert.equal(c.forma, "PIX");
 });
