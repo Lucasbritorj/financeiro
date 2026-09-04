@@ -1,21 +1,18 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { formatarCentavos } from "@/lib/money";
+import { nomeMes } from "@/lib/insights";
+import { hojeSaoPaulo } from "@/lib/data";
 import {
-  resumoDoMes,
-  gastoPorCategoria,
-  topDespesas,
-  montarFraseHeroi,
-  taxaPoupanca,
-  projecaoFechamento,
-  deslocarMes,
-  historicoMensal,
-  nomeMes,
-  type TransacaoInsight,
-} from "@/lib/insights";
-import { analisarFinancas } from "@/lib/analise";
-import HeroNarrativo, { type StatHero } from "@/components/dashboard/hero-narrativo";
+  MESES_HISTORICO,
+  mesCorrenteSaoPaulo,
+  montarCarteira,
+  montarPainel,
+  normalizarTransacoes,
+  resolverJanela,
+  type LinhaTransacao,
+} from "@/lib/dashboard-dados";
+import HeroNarrativo from "@/components/dashboard/hero-narrativo";
 import DonutCategorias from "@/components/dashboard/donut-categorias";
 import TopDespesas from "@/components/dashboard/top-despesas";
 import SeletorMes from "@/components/dashboard/seletor-mes";
@@ -25,34 +22,6 @@ import CartaoObservacao from "@/components/analise/cartao-observacao";
 import SemearCategorias from "@/components/semear-categorias";
 import LetreiroBcb from "@/components/dashboard/letreiro-bcb";
 import AplicadorRecorrencias from "@/components/dashboard/aplicador-recorrencias";
-import { hojeSaoPaulo } from "@/lib/data";
-
-// Base temporal do dashboard = data_compra (visão caixa "quanto gastei no
-// mês"). Fuso de negócio São Paulo (CLAUDE.md).
-function mesCorrenteSaoPaulo(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" })
-    .format(new Date())
-    .slice(0, 7);
-}
-function ehMesValido(m: unknown): m is string {
-  return typeof m === "string" && /^\d{4}-\d{2}$/.test(m);
-}
-
-type LinhaTransacao = {
-  descricao: string;
-  valor_total: number;
-  tipo: string;
-  data_compra: string;
-  categorias: {
-    id: string;
-    nome: string;
-    cor: string | null;
-    orcamento_mensal: number | null;
-  } | null;
-};
-
-// Nº de barras no histórico mensal.
-const MESES_HISTORICO = 6;
 
 export default async function DashboardPage({
   searchParams,
@@ -70,16 +39,16 @@ export default async function DashboardPage({
     .order("data_compra", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const mesCorrente = mesCorrenteSaoPaulo();
-  const mesComDados = ultimaTx?.data_compra?.slice(0, 7) ?? null;
-  // Prioridade: query string válida > mês mais recente com dados > mês atual.
-  const mes = ehMesValido(sp.mes) ? sp.mes : (mesComDados ?? mesCorrente);
-  const anterior = deslocarMes(mes, -1);
 
-  // Janela do histórico (MESES_HISTORICO até o mês selecionado) já cobre o
-  // comparativo do herói e a análise. gastoPorCategoria/resumoDoMes filtram
-  // por mês, então o histórico extra não contamina donut/KPIs.
-  const inicioJanela = `${deslocarMes(mes, -(MESES_HISTORICO - 1))}-01`;
+  const janela = resolverJanela({
+    mesQuery: sp.mes,
+    mesComDados: ultimaTx?.data_compra?.slice(0, 7) ?? null,
+    mesCorrente: mesCorrenteSaoPaulo(),
+  });
+
+  // A janela do histórico já cobre o comparativo do herói e a análise.
+  // gastoPorCategoria/resumoDoMes filtram por mês, então o histórico extra não
+  // contamina donut/KPIs.
   const [{ data, error }, categoriasCount, carteiraRes, contasRes] = await Promise.all([
     supabase
       .from("transacoes_origem")
@@ -88,8 +57,8 @@ export default async function DashboardPage({
         // extrato de somar junto com as compras que ele quita.
         "descricao, valor_total, tipo, data_compra, natureza, categorias(id, nome, cor, orcamento_mensal)"
       )
-      .gte("data_compra", inicioJanela)
-      .lt("data_compra", `${deslocarMes(mes, 1)}-01`)
+      .gte("data_compra", janela.inicioJanela)
+      .lt("data_compra", janela.fimJanela)
       .order("data_compra", { ascending: false }),
     supabase.from("categorias").select("id", { count: "exact", head: true }),
     // Carteira (regime de caixa): uma linha só. Contas a pagar = faturas de
@@ -110,75 +79,15 @@ export default async function DashboardPage({
     );
   }
 
-  const transacoes: TransacaoInsight[] = (data as LinhaTransacao[]).flatMap((t) => {
-    if (t.tipo !== "DESPESA" && t.tipo !== "RECEITA") return [];
-    return [
-      {
-        descricao: t.descricao,
-        valor_total: t.valor_total,
-        tipo: t.tipo,
-        data_compra: t.data_compra,
-        categoria: t.categorias,
-      },
-    ];
-  });
-
-  const resumoAtual = resumoDoMes(transacoes, mes);
-  const resumoAnterior = resumoDoMes(transacoes, anterior);
-  const categorias = gastoPorCategoria(transacoes, mes);
-  const despesas = topDespesas(transacoes, mes, 5);
-
-  const mesesHistorico = Array.from({ length: MESES_HISTORICO }, (_, i) =>
-    deslocarMes(mes, -(MESES_HISTORICO - 1) + i)
-  );
-  const historico = historicoMensal(transacoes, mesesHistorico);
-
-  const frase = montarFraseHeroi({
-    mesISO: mes,
-    gastoMes: resumoAtual.saidas,
-    gastoMesAnterior: resumoAnterior.saidas,
-    categorias,
-    formatar: formatarCentavos,
-  });
-
-  // Projeção só faz sentido para o mês corrente (que ainda está correndo).
-  // Meses passados já fecharam: mostra o realizado.
-  const ehMesCorrente = mes === mesCorrente;
-  const diaAtual = ehMesCorrente ? Number(hojeSaoPaulo().slice(8, 10)) : 31;
-  const diasNoMes = new Date(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0).getDate();
-  const projecao = ehMesCorrente
-    ? projecaoFechamento(resumoAtual.saidas, diaAtual, diasNoMes)
-    : resumoAtual.saidas;
-  const poupanca = taxaPoupanca(resumoAtual.entradas, resumoAtual.saidas);
-
-  const destaque = analisarFinancas(transacoes, {
-    mesISO: mes,
+  const { mes } = janela;
+  const { categorias, despesas, historico, frase, stats, destaque } = montarPainel({
+    transacoes: normalizarTransacoes(data as LinhaTransacao[]),
+    janela,
     hojeISO: hojeSaoPaulo(),
-    formatar: formatarCentavos,
-    limite: 1,
-  })[0];
-
-  const stats: StatHero[] = [
-    {
-      rotulo: "Saldo do mês",
-      valor: `${resumoAtual.saldo >= 0 ? "+" : ""}${formatarCentavos(resumoAtual.saldo)}`,
-      cor: resumoAtual.saldo >= 0 ? "var(--verde)" : "var(--telha)",
-    },
-    { rotulo: "Taxa de poupança", valor: poupanca == null ? "—" : `${poupanca}%` },
-    {
-      rotulo: ehMesCorrente ? "Projeção de fechamento" : "Total de saídas",
-      valor: formatarCentavos(projecao),
-    },
-    {
-      rotulo: "Entrou · saiu",
-      valor: `${formatarCentavos(resumoAtual.entradas)} · ${formatarCentavos(resumoAtual.saidas)}`,
-    },
-  ];
-
-  // Avança só até o mês corrente OU o mês mais recente com dados.
-  const tetoNavegacao =
-    mesComDados && mesComDados > mesCorrente ? mesComDados : mesCorrente;
-  const proximoAtivo = mes < tetoNavegacao;
+  });
+  const carteira = montarCarteira(carteiraRes.data);
+  const precisaSemear = (categoriasCount.count ?? 0) === 0;
+  const temDestaque = destaque && destaque.id !== "estavel";
 
   return (
     <div className="flex flex-col gap-6">
@@ -189,14 +98,14 @@ export default async function DashboardPage({
         <LetreiroBcb />
       </Suspense>
 
-      {(categoriasCount.count ?? 0) === 0 && <SemearCategorias />}
+      {precisaSemear && <SemearCategorias />}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="serifa text-2xl font-medium">Dashboard</h1>
-        <SeletorMes mes={mes} proximoAtivo={proximoAtivo} />
+        <SeletorMes mes={mes} proximoAtivo={janela.proximoAtivo} />
       </div>
 
-      {destaque && destaque.id !== "estavel" && (
+      {temDestaque && (
         <Link href="/analise" className="group block mb-2 transition-transform hover:scale-[1.01]">
           <CartaoObservacao observacao={destaque} interativo />
         </Link>
@@ -225,11 +134,11 @@ export default async function DashboardPage({
         {/* Row 2: Carteira Caixa (spans 2 cols on desktop) */}
         <div className="md:col-span-2 lg:col-span-3">
           <CarteiraCaixa
-            saldoCaixa={carteiraRes.data?.saldo_caixa ?? 0}
-            entradas={carteiraRes.data?.entradas ?? 0}
-            saidasAvista={carteiraRes.data?.saidas_avista ?? 0}
-            faturasPagas={carteiraRes.data?.faturas_pagas ?? 0}
-            boletosPagos={carteiraRes.data?.boletos_pagos ?? 0}
+            saldoCaixa={carteira.saldoCaixa}
+            entradas={carteira.entradas}
+            saidasAvista={carteira.saidasAvista}
+            faturasPagas={carteira.faturasPagas}
+            boletosPagos={carteira.boletosPagos}
             contasAPagar={(contasRes.data as ContaAPagar[] | null) ?? []}
           />
         </div>
@@ -262,7 +171,7 @@ export default async function DashboardPage({
             <TopDespesas despesas={despesas} />
           </div>
         </section>
-        
+
       </div>
     </div>
   );
