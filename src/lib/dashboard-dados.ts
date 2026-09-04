@@ -39,8 +39,13 @@ export type LinhaTransacao = {
   } | null;
 };
 
+/**
+ * Aceita yyyy-mm com mês real (01-12). Validar só o formato deixava passar
+ * "2026-99": nomeMes devolvia a string crua para a tela e deslocarMes levava a
+ * janela para 2033, porque `new Date` normaliza mês fora da faixa em silêncio.
+ */
 export function ehMesValido(m: unknown): m is string {
-  return typeof m === "string" && /^\d{4}-\d{2}$/.test(m);
+  return typeof m === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(m);
 }
 
 /** Mês corrente (yyyy-mm) no fuso de negócio, não no do servidor. */

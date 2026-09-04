@@ -24,6 +24,21 @@ test("ehMesValido: só aceita yyyy-mm", () => {
   assert.equal(ehMesValido(202607), false);
 });
 
+test("ehMesValido: o mês precisa existir, não só ter dois dígitos", () => {
+  // Achado ao navegar o dashboard com ?mes=2026-99: o formato passava, nomeMes
+  // devolvia a string crua para a tela e a janela ia parar em 2033.
+  assert.equal(ehMesValido("2026-01"), true);
+  assert.equal(ehMesValido("2026-12"), true);
+  assert.equal(ehMesValido("2026-00"), false);
+  assert.equal(ehMesValido("2026-13"), false);
+  assert.equal(ehMesValido("2026-99"), false);
+});
+
+test("mês fora da faixa cai no fallback, como qualquer lixo na query", () => {
+  const j = resolverJanela({ mesQuery: "2026-99", mesComDados: "2026-07", mesCorrente: "2026-09" });
+  assert.equal(j.mes, "2026-07"); // não "2026-99"
+});
+
 test("resolverJanela: query string válida tem prioridade sobre tudo", () => {
   const j = resolverJanela({
     mesQuery: "2026-03",
