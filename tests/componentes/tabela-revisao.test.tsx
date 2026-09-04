@@ -49,9 +49,10 @@ function montar(over: Partial<Parameters<typeof TabelaRevisao>[0]> = {}) {
   return handlers;
 }
 
-/** O texto corrido do resumo, para asserção sem depender da marcação. */
+/** O texto corrido do resumo. `getByText` já devolve o <span> inteiro: os
+ *  <b> internos só contêm números, então nenhum filho casa sozinho. */
 function textoDoResumo(): string {
-  return screen.getByText(/linhas/).closest("div")!.textContent ?? "";
+  return screen.getByText(/serão importadas/).textContent ?? "";
 }
 
 // ------------------------------- Resumo -------------------------------
@@ -101,8 +102,9 @@ test("checkbox reflete o inverso de ignorar", () => {
 });
 
 test("clicar no checkbox devolve a linha inteira ao chamador", async () => {
+  const user = userEvent.setup();
   const { onAlternarIgnorar } = montar({ linhas: [linha({ id: "x7", descricao: "PADARIA" })] });
-  await userEvent.click(screen.getByLabelText("Importar PADARIA"));
+  await user.click(screen.getByLabelText("Importar PADARIA"));
   expect(onAlternarIgnorar).toHaveBeenCalledTimes(1);
   expect(onAlternarIgnorar.mock.calls[0][0].id).toBe("x7");
 });
@@ -139,8 +141,9 @@ test("o seletor oferece só categorias de DESPESA", () => {
 });
 
 test("trocar a categoria devolve a linha e o id escolhido", async () => {
+  const user = userEvent.setup();
   const { onMudarCategoria } = montar({ linhas: [linha({ id: "z9", descricao: "GASTO" })] });
-  await userEvent.selectOptions(screen.getByLabelText("Categoria de GASTO"), "transporte");
+  await user.selectOptions(screen.getByLabelText("Categoria de GASTO"), "transporte");
   expect(onMudarCategoria).toHaveBeenCalledWith(
     expect.objectContaining({ id: "z9" }),
     "transporte",
@@ -149,10 +152,11 @@ test("trocar a categoria devolve a linha e o id escolhido", async () => {
 
 test("limpar a categoria manda string vazia, não null", async () => {
   // O container distingue os dois: "" aciona p_limpar_categoria na RPC.
+  const user = userEvent.setup();
   const { onMudarCategoria } = montar({
     linhas: [linha({ descricao: "GASTO", categoria_sugerida: "mercado" })],
   });
-  await userEvent.selectOptions(screen.getByLabelText("Categoria de GASTO"), "");
+  await user.selectOptions(screen.getByLabelText("Categoria de GASTO"), "");
   expect(onMudarCategoria.mock.calls[0][1]).toBe("");
 });
 
@@ -202,9 +206,10 @@ test("pendente troca o rótulo e trava os dois botões", () => {
 });
 
 test("confirmar e descartar chamam o container", async () => {
+  const user = userEvent.setup();
   const { onConfirmar, onDescartar } = montar();
-  await userEvent.click(screen.getByRole("button", { name: /Importar 1 transação/ }));
-  await userEvent.click(screen.getByRole("button", { name: "Descartar" }));
+  await user.click(screen.getByRole("button", { name: /Importar 1 transação/ }));
+  await user.click(screen.getByRole("button", { name: "Descartar" }));
   expect(onConfirmar).toHaveBeenCalledTimes(1);
   expect(onDescartar).toHaveBeenCalledTimes(1);
 });

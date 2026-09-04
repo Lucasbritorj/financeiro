@@ -31,10 +31,11 @@ test("mostra o seletor de banco e o campo de arquivo", () => {
 });
 
 test("escolher um arquivo chama onArquivo com o File", async () => {
+  const user = userEvent.setup();
   const { onArquivo } = montar();
   const arquivo = new File(["data,valor\n"], "extrato.csv", { type: "text/csv" });
 
-  await userEvent.upload(screen.getByLabelText(/Arquivo do extrato/), arquivo);
+  await user.upload(screen.getByLabelText(/Arquivo do extrato/), arquivo);
 
   expect(onArquivo).toHaveBeenCalledTimes(1);
   expect(onArquivo.mock.calls[0][0].name).toBe("extrato.csv");
@@ -43,19 +44,21 @@ test("escolher um arquivo chama onArquivo com o File", async () => {
 test("o input é limpo depois da escolha, para reenviar o mesmo arquivo", async () => {
   // Sem isto, escolher o mesmo arquivo duas vezes não dispara change na
   // segunda — o comportamento que o refactor moveu para cá.
+  const user = userEvent.setup();
   const { onArquivo } = montar();
   const input = screen.getByLabelText(/Arquivo do extrato/) as HTMLInputElement;
   const arquivo = new File(["x"], "extrato.csv", { type: "text/csv" });
 
-  await userEvent.upload(input, arquivo);
+  await user.upload(input, arquivo);
 
   expect(input.value).toBe("");
   expect(onArquivo).toHaveBeenCalledTimes(1);
 });
 
 test("trocar o preset avisa o chamador com o id do banco", async () => {
+  const user = userEvent.setup();
   const { onPreset } = montar();
-  await userEvent.selectOptions(screen.getByLabelText(/Banco \/ formato/), "inter");
+  await user.selectOptions(screen.getByLabelText(/Banco \/ formato/), "inter");
   expect(onPreset).toHaveBeenCalledWith("inter");
 });
 
