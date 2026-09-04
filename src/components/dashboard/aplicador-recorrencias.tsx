@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { mensagemDeErro } from "@/lib/erros";
 import { useToast } from "@/components/feedback";
+import { log } from "@/lib/log";
 
 export default function AplicadorRecorrencias() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function AplicadorRecorrencias() {
           // Estado conhecido de instalação, não falha de runtime — sem toast
           // a cada visita; o aviso visível vive na seção Recorrências.
           if (error.code === "PGRST202") {
-            console.warn("aplicar_recorrencias indisponível: aplique a migration 0015.");
+            log.aviso("aplicar_recorrencias indisponível: aplique a migration 0015.");
             return;
           }
           notificar(`Recorrências: ${mensagemDeErro(error)}`, "erro");

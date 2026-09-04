@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { log } from "@/lib/log";
 
 /** Registra o service worker do PWA. Sem UI — só efeito colateral no mount. */
 export function RegistrarServiceWorker() {
@@ -18,7 +19,7 @@ export function RegistrarServiceWorker() {
     // do app: se o header mudar, o padrão volta a morder em silêncio. Declarar
     // aqui não depende de header nenhum.
     navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch((erro) => {
-      console.error("Falha ao registrar service worker:", erro);
+      log.erro("Falha ao registrar service worker:", erro);
     });
   }, []);
 

@@ -37,10 +37,9 @@ const eslintConfig = defineConfig([
         "warn",
         { max: 350, ignore: ["src/lib/database.types.ts"] },
       ],
-      // O projeto ainda não tem adapter de log; a regra existe para impedir
-      // console novo de virar hábito, não para forçar refactor dos 2 usos
-      // atuais. Promover a "error" quando houver src/lib/log.ts.
-      "quality/no-direct-console": "warn",
+      // Existe adapter (src/lib/log.ts) e a dívida está zerada, então a regra
+      // pode barrar de verdade: console novo não entra.
+      "quality/no-direct-console": ["error", { logger: "log de @/lib/log" }],
 
       // Budgets de complexidade — medir antes de apertar.
       complexity: ["warn", 12],
@@ -56,6 +55,12 @@ const eslintConfig = defineConfig([
       "no-var": "error",
       "prefer-const": "error",
     },
+  },
+
+  // O adapter de log É o wrapper do console — a regra não se aplica a ele.
+  {
+    files: ["src/lib/log.ts"],
+    rules: { "quality/no-direct-console": "off" },
   },
 
   // Boundary server-only. src/lib/supabase/server.ts usa next/headers e só
