@@ -165,38 +165,48 @@ function magnitude(celula: string | undefined): number {
   return c === null ? 0 : Math.abs(c);
 }
 
+/** (B) Colunas separadas: crédito = entrada (+), débito = saída (-). */
+function valorPorParSeparado(campos: string[], m: MapaColunas): number | null {
+  const cred = magnitude(campos[m.iCredito]);
+  const deb = magnitude(campos[m.iDebito]);
+  if (cred > 0 && deb === 0) return cred;
+  if (deb > 0 && cred === 0) return -deb;
+  if (cred > 0 && deb > 0) return cred - deb; // raro; usa o líquido
+  return null; // ambas vazias -> linha sem valor
+}
+
+/**
+ * Sinal de um rótulo de natureza: -1 débito, +1 crédito, null se não for
+ * reconhecível. Serve tanto ao sufixo da célula ("12,50 D") quanto à coluna
+ * D/C dedicada — os dois dizem a mesma coisa, em lugares diferentes.
+ */
+function sinalDeRotulo(rotulo: string): -1 | 1 | null {
+  const t = rotulo.trim().toUpperCase();
+  if (t.startsWith("D") || t.includes("SAÍDA") || t.includes("SAIDA")) return -1;
+  if (t.startsWith("C") || t.includes("ENTRADA")) return 1;
+  return null;
+}
+
+/** Separa o sufixo D/C da célula de valor ("12,50 D") — comum na Caixa. */
+function separarSufixoDC(cru: string): { numero: string; sinal: -1 | 1 | null } {
+  const sufixo = /\s([DCdc])$/.exec(cru);
+  if (!sufixo) return { numero: cru, sinal: null };
+  return { numero: cru.slice(0, sufixo.index), sinal: sinalDeRotulo(sufixo[1]) };
+}
+
 /** Deriva o valor COM SINAL de uma linha, conforme o layout detectado. */
 function valorDaLinha(campos: string[], m: MapaColunas): number | null {
-  // (B) Colunas separadas: crédito = entrada (+), débito = saída (-).
-  if (m.iDebito >= 0 && m.iCredito >= 0) {
-    const cred = magnitude(campos[m.iCredito]);
-    const deb = magnitude(campos[m.iDebito]);
-    if (cred > 0 && deb === 0) return cred;
-    if (deb > 0 && cred === 0) return -deb;
-    if (cred > 0 && deb > 0) return cred - deb; // raro; usa o líquido
-    return null; // ambas vazias -> linha sem valor
-  }
+  if (m.iDebito >= 0 && m.iCredito >= 0) return valorPorParSeparado(campos, m);
   if (m.iValor < 0) return null;
-  // Sufixo D/C na própria célula ("12,50 D", "100,00 C") — comum na Caixa.
-  const cru = (campos[m.iValor] ?? "").trim();
-  const sufixo = /\s([DCdc])$/.exec(cru);
-  const bruto = paraCentavosAssinado(sufixo ? cru.slice(0, sufixo.index) : cru);
+
+  const { numero, sinal: sinalSufixo } = separarSufixoDC((campos[m.iValor] ?? "").trim());
+  const bruto = paraCentavosAssinado(numero);
   if (bruto === null) return null;
-  if (sufixo) {
-    return /[Dd]/.test(sufixo[1]) ? -Math.abs(bruto) : Math.abs(bruto);
-  }
-  // (C) Coluna D/C explícita define o sinal sobre a magnitude.
-  if (m.iDC >= 0) {
-    const dc = (campos[m.iDC] ?? "").trim().toUpperCase();
-    if (dc.startsWith("D") || dc.includes("SAÍDA") || dc.includes("SAIDA")) {
-      return -Math.abs(bruto);
-    }
-    if (dc.startsWith("C") || dc.includes("ENTRADA")) {
-      return Math.abs(bruto);
-    }
-  }
-  // (A) Coluna única já com sinal.
-  return bruto;
+
+  // Precedência: sufixo na própria célula, depois (C) a coluna D/C dedicada.
+  const sinal = sinalSufixo ?? (m.iDC >= 0 ? sinalDeRotulo(campos[m.iDC] ?? "") : null);
+  // (A) Sem rótulo nenhum, a coluna única já traz o sinal.
+  return sinal === null ? bruto : sinal * Math.abs(bruto);
 }
 
 /** Acha a linha de cabeçalho (pula preâmbulo de metadados) e mapeia colunas. */

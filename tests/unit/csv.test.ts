@@ -167,3 +167,99 @@ test("validarTamanhoArquivoImportacao: aceita até o teto de bytes, barra acima 
   assert.equal(validarTamanhoArquivoImportacao(1024), null);
   assert.ok(validarTamanhoArquivoImportacao(LIMITE_BYTES_IMPORTACAO + 1) !== null);
 });
+
+// --- Caracterização de valorDaLinha: ramos que a suíte não alcançava.
+// O layout (C) — coluna D/C explícita — não tinha nenhum teste, e é onde o
+// sinal deixa de vir do número e passa a vir de um rótulo textual.
+
+test("layout D/C: coluna de natureza explícita define o sinal sobre a magnitude", () => {
+  const csv = [
+    "Data;Histórico;Valor;D/C",
+    "05/07/2026;COMPRA PADARIA;12,50;D",
+    "06/07/2026;DEPOSITO;100,00;C",
+  ].join("\n");
+  const r = parseCsvExtrato(csv, "caixa");
+  assert.equal(r.linhas.length, 2);
+  assert.equal(r.linhas[0].valor, -1250);
+  assert.equal(r.linhas[1].valor, 10000);
+});
+
+test("layout D/C: rótulo por extenso (Débito/Crédito, Saída/Entrada)", () => {
+  const csv = [
+    "Data;Histórico;Valor;Deb/Cred",
+    "05/07/2026;A;10,00;Débito",
+    "06/07/2026;B;20,00;Crédito",
+    "07/07/2026;C;30,00;SAIDA",
+    "08/07/2026;D;40,00;Entrada",
+  ].join("\n");
+  const r = parseCsvExtrato(csv, "caixa");
+  assert.deepEqual(
+    r.linhas.map((l) => l.valor),
+    [-1000, 2000, -3000, 4000],
+  );
+});
+
+test("layout D/C: a magnitude manda — sinal do número é ignorado", () => {
+  // "-10,00" com rótulo C vira entrada: o rótulo é a autoridade.
+  const csv = ["Data;Histórico;Valor;D/C", "05/07/2026;A;-10,00;C"].join("\n");
+  assert.equal(parseCsvExtrato(csv, "caixa").linhas[0].valor, 1000);
+});
+
+test("layout D/C: rótulo irreconhecível deixa o sinal do número valer", () => {
+  const csv = [
+    "Data;Histórico;Valor;D/C",
+    "05/07/2026;A;-10,00;X",
+    "06/07/2026;B;20,00;",
+  ].join("\n");
+  assert.deepEqual(
+    parseCsvExtrato(csv, "caixa").linhas.map((l) => l.valor),
+    [-1000, 2000],
+  );
+});
+
+test("sufixo na célula vence a coluna D/C quando as duas existem", () => {
+  const csv = ["Data;Histórico;Valor;D/C", "05/07/2026;A;10,00 D;C"].join("\n");
+  assert.equal(parseCsvExtrato(csv, "caixa").linhas[0].valor, -1000);
+});
+
+test("par débito/crédito: as duas preenchidas usam o líquido", () => {
+  const csv = [
+    "Data;Histórico;Débito;Crédito",
+    "05/07/2026;ESTORNO PARCIAL;30,00;100,00",
+  ].join("\n");
+  // Caso raro, mas o parser tem regra para ele: crédito - débito.
+  assert.equal(parseCsvExtrato(csv, "bradesco").linhas[0].valor, 7000);
+});
+
+test("par débito/crédito: as duas vazias descartam a linha", () => {
+  const csv = [
+    "Data;Histórico;Débito;Crédito",
+    "05/07/2026;SALDO ANTERIOR;;",
+    "06/07/2026;COMPRA;50,00;",
+  ].join("\n");
+  const r = parseCsvExtrato(csv, "bradesco");
+  assert.equal(r.linhas.length, 1);
+  assert.equal(r.linhas[0].valor, -5000);
+  assert.equal(r.descartadas, 1); // a linha de saldo tinha texto, então conta
+});
+
+test("par débito/crédito ignora uma coluna 'Valor' presente no mesmo cabeçalho", () => {
+  const csv = [
+    "Data;Histórico;Valor;Débito;Crédito",
+    "05/07/2026;COMPRA;999,99;50,00;",
+  ].join("\n");
+  // O par separado tem prioridade: 999,99 não pode vazar para o resultado.
+  assert.equal(parseCsvExtrato(csv, "bradesco").linhas[0].valor, -5000);
+});
+
+test("valor não numérico descarta a linha sem derrubar o resto", () => {
+  const csv = [
+    "Data;Histórico;Valor",
+    "05/07/2026;LINHA RUIM;abc",
+    "06/07/2026;LINHA BOA;-10,00",
+  ].join("\n");
+  const r = parseCsvExtrato(csv, "bb");
+  assert.equal(r.linhas.length, 1);
+  assert.equal(r.linhas[0].valor, -1000);
+  assert.equal(r.descartadas, 1);
+});
