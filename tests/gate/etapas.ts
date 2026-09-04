@@ -86,6 +86,10 @@ export const ETAPAS: readonly Etapa[] = [
     local: { tipo: "externo", comando: ["npm", "test"] },
   },
   {
+    ci: "npm run test:componentes",
+    local: { tipo: "externo", comando: ["npm", "run", "test:componentes"] },
+  },
+  {
     ci: "npm run build",
     local: { tipo: "externo", comando: ["npm", "run", "build"] },
   },
