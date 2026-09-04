@@ -17,6 +17,7 @@ importScripts("/sw-rotas.js");
 
 const CACHE = self.SWRotas.NOME_CACHE;
 const podeCachearNavegacao = self.SWRotas.podeCachearNavegacao;
+const podeGravarNavegacao = self.SWRotas.podeGravarNavegacao;
 const ASSETS_ESTATICOS = /^\/_next\/static\//;
 
 self.addEventListener("install", () => {
@@ -57,18 +58,22 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((resposta) => {
-          // `resposta.ok` importa aqui pelo mesmo motivo da branch de assets:
-          // fetch só rejeita em falha de rede, então um 500 durante deploy
-          // resolveria normalmente e gravaria a página de erro como se fosse
-          // a "última tela boa" — que é justamente o que o fallback promete.
-          if (cacheavel && resposta.ok) {
+          // A decisão inteira mora em sw-rotas.js, para o teste executá-la com
+          // respostas sintéticas em vez de procurar este `if` no texto do
+          // arquivo. Ver podeGravarNavegacao para o porquê de cada condição —
+          // em especial `!redirected`, que é o que impede o HTML de /transacoes
+          // de ser gravado sob a chave "/" ou "/login".
+          if (podeGravarNavegacao(url.pathname, resposta)) {
             caches.open(CACHE).then((cache) => cache.put(request, resposta.clone()));
           }
           return resposta;
         })
-        // Rota protegida não tem fallback de cache: preferimos o erro de rede
-        // a servir o HTML de outra sessão. `caches.match("/")` é seguro porque
-        // "/" é público.
+        // Rota protegida não tem fallback de cache: preferimos o erro de rede a
+        // servir o HTML de outra sessão. `caches.match("/")` não devolve nada
+        // hoje — "/" só responde por redirect e, com a checagem acima, nunca é
+        // gravado. Fica como fallback para o dia em que "/" servir uma página
+        // pública própria; até lá, resolve undefined e a navegação falha, que é
+        // o comportamento correto para rota protegida offline.
         .catch(() =>
           cacheavel
             ? caches.match(request).then((r) => r ?? caches.match("/"))

@@ -10,7 +10,8 @@
     "lint": "eslint",
     "gate": "node tests/gate/run.ts",
     "test": "node --test \"tests/unit/*.test.ts\"",
-    "test:sql": "bash tests/sql/run_local.sh"
+    "test:sql": "bash tests/sql/run_local.sh",
+    "smoke": "node tests/smoke/pwa-entrega.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

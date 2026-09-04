@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { scriptsImportados, pathnameServido } from "../lib/sw-importscripts.mjs";
 
 // CONTRATO
 //
@@ -51,6 +52,12 @@ function falhar(motivo: string): never {
   );
 }
 
+// A extração dos importScripts e a resolução do caminho moram em tests/lib para
+// serem as MESMAS que o smoke test roda contra produção (tests/smoke/pwa-entrega.mjs).
+// Duas cópias divergiriam, e a divergência apareceria como um dos dois ficando
+// verde sozinho — o modo de falha que os dois existem para evitar.
+export { scriptsImportados, pathnameServido };
+
 /**
  * Devolve os padrões do array `matcher` de src/proxy.ts, com os escapes de
  * string do TypeScript já resolvidos — o arquivo escreve `"sw\\.js"`, e a regex
@@ -86,43 +93,6 @@ export function padroesDoMatcher(fonte: string): string[] {
   return literais.map((literal) => JSON.parse(literal) as string);
 }
 
-/**
- * Devolve os caminhos que o service worker carrega por `importScripts`.
- * Argumento que não seja literal de string é recusado: um caminho montado em
- * runtime não é verificável aqui, e fingir que não existe seria pior.
- */
-export function scriptsImportados(fonteSw: string): string[] {
-  const chamadas = fonteSw.match(/importScripts\s*\(([^)]*)\)/g) ?? [];
-  if (chamadas.length === 0) return [];
-
-  const caminhos: string[] = [];
-  for (const chamada of chamadas) {
-    const args = chamada.slice(chamada.indexOf("(") + 1, chamada.lastIndexOf(")"));
-    const literais = args.match(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g) ?? [];
-    const semLiteral = args.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, "");
-    if (semLiteral.replace(/,/g, "").trim() !== "") {
-      falhar(`importScripts com argumento não literal: ${chamada}`);
-    }
-    for (const literal of literais) {
-      caminhos.push(literal.slice(1, -1));
-    }
-  }
-  return caminhos;
-}
-
-/**
- * O pathname que o servidor recebe quando o service worker importa `caminho`.
- *
- * `importScripts` resolve o argumento contra a URL do PRÓPRIO service worker, e
- * não contra a raiz do site: `"rotas/sw-rotas.js"` dentro de /sw.js é buscado em
- * /rotas/sw-rotas.js. Comparar o literal cru com o matcher seria um falso verde
- * garantido — todo padrão do matcher começa em "/", e um literal relativo nunca
- * casa com ele. O assert principal passaria sem ter olhado para nada, que é
- * exatamente a classe de falha silenciosa que este arquivo existe para fechar.
- */
-export function pathnameServido(caminho: string, urlDoSw = "https://exemplo.invalid/sw.js"): string {
-  return new URL(caminho, urlDoSw).pathname;
-}
 
 /**
  * O proxy roda quando o pathname casa com algum padrão do matcher. Os padrões
@@ -182,6 +152,46 @@ test("suíte real: nenhum script importado pelo sw.js é interceptado pelo proxy
         `matcher em src/proxy.ts.`,
     );
   }
+});
+
+test("ponto nas exceções do matcher é literal, não curinga", () => {
+  // Dentro do grupo, o path-to-regexp do Next passa o conteúdo verbatim — é isso
+  // que faz o negative lookahead funcionar —, então ponto sem escape vira
+  // curinga e dispensa do proxy caminhos que ninguém pretendeu dispensar. Como o
+  // proxy é quem exige sessão, dispensa acidental é checagem de auth perdida.
+  const padroes = padroesDoMatcher(proxy);
+
+  for (const impostor of ["/faviconXico", "/swXjs", "/sw-rotasXjs", "/manifestXwebmanifest"]) {
+    assert.equal(
+      proxyIntercepta(padroes, impostor),
+      true,
+      `${impostor} escapa do proxy: algum ponto do matcher está sem escape e virou curinga`,
+    );
+  }
+
+  // Controle: os nomes de verdade continuam dispensados, senão o PWA quebra.
+  for (const real of ["/favicon.ico", "/sw.js", "/sw-rotas.js", "/manifest.webmanifest"]) {
+    assert.equal(proxyIntercepta(padroes, real), false, `${real} deixou de ser exceção`);
+  }
+});
+
+test("o register não deixa os importScripts virem do cache HTTP", () => {
+  // No padrão `updateViaCache: "imports"`, só o script de topo escapa do cache
+  // HTTP; os importados vêm dele. O nome do cache — cujo bump é o que dispara a
+  // purga no `activate` — mora justamente num script importado, então uma
+  // resposta velha ali é purga que não acontece, em silêncio. Os headers da
+  // Vercel hoje forçam revalidação, mas isso é configuração de plataforma, não
+  // garantia do app.
+  const registrador = readFileSync(
+    new URL("src/components/registrar-service-worker.tsx", RAIZ),
+    "utf8",
+  );
+  assert.match(
+    registrador,
+    /register\(\s*"\/sw\.js"\s*,\s*\{\s*updateViaCache:\s*"none"\s*\}\s*\)/,
+    'register("/sw.js") sem `{ updateViaCache: "none" }`: os scripts importados ' +
+      "podem vir do cache HTTP, e o bump do nome do cache não chega ao browser",
+  );
 });
 
 test("vermelho: caminho relativo é resolvido antes de comparar, não julgado cru", () => {

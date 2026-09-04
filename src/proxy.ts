@@ -59,6 +59,12 @@ export const config = {
     // instala, o handler de `activate` não roda, e o cache gravado pela versão
     // anterior nunca é purgado. A falha é silenciosa do lado do servidor — o
     // /sw.js continua respondendo 200, e só o console do navegador acusa.
-    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|sw-rotas\\.js|manifest\\.webmanifest|icons/|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    //
+    // Todo ponto aqui vai escapado. Dentro do grupo, o path-to-regexp do Next
+    // passa o conteúdo verbatim — é o que faz o lookahead funcionar —, então um
+    // ponto solto é curinga: `favicon.ico` sem escape também dispensava do proxy
+    // qualquer coisa começando em `/faviconXico`. Não havia rota alcançável por
+    // ali, mas é dispensa de checagem de sessão concedida por acidente de regex.
+    "/((?!_next/static|_next/image|favicon\\.ico|sw\\.js|sw-rotas\\.js|manifest\\.webmanifest|icons/|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

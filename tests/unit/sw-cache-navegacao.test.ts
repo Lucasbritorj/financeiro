@@ -21,7 +21,7 @@ const require_ = createRequire(import.meta.url);
 const RAIZ = new URL("../../", import.meta.url);
 // fileURLToPath, não .pathname: no Windows o pathname vem "/C:/..." e o require
 // não resolve.
-const { podeCachearNavegacao, ROTAS_PUBLICAS, NOME_CACHE } = require_(
+const { podeCachearNavegacao, podeGravarNavegacao, ROTAS_PUBLICAS, NOME_CACHE } = require_(
   fileURLToPath(new URL("public/sw-rotas.js", RAIZ)),
 );
 
@@ -85,19 +85,62 @@ test("o sw usa a decisão em vez de cachear navegação incondicionalmente", () 
   assert.match(sw, /podeCachearNavegacao\(url\.pathname\)/, "sw.js não consulta a decisão");
 });
 
-test("a branch de navegação só grava resposta ok", () => {
+test("a branch de navegação delega a decisão em vez de decidir inline", () => {
   const navegacao = sw.slice(sw.indexOf('request.mode === "navigate"'));
   assert.match(
     navegacao,
-    /if \(cacheavel && resposta\.ok\)/,
-    "navegação grava sem checar resposta.ok: um 500 durante deploy vira a 'última tela boa'",
+    /if \(podeGravarNavegacao\(url\.pathname, resposta\)\)/,
+    "a branch de navegação não usa podeGravarNavegacao: a decisão voltou a ser texto não executável",
   );
 });
 
-test("o nome do cache mudou de v1 (senão o cache contaminado sobrevive)", () => {
-  // O activate apaga todo cache de nome diferente do atual. Enquanto o nome for
-  // atelie-v1, o HTML protegido gravado pela versão antiga continua servível.
+test("suíte real: navegação com resposta 500 não é gravada", () => {
+  // fetch só rejeita em falha de rede; um 500 durante deploy resolve normalmente
+  // e viraria a "última tela boa" que o fallback promete.
+  assert.equal(podeGravarNavegacao("/login", { ok: false, redirected: false }), false);
+});
+
+test("suíte real: navegação REDIRECIONADA não é gravada, mesmo em rota pública", () => {
+  // O buraco que a whitelist sozinha não fecha: ela julga o pathname PEDIDO, e o
+  // cache guarda o corpo ENTREGUE. Hoje as duas rotas públicas entregam
+  // /transacoes a quem tem sessão — "/" faz redirect() em src/app/page.tsx e
+  // "/login" é mandado para /transacoes pelo proxy. Sem isto, o HTML SSR com
+  // descrição, valor e data reais é gravado sob a chave "/" ou "/login".
+  for (const rota of ROTAS_PUBLICAS) {
+    assert.equal(
+      podeGravarNavegacao(rota, { ok: true, redirected: true }),
+      false,
+      `${rota} gravaria o corpo da URL final sob a própria chave: HTML privado no Cache Storage`,
+    );
+  }
+});
+
+test("suíte real: navegação pública, ok e não redirecionada É gravada", () => {
+  // Sem este, uma decisão que respondesse `false` para tudo passaria em todos os
+  // asserts acima sem cachear coisa nenhuma.
+  assert.equal(podeGravarNavegacao("/login", { ok: true, redirected: false }), true);
+});
+
+test("vermelho: rota protegida não grava nem com resposta perfeita", () => {
+  for (const rota of rotasProtegidas()) {
+    assert.equal(podeGravarNavegacao(rota, { ok: true, redirected: false }), false, rota);
+  }
+});
+
+test("vermelho: resposta degenerada não vira 'pode gravar'", () => {
+  assert.equal(podeGravarNavegacao("/login", undefined as never), false);
+  assert.equal(podeGravarNavegacao("/login", null as never), false);
+  assert.equal(podeGravarNavegacao("/login", {} as never), false);
+  // `ok` só vale como boolean true — string não vazia não conta.
+  assert.equal(podeGravarNavegacao("/login", { ok: "sim", redirected: false } as never), false);
+});
+
+test("o nome do cache subiu de novo (senão o cache contaminado sobrevive)", () => {
+  // O activate apaga todo cache de nome diferente do atual, então o bump é o que
+  // purga conteúdo já gravado nos navegadores. v1 tinha HTML de rota protegida;
+  // v2 tinha HTML de /transacoes gravado sob a chave "/" ou "/login".
   assert.notEqual(NOME_CACHE, "atelie-v1");
+  assert.notEqual(NOME_CACHE, "atelie-v2");
   assert.match(NOME_CACHE, /^atelie-v\d+$/);
 });
 
