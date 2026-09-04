@@ -148,3 +148,73 @@ test("alerta ranqueia acima de positivo", () => {
   const o = analisarFinancas(t, { mesISO: MES, hojeISO: HOJE, formatar: fmt });
   assert.equal(o[0].severidade, "alerta");
 });
+
+// --- Caracterização: detGanhos era o único detector sem teste, e o refactor
+// mexe em todas as chamadas de obs(). Escritos contra o comportamento vigente.
+
+test("ganhos: renda subindo acima de 15% vira observação positiva", () => {
+  const o = porId(
+    analisarFinancas(
+      [
+        tx(100000, "RECEITA", "2026-06-05"),
+        tx(150000, "RECEITA", "2026-07-05"),
+        tx(1000, "DESPESA", "2026-07-06"),
+      ],
+      { mesISO: MES, hojeISO: HOJE, formatar: fmt },
+    ),
+    "ganhos",
+  );
+  assert.ok(o, "esperava observação 'ganhos'");
+  assert.equal(o.severidade, "positivo");
+  assert.match(o.titulo, /subiu/);
+});
+
+test("ganhos: renda caindo acima de 15% vira atenção", () => {
+  const o = porId(
+    analisarFinancas(
+      [
+        tx(200000, "RECEITA", "2026-06-05"),
+        tx(100000, "RECEITA", "2026-07-05"),
+        tx(1000, "DESPESA", "2026-07-06"),
+      ],
+      { mesISO: MES, hojeISO: HOJE, formatar: fmt },
+    ),
+    "ganhos",
+  );
+  assert.ok(o, "esperava observação 'ganhos'");
+  assert.equal(o.severidade, "atencao");
+  assert.match(o.titulo, /caiu/);
+});
+
+test("ganhos: variação abaixo de 15% não gera observação", () => {
+  const o = porId(
+    analisarFinancas(
+      [
+        tx(100000, "RECEITA", "2026-06-05"),
+        tx(110000, "RECEITA", "2026-07-05"),
+        tx(1000, "DESPESA", "2026-07-06"),
+      ],
+      { mesISO: MES, hojeISO: HOJE, formatar: fmt },
+    ),
+    "ganhos",
+  );
+  assert.equal(o, undefined);
+});
+
+test("obs: pontuação é o peso da severidade mais a magnitude, com teto", () => {
+  // A magnitude nunca pode empurrar uma severidade para a faixa da seguinte:
+  // um 'positivo' com magnitude enorme continua abaixo de qualquer 'atencao'.
+  const observacoes = analisarFinancas(
+    [
+      tx(10000, "RECEITA", "2026-06-05"),
+      tx(9000000, "RECEITA", "2026-07-05"), // variação absurda
+      tx(1000, "DESPESA", "2026-07-06"),
+    ],
+    { mesISO: MES, hojeISO: HOJE, formatar: fmt },
+  );
+  const ganhos = porId(observacoes, "ganhos");
+  assert.ok(ganhos);
+  assert.equal(ganhos.severidade, "positivo");
+  assert.ok(ganhos.pontuacao < 500, `positivo deve ficar abaixo de atencao, veio ${ganhos.pontuacao}`);
+  assert.ok(ganhos.pontuacao >= 250, `e não abaixo do próprio piso, veio ${ganhos.pontuacao}`);
+});
