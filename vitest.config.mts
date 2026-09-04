@@ -22,7 +22,7 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    include: ["tests/componentes/**/*.test.tsx"],
+    include: ["tests/componentes/**/*.test.{ts,tsx}"],
     setupFiles: ["tests/componentes/setup.ts"],
     // Sem globais: cada teste importa test/expect, como o resto do projeto
     // importa de node:test.
