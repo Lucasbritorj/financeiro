@@ -63,11 +63,19 @@ export function useImportacao() {
   ) {
     setPendente(true);
     setAviso(null);
-    const { data, error } = await createClient().rpc("criar_importacao", {
-      p_origem: origem,
-      p_linhas: linhas,
-      p_arquivo_sha256: arquivoSha256,
-    });
+    let data;
+    let error;
+    try {
+      ({ data, error } = await createClient().rpc("criar_importacao", {
+        p_origem: origem,
+        p_linhas: linhas,
+        p_arquivo_sha256: arquivoSha256,
+      }));
+    } catch (err) {
+      setPendente(false);
+      setErro(mensagemDeErro(err));
+      return;
+    }
     setPendente(false);
     if (error) {
       setErro(mensagemDeErro(error));
@@ -80,7 +88,7 @@ export function useImportacao() {
     };
     // Short-circuit da 0021: arquivo idêntico já enviado. O servidor não criou
     // staging novo, então não há o que revisar — fica na tela de upload.
-    if (res.arquivo_ja_importado) {
+    if (res.arquivo_ja_importado && res.status_anterior !== "REVISAO") {
       setAviso(
         res.status_anterior === "CONFIRMADA"
           ? "Este arquivo já foi importado e confirmado. Nada foi duplicado."
@@ -182,9 +190,23 @@ export function useImportacao() {
 
   async function descartar() {
     if (etapa.fase !== "revisao") return;
+    setErro(null);
     setPendente(true);
-    await createClient().rpc("descartar_importacao", { p_importacao_id: etapa.importacaoId });
+    let error;
+    try {
+      ({ error } = await createClient().rpc("descartar_importacao", {
+        p_importacao_id: etapa.importacaoId,
+      }));
+    } catch (err) {
+      setPendente(false);
+      setErro(mensagemDeErro(err));
+      return;
+    }
     setPendente(false);
+    if (error) {
+      setErro(mensagemDeErro(error));
+      return;
+    }
     setEtapa({ fase: "upload" });
   }
 
