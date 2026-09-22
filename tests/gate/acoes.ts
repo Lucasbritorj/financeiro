@@ -44,6 +44,15 @@ export const ACOES_CONHECIDAS: Readonly<Record<string, AcaoConhecida>> = {
       '"Upgrade action to use node24"). v4 declara node20. Conferido em ' +
       "17/08/2026 pelo action.yml das tags v4, v5, v6 e v7.",
   },
+  "actions/upload-artifact": {
+    majorMinimo: 6,
+    fonte:
+      "action.yml das tags v4 e v5 declara `using: node20`; a v6 declara " +
+      "`using: node24` (release v6.0.0, 12/12/2025). Conferido em 10/09/2026 " +
+      "por `gh api repos/actions/upload-artifact/contents/action.yml?ref=<tag>` " +
+      "nas tags v4, v5 e v6 — o v5 NÃO basta aqui, ao contrário de checkout e " +
+      "setup-node, cujo salto para node24 foi no v5.",
+  },
 };
 
 /**

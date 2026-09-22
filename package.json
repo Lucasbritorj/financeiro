@@ -12,6 +12,8 @@
     "test": "node --test \"tests/unit/*.test.ts\"",
     "test:componentes": "vitest run",
     "test:sql": "bash tests/sql/run_local.sh",
+    "test:e2e": "npm run build && playwright test",
+    "test:lighthouse": "lhci autorun",
     "smoke": "node tests/smoke/pwa-entrega.mjs"
   },
   "dependencies": {
@@ -33,6 +35,9 @@
     "sharp": "^0.35.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@lhci/cli": "^0.15.1",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

@@ -60,11 +60,16 @@ export const config = {
     // anterior nunca é purgado. A falha é silenciosa do lado do servidor — o
     // /sw.js continua respondendo 200, e só o console do navegador acusa.
     //
+    // robots.txt pela mesma razão do manifest: é lido sem sessão. Interceptado,
+    // /robots.txt responde 200 com o HTML de /login — o Lighthouse lê isso como
+    // robots.txt malformado e reprova a auditoria de SEO. Verificado em
+    // 10/09/2026: `curl /robots.txt` devolvia a página de login.
+    //
     // Todo ponto aqui vai escapado. Dentro do grupo, o path-to-regexp do Next
     // passa o conteúdo verbatim — é o que faz o lookahead funcionar —, então um
     // ponto solto é curinga: `favicon.ico` sem escape também dispensava do proxy
     // qualquer coisa começando em `/faviconXico`. Não havia rota alcançável por
     // ali, mas é dispensa de checagem de sessão concedida por acidente de regex.
-    "/((?!_next/static|_next/image|favicon\\.ico|sw\\.js|sw-rotas\\.js|manifest\\.webmanifest|icons/|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sw\\.js|sw-rotas\\.js|manifest\\.webmanifest|icons/|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
