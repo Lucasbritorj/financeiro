@@ -167,10 +167,10 @@ begin
     falhas := falhas || format('C5: falso positivo (%s, sugerida=%s). ', v_nat, v_sug); end if;
   log := log || format('C5[padaria: %s] ', v_nat);
 
-  -- C6 — decisão do dono: status de fatura só muda por ação explícita.
-  if (select status from public.faturas where id=v_fat) = 'PAGA' then
-    falhas := falhas || 'C6: fatura virou PAGA sozinha — viola a decisão 1. '; end if;
-  log := log || format('C6[fatura continua %s] ', (select status from public.faturas where id=v_fat));
+  -- C6 — confirmação da liquidação baixa a fatura; a view de caixa a conta uma vez.
+  if (select status from public.faturas where id=v_fat) <> 'PAGA' then
+    falhas := falhas || 'C6: fatura não virou PAGA na confirmação. '; end if;
+  log := log || format('C6[fatura %s após confirmação] ', (select status from public.faturas where id=v_fat));
 
   if falhas <> '' then raise exception 'FALHOU >>> %  [log: %]', falhas, log; end if;
   raise notice 'OK: todos os asserts passaram >>> %', log;
