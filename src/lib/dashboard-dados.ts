@@ -31,6 +31,7 @@ export type LinhaTransacao = {
   valor_total: number;
   tipo: string;
   data_compra: string;
+  natureza?: "CONSUMO" | "LIQUIDACAO_FATURA" | null;
   categorias: {
     id: string;
     nome: string;
@@ -105,6 +106,7 @@ export function normalizarTransacoes(linhas: LinhaTransacao[]): TransacaoInsight
         valor_total: t.valor_total,
         tipo: t.tipo,
         data_compra: t.data_compra,
+        natureza: t.natureza,
         categoria: t.categorias,
       },
     ];
@@ -228,6 +230,8 @@ export function montarPainel(args: {
       projecao,
       ehMesCorrente: janela.ehMesCorrente,
     }),
+    resumo: resumoAtual,
+    projecao,
     destaque: analisarFinancas(transacoes, {
       mesISO: mes,
       hojeISO,
