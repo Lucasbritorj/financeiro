@@ -22,6 +22,8 @@ import CartaoObservacao from "@/components/analise/cartao-observacao";
 import SemearCategorias from "@/components/semear-categorias";
 import LetreiroBcb from "@/components/dashboard/letreiro-bcb";
 import AplicadorRecorrencias from "@/components/dashboard/aplicador-recorrencias";
+import FechamentoMensal from "@/components/dashboard/fechamento-mensal";
+import { montarFechamentoMensal } from "@/lib/fechamento-mensal";
 
 export default async function DashboardPage({
   searchParams,
@@ -49,7 +51,7 @@ export default async function DashboardPage({
   // A janela do histórico já cobre o comparativo do herói e a análise.
   // gastoPorCategoria/resumoDoMes filtram por mês, então o histórico extra não
   // contamina donut/KPIs.
-  const [{ data, error }, categoriasCount, carteiraRes, contasRes] = await Promise.all([
+  const [{ data, error }, categoriasRes, carteiraRes, contasRes, cofrinhosRes] = await Promise.all([
     supabase
       .from("transacoes_origem")
       .select(
@@ -60,7 +62,7 @@ export default async function DashboardPage({
       .gte("data_compra", janela.inicioJanela)
       .lt("data_compra", janela.fimJanela)
       .order("data_compra", { ascending: false }),
-    supabase.from("categorias").select("id", { count: "exact", head: true }),
+    supabase.from("categorias").select("id, orcamento_mensal"),
     // Carteira (regime de caixa): uma linha só. Contas a pagar = faturas de
     // cartão não pagas ∪ boletos pendentes, unificadas por vencimento.
     supabase.from("vw_carteira").select("*").maybeSingle(),
@@ -69,6 +71,10 @@ export default async function DashboardPage({
       .select("tipo, origem_id, transacao_id, descricao, competencia, data_vencimento, status, valor")
       .order("data_vencimento", { ascending: true })
       .limit(8),
+    supabase
+      .from("cofrinhos")
+      .select("saldo_atual, valor_alvo, data_alvo")
+      .eq("arquivado", false),
   ]);
 
   if (error) {
@@ -80,13 +86,21 @@ export default async function DashboardPage({
   }
 
   const { mes } = janela;
-  const { categorias, despesas, historico, frase, stats, destaque } = montarPainel({
+  const { categorias, despesas, historico, frase, stats, destaque, resumo, projecao } = montarPainel({
     transacoes: normalizarTransacoes(data as LinhaTransacao[]),
     janela,
     hojeISO: hojeSaoPaulo(),
   });
   const carteira = montarCarteira(carteiraRes.data);
-  const precisaSemear = (categoriasCount.count ?? 0) === 0;
+  const precisaSemear = (categoriasRes.data?.length ?? 0) === 0;
+  const fechamento = categoriasRes.error || cofrinhosRes.error
+    ? null
+    : montarFechamentoMensal({
+        realizado: resumo.saidas,
+        projecao,
+        categorias: categoriasRes.data ?? [],
+        cofrinhos: cofrinhosRes.data ?? [],
+      });
   const temDestaque = destaque && destaque.id !== "estavel";
 
   return (
@@ -104,6 +118,8 @@ export default async function DashboardPage({
         <h1 className="serifa text-2xl font-medium">Dashboard</h1>
         <SeletorMes mes={mes} proximoAtivo={janela.proximoAtivo} />
       </div>
+
+      <FechamentoMensal fechamento={fechamento} mes={nomeMes(mes)} />
 
       {temDestaque && (
         <Link href="/analise" className="group block mb-2 transition-transform hover:scale-[1.01]">

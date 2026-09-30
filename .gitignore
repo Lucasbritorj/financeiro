@@ -48,3 +48,8 @@ __pycache__/
 
 .vercel
 .env*
+
+# relatórios de teste de navegador (gerados por CI e por rodada local)
+/.lighthouseci
+/playwright-report
+/test-results

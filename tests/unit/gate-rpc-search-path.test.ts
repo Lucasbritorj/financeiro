@@ -29,13 +29,21 @@ import {
 // e NÃO é isentada aqui: esta suíte mede a regra crua, e a contagem de
 // violações crus é parte do que ela trava.
 
+// Recontado em 10/09/2026: a migração 20260909205952 (integridade transacional
+// da importação) entrou com 4 declarações — fn_fingerprint_livre,
+// fn_preencher_fingerprint, e os `create or replace` de substituir_transacao e
+// confirmar_importacao — e estes números não foram atualizados junto, deixando
+// o CI vermelho desde 09/09. O eixo de SEGURANÇA não mudou: continua 0 definer
+// sem search_path e 1 única violação crua declarada (rls_auto_enable). Por isso
+// aqui é recontagem, não afrouxamento — `definersDistintos` segue 38 porque os
+// dois `create or replace` reescrevem funções que já existiam.
 const ESPERADO = {
-  statements: 65,
-  definers: 55,
-  naoDefiners: 10,
+  statements: 70,
+  definers: 58,
+  naoDefiners: 12,
   definersDistintos: 38,
   /** Statements de definer com o search_path seguro. */
-  comVazio: 54,
+  comVazio: 57,
   /** Nomes distintos de definer com o search_path seguro. */
   distintosComVazio: 37,
   /** A exceção declarada: rls_auto_enable, 'pg_catalog'. */

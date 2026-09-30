@@ -5,6 +5,7 @@ import {
   ehMesValido,
   MESES_HISTORICO,
   montarCarteira,
+  montarPainel,
   montarStats,
   normalizarTransacoes,
   projetarSaidas,
@@ -140,6 +141,24 @@ test("normalizarTransacoes: renomeia categorias -> categoria e preserva null", (
   assert.deepEqual(normalizarTransacoes([]), []);
 });
 
+test("normalizarTransacoes preserva natureza para excluir liquidação dos agregados", () => {
+  const [transacao] = normalizarTransacoes([{ ...linha("DESPESA"), natureza: "LIQUIDACAO_FATURA" }]);
+  assert.equal(transacao.natureza, "LIQUIDACAO_FATURA");
+});
+
+
+test("montarPainel exclui liquidação da fatura de realizado e projeção", () => {
+  const painel = montarPainel({
+    transacoes: normalizarTransacoes([
+      { ...linha("DESPESA", 12000), data_compra: "2026-09-03" },
+      { ...linha("DESPESA", 12000), data_compra: "2026-09-04", natureza: "LIQUIDACAO_FATURA" },
+    ]),
+    janela: resolverJanela({ mesQuery: "2026-09", mesComDados: "2026-09", mesCorrente: "2026-09" }),
+    hojeISO: "2026-09-15",
+  });
+  assert.equal(painel.resumo.saidas, 12000);
+  assert.equal(painel.projecao, 24000);
+});
 test("diasNoMes: meses de 30, 31 e fevereiro bissexto", () => {
   assert.equal(diasNoMes("2026-01"), 31);
   assert.equal(diasNoMes("2026-04"), 30);

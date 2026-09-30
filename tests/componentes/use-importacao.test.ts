@@ -18,6 +18,7 @@ type Resposta = { data: unknown; error: unknown };
 const rpc = vi.fn<(nome: string, params: unknown) => Promise<Resposta>>();
 /** Resposta do SELECT que relê o staging depois de criar a importação. */
 let respostaDoSelect: Resposta = { data: [], error: null };
+const idsImportacaoRelidos: string[] = [];
 const refresh = vi.fn();
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -27,9 +28,14 @@ vi.mock("@/lib/supabase/client", () => ({
     rpc,
     from: () => ({
       select: () => ({
-        eq: () => ({
-          order: () => Promise.resolve(respostaDoSelect),
-        }),
+        eq: (coluna: string, valor: unknown) => {
+          if (coluna === "importacao_id" && typeof valor === "string") {
+            idsImportacaoRelidos.push(valor);
+          }
+          return {
+            order: () => Promise.resolve(respostaDoSelect),
+          };
+        },
       }),
     }),
   }),
@@ -61,6 +67,7 @@ const LINHA_STAGING: LinhaRevisao = {
 beforeEach(() => {
   rpc.mockReset();
   refresh.mockReset();
+  idsImportacaoRelidos.length = 0;
   respostaDoSelect = { data: [LINHA_STAGING], error: null };
   vi.spyOn(window, "alert").mockImplementation(() => {});
 });
@@ -151,6 +158,19 @@ test("erro na RPC de staging não avança de fase", async () => {
   expect(result.current.pendente).toBe(false);
 });
 
+test("rejeição da Promise de staging não deixa o upload pendente", async () => {
+  rpc.mockRejectedValueOnce(new Error("rede indisponível"));
+  const { result } = renderHook(() => useImportacao());
+
+  await act(async () => {
+    await result.current.processarArquivo(arquivo());
+  });
+
+  expect(result.current.etapa.fase).toBe("upload");
+  expect(result.current.erro).toBe("rede indisponível");
+  expect(result.current.pendente).toBe(false);
+});
+
 test("falha ao reler o staging reporta e fica no upload", async () => {
   rpc.mockResolvedValueOnce({ data: { importacao_id: "imp-1" }, error: null });
   respostaDoSelect = { data: null, error: { message: "select falhou" } };
@@ -190,6 +210,26 @@ test("arquivo aguardando revisão em outra importação pede para terminar aquel
   });
   expect(result.current.aviso).toMatch(/Termine ou descarte aquela/);
   expect(result.current.etapa.fase).toBe("upload");
+});
+
+test("arquivo já em revisão relê o staging existente e abre a revisão", async () => {
+  rpc.mockResolvedValueOnce({
+    data: { importacao_id: "imp-audit", arquivo_ja_importado: true, status_anterior: "REVISAO" },
+    error: null,
+  });
+  const { result } = renderHook(() => useImportacao());
+
+  await act(async () => {
+    await result.current.processarArquivo(arquivo());
+  });
+
+  await waitFor(() => expect(result.current.etapa.fase).toBe("revisao"));
+  expect(idsImportacaoRelidos).toContain("imp-audit");
+  expect(result.current.etapa).toMatchObject({
+    fase: "revisao",
+    importacaoId: "imp-audit",
+    linhas: [LINHA_STAGING],
+  });
 });
 
 // ----------------------- Edição otimista em revisão -----------------------
@@ -312,6 +352,34 @@ test("descartar volta ao upload", async () => {
 
   expect(rpc).toHaveBeenCalledWith("descartar_importacao", { p_importacao_id: "imp-1" });
   expect(result.current.etapa.fase).toBe("upload");
+});
+
+test("erro ao descartar mantém a revisão aberta, mostra erro e não refaz a rota", async () => {
+  const result = await emRevisao();
+  rpc.mockResolvedValueOnce({ data: null, error: { message: "descartar falhou" } });
+
+  await act(async () => {
+    await result.current.descartar();
+  });
+
+  expect(result.current.etapa.fase).toBe("revisao");
+  expect(result.current.erro).toBe("descartar falhou");
+  expect(result.current.pendente).toBe(false);
+  expect(refresh).not.toHaveBeenCalled();
+});
+
+test("rejeição da Promise ao descartar mantém a revisão aberta", async () => {
+  const result = await emRevisao();
+  rpc.mockRejectedValueOnce(new Error("rede indisponível"));
+
+  await act(async () => {
+    await result.current.descartar();
+  });
+
+  expect(result.current.etapa).toMatchObject({ fase: "revisao", importacaoId: "imp-1" });
+  expect(result.current.erro).toBe("rede indisponível");
+  expect(result.current.pendente).toBe(false);
+  expect(refresh).not.toHaveBeenCalled();
 });
 
 test("confirmar e descartar fora da revisão não chamam nada", async () => {

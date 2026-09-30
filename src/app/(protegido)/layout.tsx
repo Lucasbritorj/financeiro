@@ -5,6 +5,7 @@ import NavLinks from "@/components/nav-links";
 import TemaToggle from "@/components/tema-toggle";
 import FeedbackProvider from "@/components/feedback";
 import ComandoMenu from "@/components/comando-menu";
+import NavegacaoMovel from "@/components/navegacao-movel";
 
 // Nav principal = fluxo do assistente. Contas a pagar (faturas + boletos) é
 // fluxo primário — gasto fixo mensal. Cartões ficam na nav secundária.
@@ -41,11 +42,12 @@ export default async function ProtegidoLayout({
           <span className="serifa mr-1 text-lg font-semibold" style={{ color: "var(--giz)" }}>
             Ateliê
           </span>
-          <NavLinks itens={NAV_PRINCIPAL} />
-          <span aria-hidden style={{ color: "var(--borda-forte)" }}>
-            ·
-          </span>
-          <NavLinks itens={NAV_SECUNDARIA} variante="secundaria" />
+          <div className="hidden items-center gap-x-5 gap-y-1 md:flex">
+            <NavLinks itens={NAV_PRINCIPAL} />
+            <span aria-hidden style={{ color: "var(--borda-forte)" }}>·</span>
+            <NavLinks itens={NAV_SECUNDARIA} variante="secundaria" />
+          </div>
+          <NavegacaoMovel itens={[...NAV_PRINCIPAL, ...NAV_SECUNDARIA]} />
           <div className="ml-auto flex items-center gap-3 text-sm" style={{ color: "var(--grafite)" }}>
             <span className="hidden md:inline">{user.email}</span>
             <ComandoMenu />

@@ -22,6 +22,7 @@ export default function NavLinks({
             key={item.href}
             href={item.href}
             data-ativo={ativo}
+            aria-current={ativo ? "page" : undefined}
             className={`nav-link ${variante === "secundaria" ? "text-xs" : "text-sm"}`}
           >
             {item.rotulo}
