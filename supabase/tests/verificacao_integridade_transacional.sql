@@ -102,6 +102,28 @@ begin
     v_falhas := v_falhas || 'F04: extrato atualizado não foi DUPLICADO. ';
   end if;
 
+  -- F05: fatura já baixada à mão não aborta a importação do extrato que a paga.
+  v_cartao := (public.criar_cartao('F05 CARTAO', 500000, 20, 10)->>'cartao_id')::uuid;
+  perform public.processar_transacao_completa(
+    'F05 COMPRA', 30000, 'DESPESA', 'CREDITO', v_cartao, date '2026-03-05', 1);
+  select id, data_vencimento into v_fatura, v_venc
+  from public.faturas where cartao_id=v_cartao and deleted_at is null order by competencia limit 1;
+  perform public.processar_pagamento_fatura(v_fatura, v_venc::timestamptz);
+  v_importacao := public.criar_importacao('OFX', jsonb_build_array(
+    jsonb_build_object('data', v_venc, 'valor', -30000,
+      'descricao', 'FATURA PAGA ITAU UNICLAS', 'id_externo', 'F05-FITID'),
+    jsonb_build_object('data', v_venc, 'valor', -1234,
+      'descricao', 'F05 PADARIA', 'id_externo', 'F05-OUTRA')));
+  begin
+    perform public.confirmar_importacao((v_importacao->>'importacao_id')::uuid);
+  exception when others then
+    v_falhas := v_falhas || format('F05: fatura já PAGA abortou a importação (%s). ', sqlstate);
+  end;
+  if not exists (select 1 from public.transacoes_origem
+                 where user_id=v_uid and id_externo='F05-OUTRA' and deleted_at is null) then
+    v_falhas := v_falhas || 'F05: linha sem relação com a fatura não foi gravada. ';
+  end if;
+
   -- RLS/menor privilégio: as RPCs ficam para authenticated, não para anon,
   -- e a tabela continua com RLS habilitada.
   if has_function_privilege('anon', 'public.confirmar_importacao(uuid)', 'EXECUTE')
@@ -111,7 +133,7 @@ begin
   end if;
 
   if v_falhas <> '' then raise exception 'FALHOU >>> %', v_falhas; end if;
-  raise notice 'OK: 9 asserts F01/F03/F04 (metadados, caixa, idempotência, concorrência, fingerprint, RLS/privilégios)';
+  raise notice 'OK: 11 asserts F01/F03/F04/F05 (fatura já paga, metadados, caixa, idempotência, concorrência, fingerprint, RLS/privilégios)';
 end;
 $teste$;
 

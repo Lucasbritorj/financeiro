@@ -1,14 +1,76 @@
-# financeiro-web
+# Ateliê — gestão financeira pessoal
 
-Gestão financeira com foco em **auditoria e integridade matemática**. O Supabase
-(PostgreSQL) é a única fonte da verdade: toda escrita transacional passa pela
-função RPC `processar_transacao_completa`, que garante atomicidade, divisão
-centesimal sem sobras (resto na 1ª parcela) e a invariante
-`SUM(parcelas) = valor_total`.
+> **EN:** Personal finance app (Next.js 16 + Supabase) built around ledger integrity. Money is stored as integer cents. Every write goes through an atomic PostgreSQL RPC protected by row-level security. Business rules are enforced by database constraints and by SQL test suites that run against a real Postgres in CI.
 
-**Stack:** Next.js 16 (App Router) · Supabase (Postgres + Auth + RLS) · Tailwind.
-**Convenção:** valores monetários trafegam como **centavos** (`bigint`), moeda BRL,
-fuso de negócio `America/Sao_Paulo`.
+[![CI](https://github.com/Lucasbritorj/financeiro/actions/workflows/ci.yml/badge.svg)](https://github.com/Lucasbritorj/financeiro/actions/workflows/ci.yml)
+![Next.js 16](https://img.shields.io/badge/Next.js-16-black)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3ECF8E)
+![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue)
+
+O Ateliê é um aplicativo de finanças pessoais com foco em **integridade do razão**. Ele cuida de:
+
+- cartões, faturas e parcelamento;
+- importação de extrato (CSV, OFX, XLSX e PDF), com deduplicação e conciliação do pagamento de fatura;
+- orçamento por categoria, cofrinhos, boletos e recorrências.
+
+<p align="center">
+  <img src="docs/img/login-desktop.png" alt="Tela de login do Ateliê no desktop" width="70%">
+  <img src="docs/img/login-mobile.png" alt="Tela de login do Ateliê no celular" width="22%">
+</p>
+
+## Decisões de engenharia
+
+| Problema | Decisão |
+|---|---|
+| Erro de arredondamento em dinheiro | Todo valor é um **inteiro em centavos** (`bigint`). A conversão para decimal acontece só na borda da tela (`src/lib/money.ts`), e um hook de edição barra aritmética monetária em float fora desse arquivo. |
+| Escrita parcial e condição de corrida | Toda escrita relacional passa por uma **RPC atômica** em PL/pgSQL: `SECURITY DEFINER`, `search_path` vazio e `FOR UPDATE` onde há disputa. As roles do cliente não têm permissão de escrita direta (DML revogado). |
+| Vazamento de dados entre usuários | **RLS** em todas as tabelas e `security_invoker` em todas as views. Uma suíte de isolamento entre usuários roda no CI. |
+| Importar o mesmo extrato duas vezes | Cada lançamento tem um fingerprint, protegido por índice único parcial. Reimportar não duplica nada, e o pagamento de uma fatura é conciliado uma única vez. |
+| Regra de negócio que só existe no código da tela | As invariantes vivem em **constraints do banco e em asserts SQL**: a soma das parcelas é igual ao total, uma fatura paga não reabre e o limite de crédito é serializado. |
+| Erro sem explicação para o usuário | As RPCs usam códigos de erro estáveis (`FW400` a `FW500`), cada um com uma dica de como resolver, que a interface mostra direto. |
+
+## Qualidade
+
+- **CI no GitHub Actions:**
+  - typecheck e lint;
+  - testes unitários (`node:test`) e de componente (Vitest);
+  - build;
+  - migrações e asserts rodando em **Postgres 17 real**.
+- **Gates estáticos sobre as migrations:**
+  - `search_path` seguro nas funções `SECURITY DEFINER`;
+  - `security_invoker` nas views;
+  - privilégios das RPCs;
+  - isolamento por usuário.
+- **Deploy contínuo** na Vercel.
+
+## Stack
+
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Supabase (Postgres, Auth, RLS, pg_cron) · Vitest · GitHub Actions · Vercel.
+
+## Rodar localmente
+
+```bash
+npm ci
+npm run dev
+```
+
+Antes do `npm run dev`, crie um `.env.local` a partir do `.env.example`, com a URL e a chave anon do seu projeto Supabase. O passo a passo do banco está em [Setup](#setup).
+
+Para testar:
+- `npm test`: testes unitários;
+- `npm run test:componentes`: testes de componente;
+- `npm run test:sql`: asserts SQL (exige Docker).
+
+## Autor
+
+Lucas Brito · [github.com/Lucasbritorj](https://github.com/Lucasbritorj)
+
+Licença [MIT](LICENSE).
+
+---
+
+# Documentação técnica
+
 
 ## Setup
 
@@ -54,6 +116,7 @@ fuso de negócio `America/Sao_Paulo`.
    - `0026_fingerprint_lancamento_manual.sql`
    - `0027_rls_auto_enable_event_trigger.sql`
    - `20260909205952_corrigir_integridade_transacional_importada.sql`
+   - `20260929120000_confirmar_importacao_fatura_ja_paga.sql`
 
    > Os bundles de `supabase/APLICAR.md` cobrem apenas até `0019`. De `0020`
    > em diante, aplique os arquivos de `supabase/migrations/` direto.
@@ -66,9 +129,10 @@ fuso de negócio `America/Sao_Paulo`.
    idempotência, limite de crédito, máquina de estados (pagar/fechar),
    sanidade temporal, privilégios, exclusões soft e a view de estornos;
    termina em `ROLLBACK`, sem persistir nada.
-4. Agende o fechamento diário do ciclo (Database → Cron, extensão `pg_cron`):
-   `select cron.schedule('fechar-faturas', '10 3 * * *', $$select public.fechar_faturas()$$);`
-   (`fechar_faturas` é administrativa — clientes não conseguem executá-la.)
+4. O fechamento diário do ciclo já vem agendado pela migração
+   `0014_estorno_recorrencia_cron.sql` (`fechar_faturas` às 06:10 UTC, cerca de
+   03:10 em São Paulo, via `pg_cron`). Não agende de novo à mão: isso cria um
+   segundo job. `fechar_faturas` é administrativa, e clientes não conseguem executá-la.
 5. Copie `.env.example` para `.env.local` e preencha com os valores de
    **Settings → API** do projeto.
 6. **Confirm email** fica ligado por padrão (`enable_confirmations = true` em
@@ -81,7 +145,7 @@ fuso de negócio `America/Sao_Paulo`.
 ## Testes locais
 
 - `npm test` — unitários (node:test, roda `.ts` nativo no Node 24).
-- `npm run test:sql` — Postgres 16 efêmero em Docker: shim do ambiente
+- `npm run test:sql` — Postgres 17 efêmero em Docker: shim do ambiente
   Supabase + migrações na ordem + os 21 asserts do núcleo.
 - CI (`.github/workflows/ci.yml`) roda os mesmos gates em push/PR.
 

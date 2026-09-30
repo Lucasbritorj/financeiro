@@ -38,12 +38,12 @@ import {
 // aqui é recontagem, não afrouxamento — `definersDistintos` segue 38 porque os
 // dois `create or replace` reescrevem funções que já existiam.
 const ESPERADO = {
-  statements: 69,
-  definers: 57,
+  statements: 70,
+  definers: 58,
   naoDefiners: 12,
   definersDistintos: 38,
   /** Statements de definer com o search_path seguro. */
-  comVazio: 56,
+  comVazio: 57,
   /** Nomes distintos de definer com o search_path seguro. */
   distintosComVazio: 37,
   /** A exceção declarada: rls_auto_enable, 'pg_catalog'. */

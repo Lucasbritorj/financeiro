@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node 'C:\\Users\\Lucas\\Workspace\\financeiro-evolucao\\.codex\\hooks\\invariantes-guard.js'"
+            "command": "node .codex/hooks/invariantes-guard.js"
           }
         ]
       }
