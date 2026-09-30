@@ -129,9 +129,10 @@ Licença [MIT](LICENSE).
    idempotência, limite de crédito, máquina de estados (pagar/fechar),
    sanidade temporal, privilégios, exclusões soft e a view de estornos;
    termina em `ROLLBACK`, sem persistir nada.
-4. Agende o fechamento diário do ciclo (Database → Cron, extensão `pg_cron`):
-   `select cron.schedule('fechar-faturas', '10 3 * * *', $$select public.fechar_faturas()$$);`
-   (`fechar_faturas` é administrativa — clientes não conseguem executá-la.)
+4. O fechamento diário do ciclo já vem agendado pela migração
+   `0014_estorno_recorrencia_cron.sql` (`fechar_faturas` às 06:10 UTC, cerca de
+   03:10 em São Paulo, via `pg_cron`). Não agende de novo à mão: isso cria um
+   segundo job. `fechar_faturas` é administrativa, e clientes não conseguem executá-la.
 5. Copie `.env.example` para `.env.local` e preencha com os valores de
    **Settings → API** do projeto.
 6. **Confirm email** fica ligado por padrão (`enable_confirmations = true` em
