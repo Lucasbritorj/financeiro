@@ -144,7 +144,7 @@ Licença [MIT](LICENSE).
 ## Testes locais
 
 - `npm test` — unitários (node:test, roda `.ts` nativo no Node 24).
-- `npm run test:sql` — Postgres 16 efêmero em Docker: shim do ambiente
+- `npm run test:sql` — Postgres 17 efêmero em Docker: shim do ambiente
   Supabase + migrações na ordem + os 21 asserts do núcleo.
 - CI (`.github/workflows/ci.yml`) roda os mesmos gates em push/PR.
 
