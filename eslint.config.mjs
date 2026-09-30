@@ -16,6 +16,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    ".consolidacao/**",
   ]),
 
   // As regras locais são um plugin CommonJS: require() ali é obrigatório,

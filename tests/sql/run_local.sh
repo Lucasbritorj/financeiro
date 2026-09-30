@@ -5,12 +5,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-CONTAINER=financeiro-web-pgtest
 IMAGEM=postgres:17-alpine
 
-docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
-docker run -d --name "$CONTAINER" \
-  -e POSTGRES_PASSWORD=test -e POSTGRES_DB=app "$IMAGEM" >/dev/null
+# Docker escolhe um nome exclusivo. Só removemos o ID criado nesta execução;
+# nunca um container preexistente de outro checkout ou execução concorrente.
+CONTAINER=$(docker run -d --network none \
+  -e POSTGRES_PASSWORD=test -e POSTGRES_DB=app "$IMAGEM")
 # Teardown em QUALQUER saída (sucesso, falha de migração, falha de assert).
 trap 'docker rm -f "$CONTAINER" >/dev/null 2>&1 || true' EXIT
 

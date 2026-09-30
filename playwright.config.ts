@@ -59,7 +59,8 @@ export default defineConfig({
       : `npm run start -- --port ${PORT}`,
     url: baseURL,
     timeout: 120_000,
-    reuseExistingServer: !process.env.CI,
+    // Porta ocupada deve falhar: outro servidor pode servir uma versão diferente.
+    reuseExistingServer: false,
     env: {
       // O build/serve não conecta no Supabase nas rotas públicas;
       // placeholders satisfazem o createClient, igual ao job `node` do CI.
