@@ -54,6 +54,7 @@ fuso de negócio `America/Sao_Paulo`.
    - `0026_fingerprint_lancamento_manual.sql`
    - `0027_rls_auto_enable_event_trigger.sql`
    - `20260909205952_corrigir_integridade_transacional_importada.sql`
+   - `20260929120000_confirmar_importacao_fatura_ja_paga.sql`
 
    > Os bundles de `supabase/APLICAR.md` cobrem apenas até `0019`. De `0020`
    > em diante, aplique os arquivos de `supabase/migrations/` direto.
