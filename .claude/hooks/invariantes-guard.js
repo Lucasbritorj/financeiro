@@ -19,7 +19,9 @@ process.stdin.on("end", () => {
   const ehTeste = /\.(test|spec)\.tsx?$/.test(fp) || /\/tests?\//.test(fp);
   const ehMoney = /\/src\/lib\/money\.ts$/.test(fp);
 
-  const novo = [t.content, t.new_string].filter(Boolean).join("\n");
+  // MultiEdit traz as trocas em t.edits[].new_string.
+  const edits = Array.isArray(t.edits) ? t.edits.map((e) => e && e.new_string) : [];
+  const novo = [t.content, t.new_string, ...edits].filter(Boolean).join("\n");
   if (!novo) process.exit(0);
 
   // (B) Smell de conversão centavos<->decimal em float fora de money.ts.
