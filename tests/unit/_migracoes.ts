@@ -136,10 +136,11 @@ export function lerMigracoes(): Migracao[] {
     .sort();
 
   return arquivos.map((arquivo) => {
-    const numero = Number(arquivo.slice(0, 4));
+    // Prefixo antes do primeiro "_": 0001..0027 ou timestamp 20260909205952.
+    const numero = Number(arquivo.split("_")[0]);
     if (!Number.isInteger(numero)) {
       throw new Error(
-        `migração "${arquivo}" não começa com prefixo numérico de 4 dígitos — ` +
+        `migração "${arquivo}" não começa com prefixo numérico — ` +
           `a ordem de aplicação depende dele.`,
       );
     }
