@@ -4,6 +4,15 @@
 
 Regras inflexíveis deste projeto. Em conflito com hábito de outro codebase, este arquivo ganha.
 
+## Classe e objetivo
+
+- **Classe: crítico** (dinheiro e dado pessoal). Piso: CI verde (typecheck, lint, unit, build,
+  SQL em Postgres real, navegador), `npm audit --omit=dev` sem alta, sem segredo, regra de
+  dinheiro em constraint ou teste, `/security-review` antes de deploy que toque auth, RLS ou RPC,
+  e produção conferida no navegador logado.
+- **Objetivo: não declarado.** Até o Lucas declarar, só manutenção do piso; melhoria acima dele
+  vai para o backlog sem executar.
+
 ## Stack
 
 - **Next.js 16** (App Router). Sessão renovada e rotas protegidas via `src/proxy.ts`
