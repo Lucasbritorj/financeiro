@@ -18,6 +18,7 @@
 // Reusa as funções de insights.ts em vez de reagregar: elas já resolvem
 // LIQUIDACAO_FATURA, orçamento estourado e projeção, e são testadas.
 import { mesesAnteriores } from "../analise.ts";
+import { mesCorrenteSaoPaulo } from "../dashboard-dados.ts";
 import {
   gastoPorCategoria,
   historicoMensal,
@@ -83,10 +84,20 @@ export function montarContexto(
   // A projeção só faz sentido para o mês corrente: num mês fechado o valor
   // real já é conhecido, e projetar "o ritmo até o dia X" de um mês passado
   // devolveria um número inventado com cara de previsão.
+  //
+  // Mês corrente e dia de hoje saem do fuso de negócio (America/Sao_Paulo), não
+  // do fuso local do servidor: na Vercel em UTC, entre 21h e 24h de SP do último
+  // dia do mês, o local já virou o mês seguinte e a projeção do mês corrente
+  // sumiria (CLAUDE.md: cliente decide data por hojeSaoPaulo/mesCorrenteSaoPaulo,
+  // nunca por new Date() local).
   const [ano, mes] = mesISO.split("-").map(Number);
-  const mesCorrente =
-    hoje.getFullYear() === ano && hoje.getMonth() + 1 === mes;
-  const diasNoMes = new Date(ano, mes, 0).getDate();
+  const mesCorrente = mesCorrenteSaoPaulo(hoje) === mesISO;
+  const diaDeHoje = Number(
+    new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" })
+      .format(hoje)
+      .slice(8, 10),
+  );
+  const diasNoMes = new Date(Date.UTC(ano, mes, 0)).getUTCDate();
 
   return {
     mes_referencia: mesISO,
@@ -98,7 +109,7 @@ export function montarContexto(
     saldo,
     taxa_poupanca_pct: taxaPoupanca(entradas, saidas),
     projecao_fechamento: mesCorrente
-      ? projecaoFechamento(saidas, hoje.getDate(), diasNoMes)
+      ? projecaoFechamento(saidas, diaDeHoje, diasNoMes)
       : null,
     categorias: categorias.map((c) => ({
       nome: c.nome,

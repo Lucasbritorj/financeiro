@@ -3,6 +3,13 @@ import assert from "node:assert/strict";
 import { montarContexto, SISTEMA_ASSISTENTE } from "../../src/lib/assistente/contexto.ts";
 import type { TransacaoInsight } from "../../src/lib/insights.ts";
 
+// node --test roda cada arquivo em processo próprio, então fixar TZ=UTC aqui
+// vale só para esta suíte: empurra o fuso local do runner para longe de
+// America/Sao_Paulo e faz o bug de fuso (mês corrente e ano do PDF decididos no
+// fuso local, não em SP) aparecer no vermelho. O código corrigido decide por SP
+// via Intl e passa com qualquer TZ.
+process.env.TZ = "UTC";
+
 // A invariante que este arquivo protege: o assistente manda AGREGADOS ao modelo,
 // nunca o razão bruto. Descrição de transação é dado sensível — "Consulta Dr.
 // Silva", "Advogado Trabalhista", o nome de quem recebeu um Pix — e não é
@@ -157,4 +164,47 @@ test("o prompt do sistema declara a unidade e a ausência do razão", () => {
   assert.match(SISTEMA_ASSISTENTE, /CENTAVOS/);
   assert.match(SISTEMA_ASSISTENTE, /NÃO tem acesso a transações individuais/);
   assert.match(SISTEMA_ASSISTENTE, /não é consultor de investimentos/i);
+});
+
+// --- Fuso America/Sao_Paulo (lote financeiro-web-lote-fuso-testes) ---
+// Com TZ=UTC no topo, o fuso local do runner é UTC. montarContexto e o ano do
+// extrato PDF têm de decidir pelo fuso de negócio (America/Sao_Paulo), não pelo
+// local — senão, entre 21h e 24h de SP do último dia do mês, a Vercel em UTC já
+// virou o mês/ano seguinte e a projeção do mês corrente some (ou o extrato de
+// dezembro ganha o ano errado).
+
+test("mês corrente da projeção sai do fuso America/Sao_Paulo, não do fuso local do runner", () => {
+  // 2026-10-01T01:30:00Z = 30/09/2026 22h30 em São Paulo. Em UTC já é 01/10.
+  const hoje = new Date("2026-10-01T01:30:00Z");
+
+  const setembro = montarContexto(TRANSACOES, "2026-09", hoje);
+  assert.equal(
+    typeof setembro.projecao_fechamento,
+    "number",
+    "30/09 22h30 em SP ainda é setembro: a projeção do mês corrente não pode ser null",
+  );
+  // dia de hoje em SP = 30 e diasNoMes(setembro) = 30; saídas de 09 = 459200
+  // => projecaoFechamento = round(459200 / 30 * 30) = 459200. Pelo fuso local
+  // (UTC, dia 01 de outubro) o dia e o mês estariam errados.
+  assert.equal(setembro.projecao_fechamento, 459200);
+
+  const outubro = montarContexto(TRANSACOES, "2026-10", hoje);
+  assert.equal(
+    outubro.projecao_fechamento,
+    null,
+    "outubro ainda não começou em SP (é 30/09): mês não corrente, projeção null",
+  );
+});
+
+test("ano de referência do extrato PDF sai do fuso America/Sao_Paulo", async () => {
+  // anoReferenciaPdf é a função pura exportada de leitura-arquivo.ts: o resto de
+  // lerArquivoImportacao toca File e pdfjs e não roda no test runner. Import
+  // dinâmico de propósito — assim a suíte de montarContexto ainda mostra o
+  // próprio vermelho mesmo quando o export ainda não existe no código antigo.
+  const { anoReferenciaPdf } = await import("../../src/lib/leitura-arquivo.ts");
+  // 2027-01-01T01:00:00Z = 31/12/2026 22h em São Paulo: o extrato de dezembro
+  // tem de receber 2026, não 2027.
+  assert.equal(anoReferenciaPdf(new Date("2027-01-01T01:00:00Z")), 2026);
+  // Instante trivial, longe da virada: ano inalterado.
+  assert.equal(anoReferenciaPdf(new Date("2026-06-15T12:00:00Z")), 2026);
 });

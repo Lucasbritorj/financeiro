@@ -17,6 +17,22 @@ import { parseOfxExtrato } from "./ofx.ts";
 import { parsePdfExtrato } from "./pdf-extrato.ts";
 import type { OrigemImportacao } from "./importacao-preview.ts";
 
+/**
+ * Ano de referência do extrato PDF: o ano de HOJE no fuso de negócio
+ * (America/Sao_Paulo), nunca o do servidor. O parser usa esse ano para completar
+ * lançamentos "dd/mm" sem ano; em 31/12 ~22h de SP a Vercel em UTC já virou o ano
+ * seguinte, e o extrato de dezembro ganharia o ano errado (CLAUDE.md: a data no
+ * cliente sai do fuso de negócio, não de new Date() local). Pura e exportada para
+ * ser testável sem File nem pdfjs.
+ */
+export function anoReferenciaPdf(agora: Date = new Date()): number {
+  return Number(
+    new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" })
+      .format(agora)
+      .slice(0, 4),
+  );
+}
+
 // Bancos BR exportam CSV/OFX em Windows-1252 (superset do ISO-8859-1) tão
 // often quanto em UTF-8. Tenta UTF-8 estrito (fatal): se os bytes não forem
 // UTF-8 válido, decai para windows-1252 — que decodifica acentos (ê, ç, ã…) e
@@ -144,7 +160,7 @@ export async function lerArquivoImportacao(
     return parseMatrizExtrato(await matrizDoXlsx(arquivo));
   }
   if (origem === "PDF") {
-    return parsePdfExtrato(await linhasDoPdf(arquivo), new Date().getFullYear());
+    return parsePdfExtrato(await linhasDoPdf(arquivo), anoReferenciaPdf());
   }
   return parseCsvExtrato(await lerTexto(arquivo), preset);
 }
