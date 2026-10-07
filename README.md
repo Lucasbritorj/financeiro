@@ -76,7 +76,8 @@ Licença [MIT](LICENSE).
 
 1. Crie um projeto em [supabase.com](https://supabase.com).
 2. No **SQL Editor**, execute **todas** as migrações de `supabase/migrations/`
-   em ordem numérica — são **27**, de `0001` a `0027`. Aplicar só o núcleo
+   em ordem alfabética — são **31**: `0001` a `0027` e quatro migrations com
+   timestamp. Aplicar só o núcleo
    (`0001`–`0006`) sobe um banco sem categorias, importação, cofrinhos,
    análise, carteira, boletos nem recorrências: telas que o app oferece falham
    contra objetos que não existem. Ordem importa — `0002` e `0003` são
@@ -117,11 +118,13 @@ Licença [MIT](LICENSE).
    - `0027_rls_auto_enable_event_trigger.sql`
    - `20260909205952_corrigir_integridade_transacional_importada.sql`
    - `20260929120000_confirmar_importacao_fatura_ja_paga.sql`
+   - `20261006120000_central_assinaturas.sql`
+   - `20261007120000_corrigir_central_assinaturas.sql`
 
    > Os bundles de `supabase/APLICAR.md` cobrem apenas até `0019`. De `0020`
    > em diante, aplique os arquivos de `supabase/migrations/` direto.
    >
-   > A última entrada troca o prefixo sequencial (`00NN_`) pelo timestamp do
+   > As últimas entradas trocam o prefixo sequencial (`00NN_`) pelo timestamp do
    > Supabase CLI. Aplique por ordem alfabética do nome do arquivo, que é a
    > mesma ordem cronológica — `2026…` vem depois de `0027`.
 3. (Opcional) Execute `supabase/tests/verificacao_nucleo.sql` — 21 asserts

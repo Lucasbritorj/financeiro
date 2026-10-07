@@ -13,6 +13,7 @@ const NAV_PRINCIPAL = [
   { href: "/dashboard", rotulo: "Dashboard" },
   { href: "/analise", rotulo: "Análise" },
   { href: "/transacoes", rotulo: "Transações" },
+  { href: "/assinaturas", rotulo: "Assinaturas" },
   { href: "/faturas", rotulo: "Contas a pagar" },
   { href: "/categorias", rotulo: "Categorias" },
   { href: "/importar", rotulo: "Importar" },
