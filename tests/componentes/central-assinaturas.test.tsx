@@ -62,9 +62,50 @@ test("mostra próximas cobranças e totais somente das ativas", async () => {
   const secao = proximas.closest("section");
   expect(secao).not.toBeNull();
   expect(within(secao!).getByText("Streaming")).toBeInTheDocument();
-  expect(screen.getByText("Custo mensal equivalente").parentElement).toHaveTextContent("R$ 40,00");
-  expect(screen.getByText("Projeção anual").parentElement).toHaveTextContent("R$ 480,00");
+  const resumo = screen.getByLabelText("Resumo das assinaturas");
+  expect(within(resumo).getByText("Custo mensal equivalente").parentElement).toHaveTextContent("R$ 40,00");
+  expect(within(resumo).getByText("Projeção anual").parentElement).toHaveTextContent("R$ 480,00");
   expect(eq).toHaveBeenCalledWith("finalidade", "ASSINATURA");
+});
+
+test("mostra impacto por cartão com totais, participação e maiores assinaturas", async () => {
+  montar();
+
+  const titulo = await screen.findByRole("heading", { name: "Impacto por Cartão" });
+  const secao = titulo.closest("section");
+  expect(secao).not.toBeNull();
+
+  const nubank = within(secao!).getByRole("heading", { name: "Nubank" }).closest("article");
+  expect(nubank).not.toBeNull();
+  expect(nubank).toHaveTextContent("1 ativa");
+  expect(nubank).toHaveTextContent("R$ 30,00");
+  expect(nubank).toHaveTextContent("R$ 360,00");
+  expect(nubank).toHaveTextContent("75,0%");
+  expect(nubank).toHaveTextContent("Streaming");
+
+  const semCartao = within(secao!).getByRole("heading", { name: "Sem cartão" }).closest("article");
+  expect(semCartao).not.toBeNull();
+  expect(semCartao).toHaveTextContent("R$ 10,00");
+  expect(semCartao).toHaveTextContent("R$ 120,00");
+  expect(semCartao).toHaveTextContent("25,0%");
+  expect(semCartao).toHaveTextContent("Nuvem");
+});
+
+test("mostra estado vazio no impacto quando só há pausadas ou canceladas", async () => {
+  order.mockResolvedValue({
+    data: [
+      { ...streaming, status: "PAUSADA" },
+      { ...anual, status: "CANCELADA" },
+    ],
+    error: null,
+  });
+  montar();
+
+  await screen.findByText("Nuvem");
+  const titulo = screen.getByRole("heading", { name: "Impacto por Cartão" });
+  const secao = titulo.closest("section");
+  expect(secao).not.toBeNull();
+  expect(within(secao!).getByText("Nenhuma assinatura ativa.")).toBeInTheDocument();
 });
 
 test("cadastra assinatura em centavos com categoria e cartão opcionais", async () => {

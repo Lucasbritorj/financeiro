@@ -15,6 +15,16 @@ export type AssinaturaCalculavel = {
   status: StatusAssinatura;
 };
 
+type AssinaturaComCartao = AssinaturaCalculavel & {
+  descricao: string;
+  cartao_id: string | null;
+};
+
+type CartaoIdentificavel = {
+  id: string;
+  nome: string;
+};
+
 const MESES_POR_CICLO: Record<PeriodicidadeAssinatura, number> = {
   MENSAL: 1,
   TRIMESTRAL: 3,
@@ -61,6 +71,87 @@ export function resumirAssinaturas(assinaturas: readonly AssinaturaCalculavel[])
     custoMensal: Math.round(custoAnual / 12),
     custoAnual,
   };
+}
+
+export function impactoPorCartao(
+  assinaturas: readonly AssinaturaComCartao[],
+  cartoes: readonly CartaoIdentificavel[],
+) {
+  const nomesPorCartao = new Map(cartoes.map((cartao) => [cartao.id, cartao.nome]));
+  const ativas = assinaturas.filter((assinatura) => assinatura.status === "ATIVA");
+  const custoAnualTotal = ativas.reduce(
+    (total, assinatura) =>
+      total + projecaoAnual(assinatura.valor, assinatura.periodicidade),
+    0,
+  );
+
+  if (custoAnualTotal === 0) return [];
+
+  const assinaturasPorCartao = new Map<string | null, AssinaturaComCartao[]>();
+  for (const assinatura of ativas) {
+    const grupo = assinaturasPorCartao.get(assinatura.cartao_id) ?? [];
+    grupo.push(assinatura);
+    assinaturasPorCartao.set(assinatura.cartao_id, grupo);
+  }
+
+  const grupos = Array.from(assinaturasPorCartao, ([cartaoId, assinaturasDoCartao]) => {
+    const assinaturasProjetadas = assinaturasDoCartao.map((assinatura) => ({
+      descricao: assinatura.descricao,
+      custoAnual: projecaoAnual(assinatura.valor, assinatura.periodicidade),
+    }));
+    const custoAnual = assinaturasProjetadas.reduce(
+      (total, assinatura) => total + assinatura.custoAnual,
+      0,
+    );
+    const principaisAssinaturas = assinaturasProjetadas
+      .slice()
+      .sort(
+        (a, b) =>
+          b.custoAnual - a.custoAnual ||
+          a.descricao.localeCompare(b.descricao, "pt-BR"),
+      )
+      .slice(0, 3);
+
+    return {
+      cartaoId,
+      nomeCartao: cartaoId
+        ? (nomesPorCartao.get(cartaoId) ?? "Cartão removido")
+        : "Sem cartão",
+      quantidadeAtivas: assinaturasDoCartao.length,
+      custoMensal: custoMensalEquivalente(custoAnual, "ANUAL"),
+      custoAnual,
+      principaisAssinaturas,
+    };
+  }).sort((a, b) => b.custoAnual - a.custoAnual);
+
+  const totalDecimosPercentuais = 1000;
+  const totalInteiro = BigInt(custoAnualTotal);
+  const participacoes = grupos.map((grupo) => {
+    const numerador = BigInt(grupo.custoAnual) * BigInt(totalDecimosPercentuais);
+    return {
+      participacaoPercentual: Number(numerador / totalInteiro),
+      resto: numerador % totalInteiro,
+    };
+  });
+  const decimosRestantes = totalDecimosPercentuais - participacoes.reduce(
+    (total, participacao) => total + participacao.participacaoPercentual,
+    0,
+  );
+  const ordemPorMaiorResto = participacoes
+    .map((_, indice) => indice)
+    .sort((a, b) => {
+      if (participacoes[a].resto === participacoes[b].resto) return a - b;
+      return participacoes[a].resto > participacoes[b].resto ? -1 : 1;
+    });
+
+  for (let indice = 0; indice < decimosRestantes; indice += 1) {
+    participacoes[ordemPorMaiorResto[indice]].participacaoPercentual += 1;
+  }
+
+  return grupos.map((grupo, indice) => ({
+    ...grupo,
+    participacaoPercentual: participacoes[indice].participacaoPercentual,
+  }));
 }
 
 export function proximasCobrancas<T extends AssinaturaCalculavel>(

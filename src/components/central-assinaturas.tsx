@@ -2,6 +2,7 @@
 
 import {
   GerenciadorAssinaturas,
+  ImpactoPorCartao,
   ProximasCobrancas,
   ResumoAssinaturas,
 } from "@/components/central-assinaturas-ui";
@@ -31,6 +32,10 @@ export default function CentralAssinaturas({
         </p>
       ) : (
         <>
+          <ImpactoPorCartao
+            assinaturas={central.assinaturas ?? []}
+            cartoes={cartoes}
+          />
           <ProximasCobrancas
             assinaturas={central.assinaturas ?? []}
             cartoes={cartoes}

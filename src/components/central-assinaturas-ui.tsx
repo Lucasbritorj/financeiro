@@ -1,6 +1,7 @@
 import type { Dispatch, FormEventHandler, SetStateAction } from "react";
 import type { StatusAssinatura } from "@/lib/assinaturas";
 import {
+  impactoPorCartao,
   proximasCobrancas,
   resumirAssinaturas,
   rotuloPeriodicidade,
@@ -72,6 +73,83 @@ export function ProximasCobrancas({
             </li>
           ))}
         </ol>
+      )}
+    </section>
+  );
+}
+
+export function ImpactoPorCartao({ assinaturas, cartoes }: {
+  assinaturas: AssinaturaLinha[];
+  cartoes: CartaoOpcao[];
+}) {
+  const grupos = impactoPorCartao(assinaturas, cartoes);
+  return (
+    <section className="vidro-soberano grid gap-4 p-4" aria-labelledby="impacto-por-cartao">
+      <h2 id="impacto-por-cartao" className="font-medium">Impacto por Cartão</h2>
+      {grupos.length === 0 ? (
+        <p className="text-sm" style={{ color: "var(--grafite)" }}>
+          Nenhuma assinatura ativa.
+        </p>
+      ) : (
+        <div className="grid min-w-0 gap-3 lg:grid-cols-2">
+          {grupos.map((grupo) => (
+            <article
+              key={grupo.cartaoId ?? "sem-cartao"}
+              className="grid min-w-0 gap-3 rounded border p-3"
+              style={{ borderColor: "var(--borda)" }}
+            >
+              <header className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
+                <h3 className="min-w-0 break-words font-medium">{grupo.nomeCartao}</h3>
+                <span className="text-xs" style={{ color: "var(--grafite)" }}>
+                  {grupo.quantidadeAtivas} {grupo.quantidadeAtivas === 1 ? "ativa" : "ativas"}
+                </span>
+              </header>
+              <dl className="grid min-w-0 gap-2 sm:grid-cols-3">
+                <div className="min-w-0">
+                  <dt className="text-xs" style={{ color: "var(--grafite)" }}>
+                    Custo mensal equivalente
+                  </dt>
+                  <dd className="numero-soberano break-words" style={{ color: "var(--ouro)" }}>
+                    {formatarCentavos(grupo.custoMensal)}
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs" style={{ color: "var(--grafite)" }}>
+                    Projeção anual
+                  </dt>
+                  <dd className="numero-soberano break-words" style={{ color: "var(--ouro)" }}>
+                    {formatarCentavos(grupo.custoAnual)}
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs" style={{ color: "var(--grafite)" }}>Participação</dt>
+                  <dd className="numero-soberano" style={{ color: "var(--ouro)" }}>
+                    {(grupo.participacaoPercentual / 10).toLocaleString("pt-BR", {
+                      minimumFractionDigits: 1,
+                      maximumFractionDigits: 1,
+                    })}%
+                  </dd>
+                </div>
+              </dl>
+              <div className="min-w-0">
+                <h4 className="text-xs font-medium" style={{ color: "var(--grafite)" }}>Maiores impactos anuais</h4>
+                <ol className="mt-2 grid min-w-0 gap-1">
+                  {grupo.principaisAssinaturas.map((assinatura, indice) => (
+                    <li
+                      key={`${assinatura.descricao}-${indice}`}
+                      className="grid min-w-0 gap-1 text-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-3"
+                    >
+                      <span className="min-w-0 break-words">{assinatura.descricao}</span>
+                      <span className="numero-soberano" style={{ color: "var(--giz)" }}>
+                        {formatarCentavos(assinatura.custoAnual)} / ano
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </article>
+          ))}
+        </div>
       )}
     </section>
   );
