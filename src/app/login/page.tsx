@@ -60,7 +60,7 @@ export default function LoginPage() {
           <label className="text-sm">
             E-mail
             <input
-              type="email"
+              type="email" maxLength={254}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -70,7 +70,7 @@ export default function LoginPage() {
           <label className="text-sm">
             Senha
             <input
-              type="password"
+              type="password" maxLength={128}
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               required
