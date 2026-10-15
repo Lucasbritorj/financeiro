@@ -1,5 +1,5 @@
-# CI: os mesmos gates rodados localmente (npm test / test:sql / tsc / lint /
-# build). Ativa automaticamente quando o repositório ganhar remote GitHub.
+﻿# CI: os mesmos gates rodados localmente (npm test / test:sql / tsc / lint /
+# build). Ativa automaticamente quando o repositÃ³rio ganhar remote GitHub.
 name: CI
 
 on:
@@ -9,15 +9,15 @@ on:
 
 jobs:
   node:
-    name: typecheck · lint · unit · build
+    name: typecheck Â· lint Â· unit Â· build
     runs-on: ubuntu-latest
     env:
-      # Build não conecta no Supabase; placeholders satisfazem o createClient.
+      # Build nÃ£o conecta no Supabase; placeholders satisfazem o createClient.
       NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
     steps:
-      # As versões destas duas são cobradas por tests/unit/gate-ci-acoes.test.ts:
-      # major abaixo do primeiro com runtime Node 24 é teste vermelho, não
+      # As versÃµes destas duas sÃ£o cobradas por tests/unit/gate-ci-acoes.test.ts:
+      # major abaixo do primeiro com runtime Node 24 Ã© teste vermelho, nÃ£o
       # annotation silenciosa no run verde.
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -25,12 +25,12 @@ jobs:
           node-version: 24
           cache: npm
       # O npm que acompanha o node flutua: `node-version: 24` trouxe 11.6.x em
-      # julho e 11.17.0 em agosto. Isso não é detalhe — em 13/08/2026 o
-      # package-lock.json foi reparado com npm 11.6.2, saiu verde na máquina de
+      # julho e 11.17.0 em agosto. Isso nÃ£o Ã© detalhe â€” em 13/08/2026 o
+      # package-lock.json foi reparado com npm 11.6.2, saiu verde na mÃ¡quina de
       # quem reparou e continuou vermelho aqui, porque o 11.17.0 exige entradas
       # de topo para bundleDependencies que o 11.6.2 dispensa. Quem valida o
-      # lock precisa ser sempre a mesma versão, senão "npm ci verde" não
-      # responde "verde em qual npm?". A versão vive em packageManager, no
+      # lock precisa ser sempre a mesma versÃ£o, senÃ£o "npm ci verde" nÃ£o
+      # responde "verde em qual npm?". A versÃ£o vive em packageManager, no
       # package.json, para que o desenvolvedor local use a mesma.
       - name: pin do npm declarado em packageManager
         run: |
@@ -39,6 +39,7 @@ jobs:
           npm i -g npm@$NPM_PIN
           npm --version
       - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm test
@@ -46,10 +47,10 @@ jobs:
       - run: npm run build
 
   e2e:
-    name: navegador · axe · teclado · 320+768+1024+1440
+    name: navegador Â· axe Â· teclado Â· 320+768+1024+1440
     runs-on: ubuntu-latest
     env:
-      # Só rotas públicas: o build não conecta no Supabase, placeholders bastam.
+      # SÃ³ rotas pÃºblicas: o build nÃ£o conecta no Supabase, placeholders bastam.
       NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
     steps:
@@ -63,14 +64,15 @@ jobs:
           NPM_PIN=$(node -p "require('./package.json').packageManager.replace('npm@','')")
           npm i -g npm@$NPM_PIN
       - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
       # `--with-deps` instala as libs de sistema do Chromium no runner; sem
-      # elas o browser baixa e não abre, e o erro aparece só no primeiro teste.
+      # elas o browser baixa e nÃ£o abre, e o erro aparece sÃ³ no primeiro teste.
       - run: npx playwright install --with-deps chromium
       - run: npm run build
-      # Sem `npm run test:e2e`: aquele script refaz o build. Aqui o build já
-      # rodou no step acima e serve de gate próprio.
+      # Sem `npm run test:e2e`: aquele script refaz o build. Aqui o build jÃ¡
+      # rodou no step acima e serve de gate prÃ³prio.
       - run: npx playwright test
-      - name: upload do relatório quando falha
+      - name: upload do relatÃ³rio quando falha
         if: failure()
         uses: actions/upload-artifact@v6
         with:
@@ -79,7 +81,7 @@ jobs:
           retention-days: 7
 
   lighthouse:
-    name: lighthouse · performance + a11y na página real
+    name: lighthouse Â· performance + a11y na pÃ¡gina real
     runs-on: ubuntu-latest
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
@@ -95,12 +97,13 @@ jobs:
           NPM_PIN=$(node -p "require('./package.json').packageManager.replace('npm@','')")
           npm i -g npm@$NPM_PIN
       - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run build
       # lhci sobe o `next start` sozinho (startServerCommand no lighthouserc.json),
       # roda 3 vezes e aplica os limiares. Job separado do e2e porque compete por
-      # CPU com o Playwright: medir performance junto de outra suíte dá ruído.
+      # CPU com o Playwright: medir performance junto de outra suÃ­te dÃ¡ ruÃ­do.
       - run: npm run test:lighthouse
-      - name: upload dos relatórios quando falha
+      - name: upload dos relatÃ³rios quando falha
         if: failure()
         uses: actions/upload-artifact@v6
         with:
@@ -109,7 +112,7 @@ jobs:
           retention-days: 7
 
   sql:
-    name: migrações + asserts em Postgres real
+    name: migraÃ§Ãµes + asserts em Postgres real
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -128,7 +131,7 @@ jobs:
       PGDATABASE: app
     steps:
       - uses: actions/checkout@v6
-      - name: shim + migrações em ordem
+      - name: shim + migraÃ§Ãµes em ordem
         run: |
           psql -v ON_ERROR_STOP=1 -q -f tests/sql/00_shim_auth.sql
           for f in supabase/migrations/*.sql; do
