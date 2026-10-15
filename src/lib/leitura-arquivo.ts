@@ -1,11 +1,11 @@
-﻿// Leitura de arquivo de extrato no navegador: decodificaÃ§Ã£o, hash e os
+// Leitura de arquivo de extrato no navegador: decodificação, hash e os
 // decoders de XLSX/PDF. Tudo aqui toca API de browser (File, TextDecoder,
-// crypto.subtle, import dinÃ¢mico), por isso mora fora de importacao-preview.ts,
-// que Ã© lÃ³gica pura e roda no test runner sem DOM.
+// crypto.subtle, import dinâmico), por isso mora fora de importacao-preview.ts,
+// que é lógica pura e roda no test runner sem DOM.
 //
-// O dispatch por origem vive aqui, e nÃ£o em importacao-preview.ts, justamente
-// porque cada parser tem assinatura e efeito colateral diferentes â€” texto,
-// matriz ou pÃ¡ginas de PDF.
+// O dispatch por origem vive aqui, e não em importacao-preview.ts, justamente
+// porque cada parser tem assinatura e efeito colateral diferentes — texto,
+// matriz ou páginas de PDF.
 
 import {
   parseCsvExtrato,
@@ -18,12 +18,12 @@ import { parsePdfExtrato } from "./pdf-extrato.ts";
 import type { OrigemImportacao } from "./importacao-preview.ts";
 
 /**
- * Ano de referÃªncia do extrato PDF: o ano de HOJE no fuso de negÃ³cio
+ * Ano de referência do extrato PDF: o ano de HOJE no fuso de negócio
  * (America/Sao_Paulo), nunca o do servidor. O parser usa esse ano para completar
- * lanÃ§amentos "dd/mm" sem ano; em 31/12 ~22h de SP a Vercel em UTC jÃ¡ virou o ano
+ * lançamentos "dd/mm" sem ano; em 31/12 ~22h de SP a Vercel em UTC já virou o ano
  * seguinte, e o extrato de dezembro ganharia o ano errado (CLAUDE.md: a data no
- * cliente sai do fuso de negÃ³cio, nÃ£o de new Date() local). Pura e exportada para
- * ser testÃ¡vel sem File nem pdfjs.
+ * cliente sai do fuso de negócio, não de new Date() local). Pura e exportada para
+ * ser testável sem File nem pdfjs.
  */
 export function anoReferenciaPdf(agora: Date = new Date()): number {
   return Number(
@@ -33,28 +33,27 @@ export function anoReferenciaPdf(agora: Date = new Date()): number {
   );
 }
 
-// Bancos BR exportam CSV/OFX em Windows-1252 (superset do ISO-8859-1) tÃ£o
-// often quanto em UTF-8. Tenta UTF-8 estrito (fatal): se os bytes nÃ£o forem
-// UTF-8 vÃ¡lido, decai para windows-1252 â€” que decodifica acentos (Ãª, Ã§, Ã£â€¦) e
-// os caracteres 0x80-0x9F (â€“, â€¦, aspas curvas) sem virar "ï¿½".
+// Bancos BR exportam CSV/OFX em Windows-1252 (superset do ISO-8859-1) tão
+// often quanto em UTF-8. Tenta UTF-8 estrito (fatal): se os bytes não forem
+// UTF-8 válido, decai para windows-1252 — que decodifica acentos (ê, ç, ã…) e
+// os caracteres 0x80-0x9F (–, …, aspas curvas) sem virar "�".
 export async function lerTexto(arquivo: File): Promise<string> {
-  if (typeof arquivo.size === "number" && arquivo.size > 10 * 1024 * 1024) throw new Error("Arquivo acima do limite de 10 MB.");
   const bruto = await arquivo.arrayBuffer();
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(bruto);
-  } catch (erro) { console.warn("Falha ao calcular SHA-256 do arquivo:", erro);
+  } catch {
     return new TextDecoder("windows-1252").decode(bruto);
   }
 }
 
 /**
- * sha256 do arquivo CRU (bytes, nÃ£o do texto decodificado): reenviar o mesmo
- * arquivo Ã© identificado antes de qualquer parse. Hash sobre o texto decairia
- * junto com a heurÃ­stica de encoding â€” dois decodes diferentes do mesmo byte
+ * sha256 do arquivo CRU (bytes, não do texto decodificado): reenviar o mesmo
+ * arquivo é identificado antes de qualquer parse. Hash sobre o texto decairia
+ * junto com a heurística de encoding — dois decodes diferentes do mesmo byte
  * dariam hashes diferentes.
  *
  * `crypto.subtle` exige secure context (https ou localhost). Fora dele
- * devolvemos null e o servidor simplesmente nÃ£o faz o short-circuit â€” a dedup
+ * devolvemos null e o servidor simplesmente não faz o short-circuit — a dedup
  * por linha da 0020/0021 continua valendo.
  */
 export async function sha256DoArquivo(arquivo: File): Promise<string | null> {
@@ -62,12 +61,12 @@ export async function sha256DoArquivo(arquivo: File): Promise<string | null> {
   try {
     const buf = await crypto.subtle.digest("SHA-256", await arquivo.arrayBuffer());
     return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  } catch (erro) { console.warn("Falha ao calcular SHA-256 do arquivo:", erro);
+  } catch {
     return null;
   }
 }
 
-/** Uma cÃ©lula do exceljs em texto â€” Date, richText e fÃ³rmula tÃªm forma prÃ³pria. */
+/** Uma célula do exceljs em texto — Date, richText e fórmula têm forma própria. */
 export function celulaParaTexto(v: unknown): string {
   if (v == null) return "";
   if (v instanceof Date) {
@@ -86,8 +85,8 @@ export function celulaParaTexto(v: unknown): string {
   return String(v);
 }
 
-// XLSX -> matriz de strings (1Âª aba). exceljs entra por import dinÃ¢mico:
-// sÃ³ quem importa planilha paga o peso do bundle.
+// XLSX -> matriz de strings (1ª aba). exceljs entra por import dinâmico:
+// só quem importa planilha paga o peso do bundle.
 export async function matrizDoXlsx(arquivo: File): Promise<string[][]> {
   const { Workbook } = await import("exceljs");
   const wb = new Workbook();
@@ -105,7 +104,7 @@ export async function matrizDoXlsx(arquivo: File): Promise<string[][]> {
   return matriz;
 }
 
-/** Os pedaÃ§os de uma pÃ¡gina agrupados pela coordenada Y, do topo para a base. */
+/** Os pedaços de uma página agrupados pela coordenada Y, do topo para a base. */
 export function linhasDaPagina(itens: readonly unknown[]): string[] {
   const porY = new Map<number, { x: number; texto: string }[]>();
   for (const item of itens) {
@@ -127,7 +126,7 @@ export function linhasDaPagina(itens: readonly unknown[]): string[] {
   );
 }
 
-// PDF -> linhas de texto (pdfjs-dist, import dinÃ¢mico). Agrupa os pedaÃ§os
+// PDF -> linhas de texto (pdfjs-dist, import dinâmico). Agrupa os pedaços
 // pela coordenada Y para reconstruir as linhas visuais do extrato.
 export async function linhasDoPdf(arquivo: File): Promise<string[]> {
   const pdfjs = await import("pdfjs-dist");
@@ -146,8 +145,8 @@ export async function linhasDoPdf(arquivo: File): Promise<string[]> {
 }
 
 /**
- * LÃª o arquivo com o parser da origem. O preset de banco sÃ³ Ã© consultado no
- * caminho CSV â€” os outros formatos carregam a prÃ³pria estrutura.
+ * Lê o arquivo com o parser da origem. O preset de banco só é consultado no
+ * caminho CSV — os outros formatos carregam a própria estrutura.
  */
 export async function lerArquivoImportacao(
   arquivo: File,
