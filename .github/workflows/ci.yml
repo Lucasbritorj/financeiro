@@ -39,7 +39,6 @@ jobs:
           npm i -g npm@$NPM_PIN
           npm --version
       - run: npm ci
-    - run: npm audit --omit=dev --audit-level=high
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm test

@@ -38,6 +38,7 @@ export function anoReferenciaPdf(agora: Date = new Date()): number {
 // UTF-8 válido, decai para windows-1252 — que decodifica acentos (ê, ç, ã…) e
 // os caracteres 0x80-0x9F (–, …, aspas curvas) sem virar "�".
 export async function lerTexto(arquivo: File): Promise<string> {
+  if (typeof arquivo.size === "number" && arquivo.size > 10 * 1024 * 1024) throw new Error("Arquivo acima do limite de 10 MB.");
   const bruto = await arquivo.arrayBuffer();
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(bruto);
