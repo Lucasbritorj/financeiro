@@ -19,6 +19,8 @@ const eslintConfig = defineConfig([
     ".consolidacao/**",
     // Código gerado pelo Supabase local; não faz parte do aplicativo.
     "supabase/.temp/**",
+    // Ferramentas e registros locais não fazem parte do código entregue.
+    ".work/**",
   ]),
 
   // As regras locais são um plugin CommonJS: require() ali é obrigatório,

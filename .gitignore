@@ -59,3 +59,7 @@ __pycache__/
 /.work/*-id.txt
 /.work/*.json
 /.work/tooling/
+/.work/*.html
+/.work/*.png
+/.playwright-mcp/
+/.maestri/

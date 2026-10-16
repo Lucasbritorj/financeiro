@@ -67,4 +67,17 @@ Data de trabalho: 2026-10-16. Raiz: C:\Claude-Matriz\Projetos\financeiro-web. Se
 
 O gate não reinstala node_modules limpa nem executa as ações hospedadas do GitHub; não é declaração de CI remoto verde. SQL e navegador foram executados separadamente. Edge Runtime continua emitindo aviso de depreciação, já existente.
 
+## Preparação da publicação — 16/10/2026
+
+Implementação organizada em seis commits locais na branch `codex/fechar-jornadas-financeiras`; origin/master integrado sem conflitos em d004f91, preservando quatro correções recentes de segurança. Sem push.
+
+Preparação separada da implementação: `.vercelignore` exclui ferramentas, registros e arquivos de ambiente do upload; `.work/**` excluído do lint para evitar varredura de ferramentas locais. Revisor encontrou incompatibilidade entre o novo limite do login e a recuperação: corrigido limite128 também na recuperação, com validação antes da chamada externa.
+
+2026-10-16 Prova: teste de recuperação antes da correção -> 1 falha e 4 aprovados; após correção -> 5 aprovados, incluindo rejeição129 e aceitação128.
+2026-10-16 Prova: npm.cmd run gate -> exit0; 548 unitários, 133 componentes, tipos/lint/build aprovados; 12 avisos existentes. Registro .work/gate-integracao-senha.log.
+2026-10-16 Prova: npm.cmd audit --omit=dev -> 0 vulnerabilidades.
+2026-10-16 Prova: vercel deploy (preview) -> READY em https://financeiro-rfmtefa13-brito-s.vercel.app; build remoto aprovado. Navegador com recursos obtidos pela CLI autenticada -> login e recuperação aprovados, projeto Supabase correto, zero erros de execução; captura mobile inspecionada.
+2026-10-16 Prova: supabase db push --linked --dry-run --skip-vault -> somente 20261016200000_editar_cadastros.sql pendente, sem aplicação. Metadados de backup -> lista vazia e PITR desativado. Auth remoto ainda sem conferência; etapas registradas em docs/publicacao-jornadas.md.
+2026-10-16 Revisão: aprovado — revisor somente leitura aprovou configuração de upload e correção de senha; diff próprio conferido. Aprovação se refere à preparação, não à instalação remota. Publicação e migração aguardam aprovação explícita conforme skill deploy.
+
 2026-10-16 Revisão: aprovado — diff próprio conferido e revisor independente aprovou a segunda rodada sem novos achados; as evidências finais exigidas passaram.
