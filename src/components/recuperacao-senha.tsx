@@ -33,6 +33,10 @@ export default function RecuperacaoSenha({ modo, erroInicial = null }: {
     event.preventDefault();
     if (pendente || !autorizado) return;
     setErro(null);
+    if (modo === "definir" && senha.length > 128) {
+      setErro("Use no máximo 128 caracteres.");
+      return;
+    }
     if (modo === "definir" && (senha.length < 8 || senha !== confirmacao)) {
       setErro(senha.length < 8 ? "Use pelo menos 8 caracteres." : "As senhas não coincidem.");
       return;
@@ -66,8 +70,8 @@ export default function RecuperacaoSenha({ modo, erroInicial = null }: {
           {modo === "solicitar" ? <label>E-mail
             <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="campo-soberano" />
           </label> : <>
-            <label>Nova senha<input type="password" autoComplete="new-password" minLength={8} required value={senha} onChange={(e) => setSenha(e.target.value)} className="campo-soberano" /></label>
-            <label>Confirmar senha<input type="password" autoComplete="new-password" minLength={8} required value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} className="campo-soberano" /></label>
+            <label>Nova senha<input type="password" autoComplete="new-password" minLength={8} maxLength={128} required value={senha} onChange={(e) => setSenha(e.target.value)} className="campo-soberano" /></label>
+            <label>Confirmar senha<input type="password" autoComplete="new-password" minLength={8} maxLength={128} required value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} className="campo-soberano" /></label>
           </>}
           <button disabled={pendente} className="botao-soberano">{pendente ? "Aguarde..." : modo === "solicitar" ? "Enviar link" : "Salvar senha"}</button>
         </form>}

@@ -1,5 +1,5 @@
 import { beforeEach, expect, test, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 const mocks = vi.hoisted(() => ({ reset: vi.fn(), update: vi.fn(), user: vi.fn() }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth: {
@@ -40,6 +40,24 @@ test("sessão ausente não oferece alteração de senha", async () => {
   render(<RecuperacaoSenha modo="definir" />);
   expect(await screen.findByRole("alert")).toHaveTextContent("link");
   expect(screen.queryByRole("button", { name: "Salvar senha" })).not.toBeInTheDocument();
+});
+
+test("recuperação respeita o limite de senha do login, inclusive envio programático", async () => {
+  render(<RecuperacaoSenha modo="definir" />);
+  const senha = await screen.findByLabelText("Nova senha");
+  const confirmacao = screen.getByLabelText("Confirmar senha");
+  expect(senha).toHaveAttribute("maxlength", "128");
+  expect(confirmacao).toHaveAttribute("maxlength", "128");
+  fireEvent.change(senha, { target: { value: "a".repeat(129) } });
+  fireEvent.change(confirmacao, { target: { value: "a".repeat(129) } });
+  fireEvent.submit(senha.closest("form")!);
+  expect(mocks.update).not.toHaveBeenCalled();
+  expect(screen.getByRole("alert")).toHaveTextContent("no máximo 128");
+  fireEvent.change(senha, { target: { value: "a".repeat(128) } });
+  fireEvent.change(confirmacao, { target: { value: "a".repeat(128) } });
+  fireEvent.submit(senha.closest("form")!);
+  expect(mocks.update).toHaveBeenCalledWith({ password: "a".repeat(128) });
+  await screen.findByRole("status");
 });
 test("erro de rede libera nova tentativa", async () => {
   mocks.reset.mockRejectedValueOnce(new Error("Falha de rede"));
