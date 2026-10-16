@@ -25,5 +25,8 @@ export function mensagemDeErro(error: unknown): string {
     // rejeição sem Error). Mensagem genérica em vez de "undefined" na tela.
     return "Erro inesperado. Tente de novo.";
   }
+  if (/\bSELECT\b/i.test(error.message)) {
+    return "Erro inesperado. Tente de novo.";
+  }
   return error.hint ? `${error.message} ${error.hint}` : error.message;
 }

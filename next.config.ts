@@ -36,6 +36,7 @@ const nextConfig: NextConfig = {
         headers: [
           // Só origens explícitas executam/conectam; iframe proibido.
           { key: "Content-Security-Policy", value: csp },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
           // App não deve ser embutido em iframe (clickjacking).
           { key: "X-Frame-Options", value: "DENY" },
           // Navegador não deve adivinhar MIME types.
