@@ -38,14 +38,15 @@ import {
 // aqui é recontagem, não afrouxamento — `definersDistintos` segue 38 porque os
 // dois `create or replace` reescrevem funções que já existiam.
 const ESPERADO = {
-  statements: 70,
-  definers: 58,
+  // 16/10: três RPCs de edição, todas com search_path vazio e privilégios explícitos.
+  statements: 74,
+  definers: 62,
   naoDefiners: 12,
-  definersDistintos: 38,
+  definersDistintos: 41,
   /** Statements de definer com o search_path seguro. */
-  comVazio: 57,
+  comVazio: 61,
   /** Nomes distintos de definer com o search_path seguro. */
-  distintosComVazio: 37,
+  distintosComVazio: 40,
   /** A exceção declarada: rls_auto_enable, 'pg_catalog'. */
   violacoesCruas: 1,
 } as const;

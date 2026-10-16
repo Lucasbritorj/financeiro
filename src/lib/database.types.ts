@@ -682,6 +682,18 @@ export type Database = {
         Args: { p_cartao_id: string };
         Returns: Json;
       };
+      editar_cartao: {
+        Args: { p_cartao_id: string; p_nome: string; p_limite_total: number; p_dia_fechamento: number; p_dia_vencimento: number };
+        Returns: Json;
+      };
+      editar_cofrinho: {
+        Args: { p_cofrinho_id: string; p_nome: string; p_valor_alvo: number; p_horizonte: string; p_data_alvo: string | null };
+        Returns: Json;
+      };
+      editar_recorrencia: {
+        Args: { p_recorrencia_id: string; p_descricao: string; p_valor: number; p_tipo: string; p_forma_pagamento: string; p_dia_do_mes: number; p_categoria_id: string | null };
+        Returns: Json;
+      };
       editar_transacao: {
         Args: {
           p_transacao_id: string;

@@ -3,6 +3,7 @@ import NovaCategoriaForm from "@/components/nova-categoria-form";
 import OrcamentoCategoria from "@/components/orcamento-categoria";
 import BotaoAcaoRpc from "@/components/botao-acao-rpc";
 import SemearCategorias from "@/components/semear-categorias";
+import EditarCadastro from "@/components/editar-cadastro";
 import type { Categoria, RegraCategorizacao } from "@/lib/database.types";
 
 export default async function CategoriasPage() {
@@ -50,6 +51,7 @@ export default async function CategoriasPage() {
                 style={{ background: c.cor ?? "var(--grafite)" }}
               />
               <span className="font-medium">{c.nome}</span>
+              <EditarCadastro tipo="categoria" id={c.id} valores={{ nome: c.nome, cor: c.cor ?? "#D9A24E", icone: c.icone ?? "" }} />
               <span
                 className="selo"
                 style={{

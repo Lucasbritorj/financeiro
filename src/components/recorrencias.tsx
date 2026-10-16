@@ -9,7 +9,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { formatarCentavos, paraCentavos } from "@/lib/money";
+import { formatarCentavos, paraCentavos, centavosParaDecimalEditavel } from "@/lib/money";
+import EditarCadastro from "@/components/editar-cadastro";
 import { mensagemDeErro } from "@/lib/erros";
 import { useToast, useConfirm } from "@/components/feedback";
 
@@ -170,6 +171,9 @@ export default function Recorrencias({ categorias }: { categorias: CategoriaOpca
                   Excluir
                 </button>
               </span>
+              <div className="w-full">
+                <EditarCadastro tipo="recorrencia" id={r.id} categorias={categorias} aoSalvar={carregar} valores={{ descricao: r.descricao, valor: centavosParaDecimalEditavel(r.valor), tipo: r.tipo, forma_pagamento: r.forma_pagamento, dia_do_mes: String(r.dia_do_mes), categoria_id: r.categoria_id ?? "" }} />
+              </div>
             </li>
           ))}
         </ul>
