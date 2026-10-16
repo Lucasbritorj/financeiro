@@ -69,7 +69,10 @@ export function paraCentavos(entrada: string): number {
 
 /** centavos -> "1234,56" (sem prefixo de moeda), para preencher campo editável. */
 export function centavosParaDecimalEditavel(centavos: number): string {
-  return (centavos / 100).toFixed(2).replace(".", ",");
+  if (!Number.isSafeInteger(centavos)) throw new Error("Valor inválido em centavos.");
+  const absoluto = BigInt(centavos < 0 ? -centavos : centavos);
+  const cem = BigInt(100);
+  return `${centavos < 0 ? "-" : ""}${absoluto / cem},${String(absoluto % cem).padStart(2, "0")}`;
 }
 
 export function formatarCentavos(centavos: number): string {
