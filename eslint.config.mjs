@@ -17,6 +17,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     ".consolidacao/**",
+    // Código gerado pelo Supabase local; não faz parte do aplicativo.
+    "supabase/.temp/**",
   ]),
 
   // As regras locais são um plugin CommonJS: require() ali é obrigatório,

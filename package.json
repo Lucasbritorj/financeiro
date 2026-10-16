@@ -13,6 +13,7 @@
     "test:componentes": "vitest run",
     "test:sql": "bash tests/sql/run_local.sh",
     "test:e2e": "npm run build && playwright test",
+    "test:e2e:local": "node tests/e2e/run-local.mjs",
     "test:lighthouse": "lhci autorun",
     "smoke": "node tests/smoke/pwa-entrega.mjs"
   },
@@ -23,7 +24,7 @@
     "exceljs": "^4.4.0",
     "framer-motion": "^12.42.2",
     "lucide-react": "^1.24.0",
-    "next": "16.3.6",
+    "next": "16.3.8",
     "pdfjs-dist": "^6.1.200",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -32,7 +33,7 @@
   "overrides": {
     "postcss": "^8.5.10",
     "uuid": "^11.1.1",
-    "sharp": "^0.35.3"
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
@@ -47,7 +48,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.1.1",
     "eslint": "^9",
-    "eslint-config-next": "16.3.6",
+    "eslint-config-next": "16.3.8",
     "jsdom": "^30.0.1",
     "tailwindcss": "^4",
     "typescript": "^5",

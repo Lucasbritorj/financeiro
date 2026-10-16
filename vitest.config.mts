@@ -28,9 +28,10 @@ export default defineConfig({
     // importa de node:test.
     globals: false,
     restoreMocks: true,
-    // O pool "forks" (default) não sobe worker neste Windows — o processo
-    // fica esperando resposta e estoura em timeout sem rodar teste nenhum.
-    // "threads" usa worker_threads e arranca normalmente.
-    pool: "threads",
+    // Node compatível com jsdom (24.15+) e processos isolados: em 16/10,
+    // threads não inicializou; forks com um worker passou os 132 testes.
+    // Limita consumo nesta máquina sem relaxar testes, isolamento ou timeout.
+    pool: "forks",
+    maxWorkers: 1,
   },
 });
