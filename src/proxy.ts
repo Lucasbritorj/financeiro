@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { fetchComTimeout } from "./lib/supabase/fetch";
 
 // Renova a sessão Supabase a cada request e protege as rotas do app.
 export async function proxy(request: NextRequest) {
@@ -9,6 +10,7 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: { fetch: fetchComTimeout },
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -30,9 +32,11 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const ehLogin = request.nextUrl.pathname.startsWith("/login");
+  const caminho = request.nextUrl.pathname;
+  const ehLogin = caminho === "/login";
+  const ehRecuperacao = ["/login/recuperar", "/login/confirmar", "/login/nova-senha"].includes(caminho);
 
-  if (!user && !ehLogin) {
+  if (!user && !ehLogin && !ehRecuperacao) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
