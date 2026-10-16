@@ -31,6 +31,9 @@ O Ateliê é um aplicativo de finanças pessoais com foco em **integridade do ra
 
 ## Qualidade
 
+Estado atual e próximos passos: [pendências atuais](docs/pendencias-atuais.md).
+Conferência de banco, recuperação de senha e backups: [verificação da instalação](docs/verificacao-instalacao.md).
+
 - **CI no GitHub Actions:**
   - typecheck e lint;
   - testes unitários (`node:test`) e de componente (Vitest);
@@ -48,6 +51,8 @@ O Ateliê é um aplicativo de finanças pessoais com foco em **integridade do ra
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Supabase (Postgres, Auth, RLS, pg_cron) · Vitest · GitHub Actions · Vercel.
 
 ## Rodar localmente
+
+Use Node.js 24.15 ou superior na linha 24 e npm 11.17.0 (a versão fixada pelo projeto).
 
 ```bash
 npm ci
@@ -76,7 +81,7 @@ Licença [MIT](LICENSE).
 
 1. Crie um projeto em [supabase.com](https://supabase.com).
 2. No **SQL Editor**, execute **todas** as migrações de `supabase/migrations/`
-   em ordem numérica — são **27**, de `0001` a `0027`. Aplicar só o núcleo
+   em ordem alfabética — são **30**, de `0001` a `0027`, mais as três migrações com timestamp listadas abaixo. Aplicar só o núcleo
    (`0001`–`0006`) sobe um banco sem categorias, importação, cofrinhos,
    análise, carteira, boletos nem recorrências: telas que o app oferece falham
    contra objetos que não existem. Ordem importa — `0002` e `0003` são
@@ -117,11 +122,12 @@ Licença [MIT](LICENSE).
    - `0027_rls_auto_enable_event_trigger.sql`
    - `20260909205952_corrigir_integridade_transacional_importada.sql`
    - `20260929120000_confirmar_importacao_fatura_ja_paga.sql`
+   - `20261016200000_editar_cadastros.sql` (edição segura de cartões, cofrinhos e recorrências)
 
    > Os bundles de `supabase/APLICAR.md` cobrem apenas até `0019`. De `0020`
    > em diante, aplique os arquivos de `supabase/migrations/` direto.
    >
-   > A última entrada troca o prefixo sequencial (`00NN_`) pelo timestamp do
+   > As entradas com data trocam o prefixo sequencial (`00NN_`) pelo timestamp do
    > Supabase CLI. Aplique por ordem alfabética do nome do arquivo, que é a
    > mesma ordem cronológica — `2026…` vem depois de `0027`.
 3. (Opcional) Execute `supabase/tests/verificacao_nucleo.sql` — 21 asserts

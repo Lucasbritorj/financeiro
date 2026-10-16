@@ -1,0 +1,16 @@
+# Checklist — Fechar jornadas financeiras
+- [x] CA1: consumo coerente entre Análise e Dashboard.
+- [x] CA2: relatórios sem truncamento silencioso.
+- [x] CA3: navegar histórico de faturas.
+- [x] CA4: recuperação de senha.
+- [x] CA5: exportação CSV autenticada e completa.
+- [x] CA6: edição segura de cadastros.
+- [x] CA7: jornadas financeiras verificadas localmente.
+- [x] CA8: procedimento de instalação e pendências atualizado.
+- [x] CA9: corrigir alertas altos das dependências existentes.
+- [x] Fase 1: relatórios e histórico.
+- [x] Fase 2: recuperação.
+- [x] Fase 3: CSV.
+- [x] Fase 4: edições.
+- [x] Fase 5: jornadas e instalação.
+- [x] Fase 6: provas finais e revisão.
