@@ -37,18 +37,21 @@ export function analisarFinancas(
   transacoes: TransacaoInsight[],
   args: { mesISO: string; hojeISO: string; formatar: (c: number) => string; limite?: number },
 ): Observacao[] {
+  // Todos os detectores recebem consumo: inclusive recorrência e tendências,
+  // que percorrem as linhas diretamente, sem passar por resumoDoMes.
+  const consumo = transacoes.filter((t) => t.natureza !== "LIQUIDACAO_FATURA");
   const ctx = {
     mesISO: args.mesISO,
     hojeISO: args.hojeISO,
     formatar: args.formatar,
   };
-  const todas = DETECTORES.flatMap((d) => d(transacoes, ctx));
+  const todas = DETECTORES.flatMap((d) => d(consumo, ctx));
   todas.sort((a, b) => b.pontuacao - a.pontuacao);
   if (todas.length > 0) return todas.slice(0, args.limite ?? LIMITE_PADRAO);
 
   // Nada notável: mês com movimento merece uma leitura; mês sem nenhum
   // lançamento não inventa observação.
-  const doMes = resumoDoMes(transacoes, args.mesISO);
+  const doMes = resumoDoMes(consumo, args.mesISO);
   if (doMes.saidas === 0 && doMes.entradas === 0) return [];
   return [
     obs({
