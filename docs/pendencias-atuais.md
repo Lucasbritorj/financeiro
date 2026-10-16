@@ -14,11 +14,12 @@ Fonte de escopo desta rodada: `docs/specs/fechar-jornadas-financeiras.md`. O ant
 - Correção da lista que não mostrava uma transação recém-criada após atualização do servidor.
 - Correção dos três alertas de produção encontrados nesta rodada; auditoria final com zero entradas. A cadeia de desenvolvimento é uma verificação separada.
 
-## Antes de publicar
+## Situação da publicação
 
-- Aplicar a nova migração somente após conferir o banco alvo e o histórico de aplicação.
-- Configurar a URL de recuperação e conferir SMTP, confirmação de e-mail e backups: `docs/verificacao-instalacao.md`.
-- Conferir a publicação e a configuração efetiva no ambiente real. Não foram acessadas nesta rodada.
+- Publicação e migração executadas em 16/10/2026 após autorização; detalhes e provas em `docs/publicacao-jornadas.md`.
+- URL de recuperação confirmada pelo Lucas. Ainda falta conferir envio real, SMTP, template e políticas de confirmação/senha em conta de teste autorizada.
+- Consulta remota de backups retornou lista vazia e PITR desativado. Definição anterior da função substituída preservada em `C:\Backup`; definir uma política de backup integral continua pendente.
+- Commits locais ainda sem push ao GitHub; uma futura publicação pela branch antiga pode substituir a versão atual.
 
 ## Melhorias futuras, sem implementação nesta rodada
 

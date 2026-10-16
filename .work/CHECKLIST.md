@@ -14,3 +14,8 @@
 - [x] Fase 4: edições.
 - [x] Fase 5: jornadas e instalação.
 - [x] Fase 6: provas finais e revisão.
+- [x] Fase 7: publicação autorizada, função anterior preservada, migração aplicada e permissões conferidas.
+- [x] Produção preparada sem domínio, cinco rotas verificadas e mesma versão promovida.
+- [x] URL de recuperação existente confirmada pelo Lucas; proteção da Vercel preservada.
+
+Envio real de e-mail, políticas Auth e backup integral permanecem como verificações operacionais em docs/pendencias-atuais.md.

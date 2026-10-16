@@ -80,4 +80,16 @@ Preparação separada da implementação: `.vercelignore` exclui ferramentas, re
 2026-10-16 Prova: supabase db push --linked --dry-run --skip-vault -> somente 20261016200000_editar_cadastros.sql pendente, sem aplicação. Metadados de backup -> lista vazia e PITR desativado. Auth remoto ainda sem conferência; etapas registradas em docs/publicacao-jornadas.md.
 2026-10-16 Revisão: aprovado — revisor somente leitura aprovou configuração de upload e correção de senha; diff próprio conferido. Aprovação se refere à preparação, não à instalação remota. Publicação e migração aguardam aprovação explícita conforme skill deploy.
 
+## Publicação autorizada
+
+Lucas autorizou «segue» após a solicitação explícita de autorização da migração e publicação. Confirmou também que a URL exata de recuperação já estava cadastrada no Supabase. Banco vinculado e projeto Vercel conferidos novamente antes das alterações.
+
+2026-10-16 Prova: preservação por consulta somente de leitura -> definição e privilégios anteriores de editar_categoria salvos em C:\Backup\financeiro-web\2026-10-16\editar_categoria-antes.json; não é backup integral.
+2026-10-16 Prova: supabase db push --linked --skip-vault --yes -> exit0; somente 20261016200000_editar_cadastros.sql aplicada. Consulta e verificação posterior -> migração presente, quatro funções com search_path vazio, SECURITY DEFINER, authenticated permitido e anon negado.
+2026-10-16 Prova: gitleaks git --no-banner --redact -> 172 commits, nenhum vazamento; npm audit --omit=dev --audit-level=high -> zero vulnerabilidades.
+2026-10-16 Prova: vercel deploy --prod --skip-domain --project financeiro --scope brito-s --yes -> READY, build remoto aprovado, dpl_2NkVwHqrcoq1Hhv9Sqc6t1Sp54MY; cinco rotas HTTP aprovadas antes da promoção.
+2026-10-16 deploy Vercel https://financeiro-brito-s.vercel.app — Prova: vercel promote -> sucesso; inspect confirmou alias no mesmo deploy de produção; cinco rotas HTTP aprovadas no alias (login200, recuperação200, dashboard307, exportação307, callback inválido303).
+2026-10-16 Prova: navegador com recursos de produção obtidos pela CLI autenticada -> login e recuperação aprovados, zero erros de execução, captura mobile .work/production-recuperacao.png inspecionada. Proteção Vercel preservada. Sem envio de e-mail real ou escrita de dados financeiros para teste.
+2026-10-16 Revisão: aprovado — código publicado é o revisado, docs e diff operacional conferidos; limitações de Auth, backup e Git registradas. Nenhum push realizado, nenhuma configuração Auth modificada e testes SQL executados somente localmente na fase anterior.
+
 2026-10-16 Revisão: aprovado — diff próprio conferido e revisor independente aprovou a segunda rodada sem novos achados; as evidências finais exigidas passaram.

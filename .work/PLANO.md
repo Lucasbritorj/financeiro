@@ -18,3 +18,7 @@ Executar Postgres 17 efêmero sem banco remoto e ampliar jornadas conforme servi
 
 ## Fase 6 — Entrega
 Rodar npm test, npm run test:componentes, npm run lint, build, navegador e smoke pertinentes. Corrigir os alertas altos de dependências existentes encontrados na auditoria (CA9), sem atualização major. Revisar diff, registrar prova no LOG, marcar checklist somente pelo demonstrado. Não repetir suítes válidas sem mudanças pertinentes.
+
+## Fase 7 — Publicação autorizada em 16/10/2026
+
+Preservar definição anterior da função, aplicar apenas migração pendente, conferir permissões por leitura, criar produção sem domínio, validar rotas e promover a mesma versão. URL de recuperação confirmada pelo Lucas. Estado e limites em docs/publicacao-jornadas.md; testes com escrita permanecem locais.

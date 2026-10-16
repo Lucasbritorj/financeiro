@@ -1,6 +1,6 @@
 # Conferência da instalação do Ateliê
 
-Este procedimento não aplica migrações nem altera configuração remota. Em 16/10/2026, a implementação foi conferida somente em serviços locais. O estado da produção continua sem confirmação.
+Este procedimento descreve conferências de instalação. A validação funcional foi feita em serviços locais; a publicação e a migração remota foram executadas posteriormente com autorização em 16/10/2026. Consulte `docs/publicacao-jornadas.md` para o estado efetivo e as limitações verificadas.
 
 ## Banco: consultas somente de leitura
 
@@ -44,7 +44,7 @@ Referência do fluxo: [documentação oficial Supabase](https://supabase.com/doc
 
 - Conferir no painel o último backup bem-sucedido e a política de retenção; registrar data e ambiente sem baixar dados pessoais para o repositório.
 - Conferir se a versão publicada corresponde ao código entregue e se a nova migração foi aplicada antes de disponibilizar os botões de edição.
-- Publicação, aplicação de migrações e mudanças de configuração são uma etapa separada. Nenhuma foi executada remotamente nesta entrega.
+- Publicação e aplicação de migrações foram executadas na etapa autorizada registrada em `docs/publicacao-jornadas.md`. Configuração Auth não foi alterada; a URL de recuperação existente foi confirmada pelo Lucas.
 
 ## Reproduzir os testes locais
 

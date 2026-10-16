@@ -18,7 +18,7 @@
 - Auditoria de dependências de produção: zero vulnerabilidades.
 - Pacote de upload conferido: zero arquivos de `.work`, `.maestri`, `.claude`, `memory`, `.env*` ou `supabase/.temp`.
 
-## Etapas de produção pendentes
+## Procedimento de publicação
 
 1. Aprovação explícita do Lucas para publicação e para a migração `20261016200000_editar_cadastros.sql`.
 2. Preservar a definição atual de `editar_categoria` antes da aplicação. A API de backups retornou lista vazia em 16/10/2026 e PITR desativado; não há restauração física confirmada. Qualquer exportação de segurança deve ficar em `C:\Backup`, sem dados pessoais no repositório.
@@ -32,4 +32,17 @@
 
 Versão anterior confirmada como publicada: https://financeiro-p98miqs2p-brito-s.vercel.app (`2513c5e`). Se a publicação falhar, promover essa versão anterior na Vercel. As funções novas podem permanecer sem uso; não apagar dados nem desfazer histórico de migrações automaticamente. Reverter `editar_categoria` somente com a definição preservada e revisão específica.
 
-Produção, configuração Auth e banco continuam sem alterações nesta etapa. Nenhum push Git foi realizado.
+## Resultado da execução autorizada
+
+Lucas autorizou seguir com a publicação e migração em 16/10/2026. Também confirmou que a URL de recuperação já estava cadastrada; não foi necessário alterar Auth.
+
+- Definição e permissões anteriores de `editar_categoria` preservadas em `C:\Backup\financeiro-web\2026-10-16\editar_categoria-antes.json`. Isso é cópia da definição da função, não backup integral do banco.
+- Migração `20261016200000_editar_cadastros.sql` aplicada com sucesso, sem seeds, roles ou atualização de Vault.
+- Consulta posterior confirmou a migração e quatro funções: `security_definer=true`, `search_path` vazio, execução permitida a `authenticated` e negada a `anon`.
+- Deploy de produção `dpl_2NkVwHqrcoq1Hhv9Sqc6t1Sp54MY` criado sem domínio, testado e promovido. Versão imutável: https://financeiro-bdjzloygq-brito-s.vercel.app . Alias confirmado: https://financeiro-brito-s.vercel.app . Código em `176750f`.
+- Cinco verificações HTTP aprovadas antes e depois da promoção: login200, recuperação200, dashboard307 para login, exportação307 para login e callback sem código303 para solicitar novo link. Acesso pela CLI autenticada; proteção Vercel mantida.
+- Segurança: gitleaks percorreu 172 commits sem vazamentos; dependências de produção com zero vulnerabilidades.
+
+O envio e recebimento de e-mail real, SMTP, template e políticas de confirmação/senha não foram verificados remotamente. A URL de recuperação foi confirmada pelo Lucas. As jornadas completas com gravação foram verificadas no ambiente local; nenhum registro financeiro real foi alterado para teste. A proteção da Vercel exige acesso autorizado também no domínio de produção.
+
+Nenhum push Git foi realizado; os commits da implementação estão na branch local. O deploy foi feito diretamente pela CLI.
