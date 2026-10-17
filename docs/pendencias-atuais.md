@@ -4,6 +4,8 @@ Fonte de escopo desta rodada: `docs/specs/fechar-jornadas-financeiras.md`. O ant
 
 ## Integração mais recente
 
+- Planejamento e importação segura publicados em 17/10: PR16, versão `1415937`, migração `20261017180000_planejamento_reversao_importacao.sql` instalada com os dados financeiros preservados. Conferência conjunta de datas, próximos 12 meses por cartão, alertas internos e reversão com prévia/bloqueios. Novo job autenticado com Supabase descartável executado no GitHub (34 testes aprovados). Provas e limites: `docs/planejamento-importacao-segura.md`.
+
 - Correção da fatura Itaú instalada e publicada em 17/10: PR #14, versão `37993b3`, migração `20261017150000_corrigir_fatura_itau.sql`. Colunas, futuras, IOF, datas, sugestões e total revisados; painel/Análise por competência. Documento real conferido somente em ambiente privado; dados existentes preservados. Recuperação da importação antiga permanece pendente. Provas: `docs/correcao-fatura-itau.md`.
 
 - Importação de faturas de cartão publicada inicialmente em 17/10 pelo PR #13 (`7666835`), com a migração `20261017130000_importar_faturas_cartao.sql`. Versão posteriormente substituída pela correção acima; provas e limites: `docs/importacao-faturas.md`.
@@ -38,7 +40,6 @@ Fonte de escopo desta rodada: `docs/specs/fechar-jornadas-financeiras.md`. O ant
 - Onboarding completo: existe convite para categorias, falta orientação da primeira configuração.
 - Agendamento de recorrências sem abrir o dashboard: o funcionamento atual é intencional e recupera ocorrências atrasadas ao abrir a tela.
 - Contas bancárias, transferências e conciliação de saldo.
-- Alertas, orçamento histórico por mês e exportação PDF.
+- Orçamento histórico por mês e exportação PDF.
 - Mapeamento manual de colunas na importação e eventual Open Finance.
-- Automatizar as jornadas autenticadas em um job próprio de CI com Supabase local.
 - Reavaliar a cadeia de desenvolvimento do Lighthouse e os avisos de complexidade. Relatórios antigos de vulnerabilidades não representam uma auditoria atual.
