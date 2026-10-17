@@ -4,7 +4,9 @@ Fonte de escopo desta rodada: `docs/specs/fechar-jornadas-financeiras.md`. O ant
 
 ## Integração mais recente
 
-- Importação de faturas de cartão implementada, validada e publicada em 17/10: Itaú PDF fictício, revisão de compras/parcelas/assinaturas, parcelas futuras separadas dos gastos e conciliação entre meses. Provas e limites: `docs/importacao-faturas.md`. Migração `20261017130000_importar_faturas_cartao.sql` instalada após autorização, PR #13 integrado e versão `7666835` em produção. Conferência com o PDF particular do Lucas ainda necessária.
+- Correção da fatura Itaú instalada e publicada em 17/10: PR #14, versão `37993b3`, migração `20261017150000_corrigir_fatura_itau.sql`. Colunas, futuras, IOF, datas, sugestões e total revisados; painel/Análise por competência. Documento real conferido somente em ambiente privado; dados existentes preservados. Recuperação da importação antiga permanece pendente. Provas: `docs/correcao-fatura-itau.md`.
+
+- Importação de faturas de cartão publicada inicialmente em 17/10 pelo PR #13 (`7666835`), com a migração `20261017130000_importar_faturas_cartao.sql`. Versão posteriormente substituída pela correção acima; provas e limites: `docs/importacao-faturas.md`.
 
 - Central de Assinaturas de 07/10 e complementos de 11/10 integrados localmente, com contratos no cartão, status, periodicidades, custos e impacto por cartão. Critérios e provas: `docs/specs/integrar-central-assinaturas.md` e `docs/integracao-assinaturas.md`.
 - Corrigidos paginação, próximas cobranças, recuperação de erros e concorrência com exclusão de cartão. Auditoria de dependências incorporada ao CI e ao gate local.

@@ -16,6 +16,9 @@ Spec: docs/specs/corrigir-fatura-itau.md.
 - [x] Fase B: leitura e revisão.
 - [x] Fase C: integridade e competência.
 - [x] Fase D: jornada e entrega revisada.
+- [x] Publicação autorizada em 17/10: cópia privada, migração e preservação das 14 tabelas conferidas.
+- [x] PR14 integrado após checks e prévia aprovados; CI pós-merge aprovado.
+- [x] Produção READY no domínio principal; verificações de acesso, navegador e erros conferidas.
 
 ---
 

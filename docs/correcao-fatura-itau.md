@@ -1,6 +1,6 @@
 # Correção da importação Itaú — 17/10/2026
 
-Status: implementação e validação local; instalação remota, publicação e recuperação do lote antigo são etapas separadas.
+Status: migração instalada e correções publicadas em 17/10/2026 após autorização explícita. Recuperação do lote antigo permanece uma operação separada.
 Spec: [corrigir-fatura-itau](specs/corrigir-fatura-itau.md). Auditoria sanitizada: [achados](auditorias/importacao-faturas-itau-2026-10-17.md).
 
 ## Comportamento
@@ -33,6 +33,12 @@ O PDF particular foi conferido somente localmente, com total, previsão e classi
 ## Instalação e retorno
 
 Aplicar apenas a migração aditiva `20261017150000_corrigir_fatura_itau.sql` ao ambiente confirmado antes de publicar o código que consulta `vw_movimentos_competencia`. A migração substitui a RPC de confirmação e cria uma view invoker; não reescreve dados existentes.
+
+Etapa executada: simulação confirmou somente essa migração; cópia privada das 14 tabelas financeiras e definições anteriores preservada. Instalação terminou com saída zero; contagens e hashes permaneceram idênticos. A view invoker, RLS e permissões da RPC foram conferidos por leitura; nenhuma migração pendente.
+
+[PR #14](https://github.com/Lucasbritorj/financeiro/pull/14) integrado em `37993b3`, após seis verificações aprovadas e prévia testada. CI pós-merge [39055544238](https://github.com/Lucasbritorj/financeiro/actions/runs/39055544238) aprovado. [Aplicativo publicado](https://financeiro-brito-s.vercel.app), versão [imutável](https://financeiro-1ppumyrxs-brito-s.vercel.app), READY e domínio confirmado nessa versão. Sete verificações HTTP, login e recuperação no navegador aprovados, zero pageerror; nenhuma chamada de gravação de teste em produção. Consulta de erros dessa publicação sem ocorrências no intervalo consultado.
+
+Retorno disponível pelo deployment anterior `financeiro-7zzr3yvyo-brito-s.vercel.app`. Arquivos privados, PDF e credenciais não entraram no GitHub; varredura dos 186 commits sem vazamentos e revisão dos 34 arquivos do envio sem dados reais da fatura.
 
 Preparar cópia privada e conferir migrações/permissões antes de qualquer instalação remota. Retorno de código pode usar o deployment anterior: a RPC preserva a assinatura existente e aceita o payload antigo; a view adicional pode permanecer. Não desfazer dados de importações confirmadas automaticamente.
 
