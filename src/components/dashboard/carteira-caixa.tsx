@@ -37,7 +37,7 @@ export default function CarteiraCaixa({
 
   return (
     <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
-      <section className="vidro-soberano p-6">
+      <section className="vidro-soberano min-w-0 p-6">
         <header className="mb-4 flex items-baseline justify-between">
           <h2 className="serifa text-lg font-medium">Carteira</h2>
           <span className="text-xs" style={{ color: "var(--grafite)" }}>
@@ -51,23 +51,23 @@ export default function CarteiraCaixa({
           {formatarCentavos(saldoCaixa)}
         </p>
         <dl className="mt-5 grid gap-2 text-sm">
-          <div className="flex justify-between">
+          <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
             <dt style={{ color: "var(--grafite)" }}>Entradas</dt>
-            <dd className="numero-soberano" style={{ color: "var(--verde)" }}>
+            <dd className="numero-soberano ml-auto" style={{ color: "var(--verde)" }}>
               +{formatarCentavos(entradas)}
             </dd>
           </div>
-          <div className="flex justify-between">
+          <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
             <dt style={{ color: "var(--grafite)" }}>Gastos à vista (pix/débito/dinheiro)</dt>
-            <dd className="numero-soberano">−{formatarCentavos(saidasAvista)}</dd>
+            <dd className="numero-soberano ml-auto">−{formatarCentavos(saidasAvista)}</dd>
           </div>
-          <div className="flex justify-between">
+          <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
             <dt style={{ color: "var(--grafite)" }}>Faturas pagas</dt>
-            <dd className="numero-soberano">−{formatarCentavos(faturasPagas)}</dd>
+            <dd className="numero-soberano ml-auto">−{formatarCentavos(faturasPagas)}</dd>
           </div>
-          <div className="flex justify-between">
+          <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
             <dt style={{ color: "var(--grafite)" }}>Boletos pagos</dt>
-            <dd className="numero-soberano">−{formatarCentavos(boletosPagos)}</dd>
+            <dd className="numero-soberano ml-auto">−{formatarCentavos(boletosPagos)}</dd>
           </div>
         </dl>
         <p className="mt-4 text-xs leading-relaxed" style={{ color: "var(--grafite)" }}>
@@ -76,7 +76,7 @@ export default function CarteiraCaixa({
         </p>
       </section>
 
-      <section className="vidro-soberano p-6">
+      <section className="vidro-soberano min-w-0 p-6">
         <header className="mb-4 flex items-baseline justify-between">
           <h2 className="serifa text-lg font-medium">Contas a pagar</h2>
           <span className="numero-soberano text-xs" style={{ color: "var(--grafite)" }}>

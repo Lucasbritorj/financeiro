@@ -230,3 +230,11 @@ Lucas autorizou expressamente instalar a migração e publicar as correções no
 2026-10-17 deploy Vercel produção https://financeiro-brito-s.vercel.app — dpl_64b5mVR9gNkzkmm1As3kgGkKr1Ea, versão imutável https://financeiro-1ppumyrxs-brito-s.vercel.app, READY, commit 37993b3 e domínio principal confirmado nessa versão. Publicação automática pela integração Git/Vercel, sem upload de arquivos locais.
 2026-10-17 Prova: verify-staged.cjs no domínio principal -> sete rotas aprovadas. verify-browser.cjs -> login e recuperação aprovados, zero pageerror, sem envio de e-mail. Logs de erros da nova versão sem ocorrências na consulta de 30 minutos (não é monitoramento contínuo). Retorno de código disponível pelo deploy anterior financeiro-7zzr3yvyo-brito-s.vercel.app; preservar funções e dados ao retornar.
 2026-10-17 Revisão: aprovado — instalação, preservação de dados, alvo, CI e publicação conferidos; segurança sem achado alto. Lote antigo preservado e recuperação/reimportação continua operação separada, para evitar duplicação.
+
+## Manutenção visual — enquadramento do Dashboard (17/10/2026)
+
+Pedido: card Maiores despesas vazando para fora do enquadramento. Mudança mínima nas classes de layout da lista, do card e da carteira. Sem alteração de cálculos, persistência, autenticação ou banco remoto; fixture e conta temporária locais.
+2026-10-17 Prova: regressão no navegador antes do ajuste -> duas falhas por overflow. Após conter a lista, teste revelou largura intrínseca extra na carteira com valor grande; corrigida permitindo encolhimento e quebra das linhas.
+2026-10-17 Prova: build/TypeScript + jornada autenticada local de layout -> exit0, 2 passed, em 320/768/1024/1191/1440; lista e página dentro dos limites. Screenshots de celular e desktop inspecionados, com valor integral preservado. Saídas em .work/maiores-despesas-*.log e test-results ignorados.
+2026-10-17 Prova: node --test tests/unit/dashboard-dados.test.ts -> 25 passed, zero falhas. Lint dirigido dos quatro arquivos -> zero erros, um aviso existente de complexidade no Dashboard.
+2026-10-17 Revisão: aprovado — diff e screenshots revisados; segunda opinião independente somente leitura revisao_enquadramento sem achado acionável. É manutenção visual, sem nova spec nem mudança das regras financeiras.
