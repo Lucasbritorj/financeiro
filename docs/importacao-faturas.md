@@ -1,6 +1,6 @@
 # Importação e revisão de faturas de cartão
 
-Implementação da spec `docs/specs/importar-faturas-cartao.md`. Começa com PDF textual Itaú fictício; a fatura particular do Lucas ainda não foi fornecida nem conferida. A leitura é por layout, sem garantia universal para qualquer PDF bancário.
+Implementação da spec `docs/specs/importar-faturas-cartao.md`. A primeira versão usou PDF textual fictício. O documento particular foi conferido privadamente na rodada de correção, já publicada em 17/10/2026: [correção da fatura Itaú](correcao-fatura-itau.md). A leitura é por layout, sem garantia universal para qualquer PDF bancário.
 
 ## Fluxo
 

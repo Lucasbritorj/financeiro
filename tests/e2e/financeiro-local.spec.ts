@@ -37,6 +37,29 @@ const test = base.extend<{ conta: { db: SupabaseClient<Database>; email: string 
   },
 });
 
+test('maiores despesas mantém descrição, data e valor dentro do cartão',async({page,conta})=>{
+ const descricao='DESPESA FICTICIA COM DESCRICAO MUITO LONGA '+ 'REFERENCIA'.repeat(14);
+ const criada=await conta.db.rpc('processar_transacao_completa',{p_descricao:descricao,p_valor_total:123456789,p_tipo:'DESPESA',p_forma_pagamento:'DEBITO',p_cartao_id:null,p_data_compra:'2026-09-10',p_num_parcelas:1});
+ expect(criada.error).toBeNull();
+ await page.goto('/dashboard?mes=2026-09');
+ const cartao=page.getByRole('heading',{name:'Maiores despesas',exact:true}).locator('../..');
+ await expect(cartao.getByText('R$ 1.234.567,89',{exact:true})).toBeVisible();
+ for(const largura of [320,768,1024,1191,1440]){
+  await page.setViewportSize({width:largura,height:900});
+  const enquadrado=await cartao.evaluate(card=>{
+   const limite=card.getBoundingClientRect();
+   return [...card.querySelectorAll('li')].every(l=>{
+    const r=l.getBoundingClientRect();
+    return l.scrollWidth<=l.clientWidth && r.left>=limite.left && r.right<=limite.right;
+   });
+  });
+  expect(enquadrado).toBe(true);
+  // Aguardar a geometria final após a troca do viewport.
+  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(largura);
+  await cartao.screenshot({path:test.info().outputPath(`maiores-despesas-${largura}.png`)});
+ }
+});
+
 test('Itaú duas colunas: pagamento, moeda, IOF, futuras e competência sem misturar',async({page,conta})=>{
  test.setTimeout(180_000);
  const erros:string[]=[];page.on('pageerror',e=>erros.push(e.message));

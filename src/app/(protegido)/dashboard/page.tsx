@@ -172,8 +172,8 @@ export default async function DashboardPage({
         </section>
 
         {/* Top Despesas (na antiga vaga do donut, ao lado do Histórico) */}
-        <section className="vidro-soberano p-6 md:col-span-2 lg:col-span-1 flex flex-col">
-          <header className="mb-5 flex items-baseline justify-between">
+        <section className="vidro-soberano min-w-0 p-6 md:col-span-2 lg:col-span-1 flex flex-col">
+          <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <h2 className="serifa text-lg font-medium">Maiores despesas</h2>
             <span className="text-xs" style={{ color: "var(--grafite)" }}>
               top 5 · {nomeMes(mes)} ·{" "}
@@ -182,7 +182,7 @@ export default async function DashboardPage({
               </Link>
             </span>
           </header>
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <TopDespesas despesas={despesas} />
           </div>
         </section>
