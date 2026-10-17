@@ -6,6 +6,7 @@ import { readFile } from "node:fs/promises";
 import type { Database } from "../../src/lib/database.types";
 import { hojeSaoPaulo } from "../../src/lib/data";
 import AxeBuilder from "@axe-core/playwright";
+import { pdfFicticio } from './pdf-ficticio';
 
 // Serviço de autenticação, API e Postgres reais. Não usa banco nem usuário remoto.
 base.skip(process.env.E2E_LOCAL !== "1", "Execute npm run test:e2e:local com Supabase local.");
@@ -34,6 +35,56 @@ const test = base.extend<{ conta: { db: SupabaseClient<Database>; email: string 
       if (removido.error) throw removido.error;
     }
   },
+});
+
+test('fatura Itaú PDF: revisão, parcelas futuras, assinatura e mês seguinte sem duplicidade',async({page,conta})=>{
+ test.setTimeout(180_000);
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ const cartao=await conta.db.rpc('criar_cartao',{p_nome:'Itaú teste',p_limite_total:100000,p_dia_fechamento:25,p_dia_vencimento:10});
+ expect(cartao.error).toBeNull();const id=(cartao.data as {cartao_id:string}).cartao_id;
+ const pdf=pdfFicticio(['ITAU - FATURA FICTICIA','05/10 LOJA MOVEIS 03/10 100,00','06/10 NETFLIX.COM 39,90','07/10 MERCADO 25,00','Total desta fatura 164,90']);
+ await page.goto('/importar');await page.getByLabel('O que você quer importar?').selectOption('fatura');
+ await page.getByLabel('Cartão da fatura').selectOption(id);await page.getByLabel('Mês da fatura').fill('2026-10');
+ await page.getByLabel(/Arquivo da fatura/).setInputFiles({name:'itau-ficticio.pdf',mimeType:'application/pdf',buffer:pdf});
+ await expect(page.getByRole('heading',{name:/Confira a fatura/})).toBeVisible();
+ await expect(page.getByLabel('Parcela atual da linha 1')).toHaveValue('3');
+ await page.getByLabel('Decisão sobre assinatura da linha 2').selectOption('NOVA');
+ await page.getByLabel('Próxima cobrança da linha 2').fill('2027-11-06');
+ for(const tema of ['escuro','claro']) {
+  await page.evaluate(t=>{if(t==='claro')document.documentElement.setAttribute('data-tema','claro');else document.documentElement.removeAttribute('data-tema');},tema);
+  for(const largura of [320,375,768,1024,1440,1920]) {
+   await page.setViewportSize({width:largura,height:900});
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+   await page.screenshot({path:test.info().outputPath(`fatura-${tema}-${largura}.png`),fullPage:true});
+  }
+  expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
+ }
+ await page.getByRole('button',{name:'Confirmar importação da fatura'}).focus();await page.keyboard.press('Enter');
+ await expect(page.getByRole('status')).toContainText('3 cobrança(s) registrada(s)');
+ expect((await conta.db.from('transacoes_origem').select('id,forma_pagamento')).data).toHaveLength(3);
+ const efetivas=await conta.db.from('parcelas').select('valor');expect(efetivas.data?.reduce((s,l)=>s+l.valor,0)).toBe(16490);
+ expect((await conta.db.from('recorrencias').select('id').eq('finalidade','ASSINATURA')).data).toHaveLength(1);
+ expect((await conta.db.from('vw_previsoes_parcelamento').select('*')).data).toHaveLength(7);
+ await page.reload();await page.getByLabel('O que você quer importar?').selectOption('fatura');
+ await page.getByLabel('Cartão da fatura').selectOption(id);await page.getByLabel('Mês da fatura').fill('2026-10');
+ await page.getByLabel(/Arquivo da fatura/).setInputFiles({name:'itau-ficticio.pdf',mimeType:'application/pdf',buffer:pdf});
+ await expect(page.getByRole('heading',{name:/Confira a fatura/})).toBeVisible();
+ await page.getByRole('button',{name:'Descartar revisão'}).click();
+ const plano=(await conta.db.from('planos_parcelamento').select('id').single()).data!.id;
+ await page.getByLabel('Mês da fatura').fill('2026-11');
+ await page.getByLabel(/Arquivo da fatura/).setInputFiles({name:'itau-novembro.pdf',mimeType:'application/pdf',buffer:pdfFicticio(['05/11 LOJA MOVEIS 04/10 100,00','Total desta fatura 100,00'])});
+ await expect(page.getByRole('heading',{name:/Confira a fatura/})).toBeVisible();
+ await page.getByLabel('Vínculo da linha 1').selectOption(plano);
+ await page.getByRole('button',{name:'Confirmar importação da fatura'}).click();
+ await expect(page.getByRole('status')).toContainText('1 cobrança(s) registrada(s)');
+ expect((await conta.db.from('vw_previsoes_parcelamento').select('*')).data).toHaveLength(6);
+ expect((await conta.db.from('parcelas').select('valor')).data?.reduce((s,l)=>s+l.valor,0)).toBe(26490);
+ await page.getByRole('button',{name:'Consultar previsões deste cartão'}).click();
+ await expect(page.getByText(/6 parcela\(s\) prevista/)).toBeVisible();
+ await page.getByLabel('Valor previsto por parcela (R$)').fill('110,00');
+ await page.getByRole('button',{name:'Atualizar somente previsões'}).click();
+ await expect.poll(async()=>(await conta.db.from('planos_parcelamento').select('valor_previsto').single()).data?.valor_previsto).toBe(11000);
+ expect(errors).toEqual([]);
 });
 
 test("central de assinaturas persiste contrato e status sem duplicar despesas", async ({ page, conta }) => {

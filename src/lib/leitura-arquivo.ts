@@ -16,6 +16,7 @@ import {
 import { parseOfxExtrato } from "./ofx.ts";
 import { parsePdfExtrato } from "./pdf-extrato.ts";
 import type { OrigemImportacao } from "./importacao-preview.ts";
+import { analisarLinhaFatura, parsePdfFatura } from "./importacao-fatura.ts";
 
 /**
  * Ano de referência do extrato PDF: o ano de HOJE no fuso de negócio
@@ -164,4 +165,22 @@ export async function lerArquivoImportacao(
     return parsePdfExtrato(await linhasDoPdf(arquivo), anoReferenciaPdf());
   }
   return parseCsvExtrato(await lerTexto(arquivo), preset);
+}
+
+/** Decoders compartilhados; o contexto de fatura determina o significado do sinal. */
+export async function lerArquivoFatura(arquivo: File, origem: OrigemImportacao, competencia: string) {
+  if (origem === 'PDF') return parsePdfFatura(await linhasDoPdf(arquivo), competencia);
+  const resultado = origem==='CSV' ? parseCsvExtrato(await lerTexto(arquivo),'itau',true)
+    : origem==='XLSX' ? parseMatrizExtrato(await matrizDoXlsx(arquivo),true)
+    : await lerArquivoImportacao(arquivo, origem, 'itau');
+  const linhas = resultado.linhas.map(l => {
+    const linha = analisarLinhaFatura(l);
+    // OFX padroniza crédito como positivo; CSV/XLSX de cartão podem trazer compras positivas.
+    if ((origem==='OFX'||origem==='OFC') && l.valor>0 && linha.tipo!=='INFORMATIVO') {
+      linha.tipo='AJUSTE'; linha.motivo='Crédito no OFX: confira e exclua o ajuste antes de importar compras.';
+    }
+    return linha;
+  });
+  if (!linhas.length) throw new Error(`Nenhum lançamento reconhecido no ${origem}. Confira o layout.`);
+  return {linhas,descartadas:resultado.descartadas,total_informado:null as number|null};
 }
