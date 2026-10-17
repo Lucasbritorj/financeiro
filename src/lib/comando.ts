@@ -47,6 +47,11 @@ const ROTAS: { rota: string; rotulo: string; aliases: string[] }[] = [
   { rota: "/analise", rotulo: "Análise", aliases: ["analise", "insights", "observacoes"] },
   { rota: "/transacoes", rotulo: "Transações", aliases: ["transacoes", "lancamentos", "extrato"] },
   {
+    rota: "/assinaturas",
+    rotulo: "Assinaturas",
+    aliases: ["assinaturas", "assinatura", "servicos recorrentes"],
+  },
+  {
     rota: "/faturas",
     rotulo: "Contas a pagar",
     aliases: ["contas a pagar", "contas", "faturas", "boletos"],

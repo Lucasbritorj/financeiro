@@ -1,6 +1,13 @@
-# Pendências atuais — 16/10/2026
+# Pendências atuais — 17/10/2026
 
 Fonte de escopo desta rodada: `docs/specs/fechar-jornadas-financeiras.md`. O antigo `modelo_final_financeiro.md` é histórico de ideias; não é instrução técnica atual.
+
+## Integração mais recente
+
+- Central de Assinaturas de 07/10 e complementos de 11/10 integrados localmente, com contratos no cartão, status, periodicidades, custos e impacto por cartão. Critérios e provas: `docs/specs/integrar-central-assinaturas.md` e `docs/integracao-assinaturas.md`.
+- Corrigidos paginação, próximas cobranças, recuperação de erros e concorrência com exclusão de cartão. Auditoria de dependências incorporada ao CI e ao gate local.
+- Testes locais aprovados: 559 unitários, 147 componentes, 12 arquivos SQL, upgrade na ordem real, concorrência e 24 jornadas de navegador (22 anteriores + 2 novas). Lighthouse local: desempenho 77/acessibilidade 100.
+- **Ainda não publicada:** três migrações da central e nova publicação aguardam a etapa específica de instalação. O site segue na versão anterior; esta lista não é prova de central instalada remotamente.
 
 ## Entregas desta rodada (validação detalhada em .work/LOG.md)
 

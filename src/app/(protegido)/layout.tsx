@@ -13,6 +13,7 @@ const NAV_PRINCIPAL = [
   { href: "/dashboard", rotulo: "Dashboard" },
   { href: "/analise", rotulo: "Análise" },
   { href: "/transacoes", rotulo: "Transações" },
+  { href: "/assinaturas", rotulo: "Assinaturas" },
   { href: "/faturas", rotulo: "Contas a pagar" },
   { href: "/categorias", rotulo: "Categorias" },
   { href: "/importar", rotulo: "Importar" },
@@ -42,7 +43,7 @@ export default async function ProtegidoLayout({
           <span className="serifa mr-1 text-lg font-semibold" style={{ color: "var(--giz)" }}>
             Ateliê
           </span>
-          <div className="hidden items-center gap-x-5 gap-y-1 md:flex">
+          <div className="hidden min-w-0 flex-wrap items-center gap-x-5 gap-y-1 md:flex">
             <NavLinks itens={NAV_PRINCIPAL} />
             <span aria-hidden style={{ color: "var(--borda-forte)" }}>·</span>
             <NavLinks itens={NAV_SECUNDARIA} variante="secundaria" />

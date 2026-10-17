@@ -74,6 +74,10 @@ export const ETAPAS: readonly Etapa[] = [
       "verdade segue fora do alvo, e segue declarada em FORA_DO_ALVO.",
   },
   {
+    ci: "npm audit --omit=dev --audit-level=high",
+    local: { tipo: "externo", comando: ["npm", "audit", "--omit=dev", "--audit-level=high"] },
+  },
+  {
     ci: "npx tsc --noEmit",
     local: { tipo: "externo", comando: ["npx", "tsc", "--noEmit"] },
   },

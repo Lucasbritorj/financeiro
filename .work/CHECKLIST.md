@@ -1,4 +1,16 @@
 # Checklist — Fechar jornadas financeiras
+## Rodada atual: Central de Assinaturas
+- [x] CA1: integrar central e preservar entregas atuais; auditoria no CI.
+- [x] CA2: custos e próximas cobranças corretos.
+- [x] CA3: cadastros/status persistentes, isolamento e falhas recuperáveis.
+- [x] CA4: motor sem duplicidade e compatível com ordem das migrações.
+- [x] CA5: jornada real local desktop/celular e interface conferida.
+- [x] CA6: gate, SQL, segurança, revisão e documentação.
+- [x] Fase A: regressões e incorporação.
+- [x] Fase B: consistência e jornadas.
+- [x] Fase C: entrega revisada.
+
+## Histórico da entrega anterior
 - [x] CA1: consumo coerente entre Análise e Dashboard.
 - [x] CA2: relatórios sem truncamento silencioso.
 - [x] CA3: navegar histórico de faturas.

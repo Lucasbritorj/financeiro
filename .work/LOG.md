@@ -93,3 +93,30 @@ Lucas autorizou «segue» após a solicitação explícita de autorização da m
 2026-10-16 Revisão: aprovado — código publicado é o revisado, docs e diff operacional conferidos; limitações de Auth, backup e Git registradas. Nenhum push realizado, nenhuma configuração Auth modificada e testes SQL executados somente localmente na fase anterior.
 
 2026-10-16 Revisão: aprovado — diff próprio conferido e revisor independente aprovou a segunda rodada sem novos achados; as evidências finais exigidas passaram.
+
+## Integração da Central de Assinaturas — 16–17/10/2026
+
+Autorização: «execute então», após comparar todas as branches do GitHub e identificar a central existente. Spec criada antes do produto em docs/specs/integrar-central-assinaturas.md. Integrados 8a9d5d1 e d4c6285 via merge local sem commit automático. Resolvidos conflitos de README e contagem de funções preservando ambas as entregas; nenhuma dependência nova.
+
+Regressões demonstradas: teste de domínio inicialmente falhou com ERR_MODULE_NOT_FOUND para src/lib/assinaturas.ts, provando ausência local; novas regressões de próximas cobranças e rede exercitaram falhas; teste SQL de integração reproduziu 23514 ao passar assinatura para editar_recorrencia, corrigido para FW404; teste com duas sessões locais criou assinatura vinculada a cartão excluído na definição anterior e passou com serialização aditiva. Migrações existentes preservadas, correções em 20261016210000_integrar_assinaturas_cadastros.sql.
+
+Correções: filtrar cobranças futuras antes do limite; paginação por ID com helper existente e sem total parcial; catch/finally e bloqueio de envios; aviso real de leitura/rede em vez de presumir migração ausente; parar repetição do motor ao receber falha individual; advisory lock por usuário antes de travas de linha em criar/editar assinatura e excluir cartão; edição normal limitada à finalidade LANCAMENTO e ao teto do schema. Auditoria CI espelhada em tests/gate/etapas.ts (o gate detectou a divergência antes da correção).
+
+2026-10-17 Prova: registros da rodada .work/assinaturas-gate-final.log -> exit0, 559 unitários, 147 componentes, tipos/lint/build e auditoria aprovados. Lint 0 erros/14 avisos, sem ocultar os 12 anteriores nem os 2 da central. Node24.21.0/npm11.17.0; build com variáveis da instância Supabase local apenas em memória. Após ajustes de apresentação/formatação, lint dirigido -> 0 erros.
+2026-10-17 Prova: npm.cmd run test:sql -> 12/12 arquivos verdes no Postgres17 efêmero, incluindo 22 asserts da central, 18 de edições e 3 da integração. Registro .work/assinaturas-sql-corrigido.log.
+2026-10-17 Prova: node --test tests/sql/upgrade-assinaturas.test.mjs -> 1 passed; 33 migrações na ordem real de atualização (162000 já instalado antes das duas migrações antigas) e 12/12 notices de sucesso dos asserts. Registro .work/assinaturas-upgrade-final.log.
+2026-10-17 Prova: node --test tests/sql/assinaturas-concorrencia.test.mjs -> 1 passed; vermelho reproduzido sem as novas travas, verde com elas; nenhum teste usou banco remoto. Registros .work/concorrencia-red.log e .work/concorrencia-green.log.
+2026-10-17 Prova: Playwright desktop1440/mobile320 -> 22 jornadas anteriores passaram na primeira execução; as 2 novas falharam por seletor exato de label e passaram após usar combobox acessível. Registros .work/assinaturas-e2e.log e .work/assinaturas-e2e-central.log. Não foram repetidas suítes anteriores válidas sem alteração pertinente.
+2026-10-17 Prova: nova jornada real verifica criação/cartão, edição, pausa por teclado, reativação, cancelamento confirmado, persistência após reload e zero transações/faturas geradas. Axe sem violações nos dois temas; 12 capturas por projeto (24 no total) em 320/375/768/1024/1440/1920, sem overflow. Capturas de 320/768/1024/1440 inspecionadas visualmente; tokens/estilo Ateliê preservados.
+2026-10-17 Prova: Lighthouse na rota autenticada /assinaturas, Supabase local real e conta temporária -> desempenho 77, acessibilidade 100, LCP 2,5 s, CLS 0. Apenas métricas não sensíveis salvas em .work/assinaturas-lighthouse.json; usuário temporário removido ao final. É medição local única, não prova de desempenho em produção.
+2026-10-17 Prova: gitleaks dir src/supabase-migrations/tests -> zero achados; npm audit --omit=dev --audit-level=high -> zero vulnerabilidades. Consulta READONLY ao projeto remoto confirmado -> zero recorrências acima do teto; dry-run --include-all --skip-vault -> exatamente três migrações pendentes, sem aplicação remota.
+2026-10-17 Revisão: aprovado — revisor independente somente leitura aprovou segunda rodada sem novos achados bloqueantes; diff próprio e git diff --check conferidos. Repetir preflight de valores imediatamente antes de qualquer instalação remota. Estado e riscos em docs/integracao-assinaturas.md; central ainda sem deploy/push/migração remota nesta rodada.
+
+| Afirmação | Prova obtida | Resultado |
+|---|---|---|
+| CA1: central integrada sem perder entregas | Comandos/menu/tipos e 22 jornadas anteriores; auditoria CI espelhada no gate | Passou |
+| CA2: custos/próximas cobranças | Unitários da branch e regressão de vencidas antes da limitação | Passou |
+| CA3: persistência/isolamento/rede | Componentes, SQL e navegador com serviços reais locais | Passou |
+| CA4: agenda sem duplicidade/ordem/travas | SQL 12/12, upgrade real e duas sessões concorrentes | Passou |
+| CA5: interface/jornadas | Duas novas jornadas, seis larguras/dois temas, axe/teclado e capturas | Passou |
+| CA6: entrega revisada | Gate/build/segurança e revisor aprovado; documentação atualizada | Passou |

@@ -35,18 +35,20 @@ import {
 // confirmar_importacao — e estes números não foram atualizados junto, deixando
 // o CI vermelho desde 09/09. O eixo de SEGURANÇA não mudou: continua 0 definer
 // sem search_path e 1 única violação crua declarada (rls_auto_enable). Por isso
-// aqui é recontagem, não afrouxamento — `definersDistintos` segue 38 porque os
-// dois `create or replace` reescrevem funções que já existiam.
+// aqui é recontagem, não afrouxamento. A Central de Assinaturas acrescenta uma
+// função invoker, três definers novos e substitui três definers existentes.
+// A correção posterior substitui criar_assinatura, editar_assinatura e
+// excluir_cartao: +3 statements, sem nome distinto novo.
 const ESPERADO = {
-  // 16/10: três RPCs de edição, todas com search_path vazio e privilégios explícitos.
-  statements: 74,
-  definers: 62,
-  naoDefiners: 12,
-  definersDistintos: 41,
+  // Central de assinaturas e três RPCs de edição da entrega de 16/10.
+  statements: 88,
+  definers: 75,
+  naoDefiners: 13,
+  definersDistintos: 44,
   /** Statements de definer com o search_path seguro. */
-  comVazio: 61,
+  comVazio: 74,
   /** Nomes distintos de definer com o search_path seguro. */
-  distintosComVazio: 40,
+  distintosComVazio: 43,
   /** A exceção declarada: rls_auto_enable, 'pg_catalog'. */
   violacoesCruas: 1,
 } as const;

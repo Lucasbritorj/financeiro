@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import type { Database } from "../../src/lib/database.types";
 import { hojeSaoPaulo } from "../../src/lib/data";
+import AxeBuilder from "@axe-core/playwright";
 
 // Serviço de autenticação, API e Postgres reais. Não usa banco nem usuário remoto.
 base.skip(process.env.E2E_LOCAL !== "1", "Execute npm run test:e2e:local com Supabase local.");
@@ -33,6 +34,61 @@ const test = base.extend<{ conta: { db: SupabaseClient<Database>; email: string 
       if (removido.error) throw removido.error;
     }
   },
+});
+
+test("central de assinaturas persiste contrato e status sem duplicar despesas", async ({ page, conta }) => {
+  test.setTimeout(120_000);
+  const cartao = await conta.db.rpc("criar_cartao", { p_nome: "Cartão assinaturas", p_limite_total: 100000, p_dia_fechamento: 20, p_dia_vencimento: 10 });
+  expect(cartao.error).toBeNull();
+  const cartaoId = (cartao.data as { cartao_id: string }).cartao_id;
+  const ano = Number(hojeSaoPaulo().slice(0, 4)) + 1;
+  await page.goto("/assinaturas");
+  await page.getByRole("button", { name: "Nova assinatura" }).click();
+  await page.getByLabel("Serviço ou assinatura").fill("Streaming da jornada");
+  await page.getByLabel("Valor por cobrança (R$)").fill("49,90");
+  await page.getByLabel("Próxima cobrança", { exact: true }).fill(`${ano}-02-28`);
+  await page.getByRole("combobox", { name: "Cartão", exact: true }).selectOption(cartaoId);
+  await page.getByRole("button", { name: "Cadastrar assinatura", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Editar Streaming da jornada" })).toBeVisible();
+  const contrato = async () => (await conta.db.from("recorrencias").select("valor,status,cartao_id").eq("finalidade", "ASSINATURA").single()).data;
+  expect(await contrato()).toMatchObject({ valor: 4990, status: "ATIVA", cartao_id: cartaoId });
+  await page.getByRole("button", { name: "Editar Streaming da jornada" }).click();
+  await page.getByLabel("Valor por cobrança (R$)").fill("59,90");
+  await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+  await expect.poll(async () => (await contrato())?.valor).toBe(5990);
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Pausar Streaming da jornada" })).toBeVisible();
+
+  // Capturas reais da rota autenticada, nos temas existentes e breakpoints.
+  for (const tema of ["escuro", "claro"]) {
+    await page.evaluate((tema) => {
+      if (tema === "claro") document.documentElement.setAttribute("data-tema", "claro");
+      else document.documentElement.removeAttribute("data-tema");
+    }, tema);
+    for (const largura of [320, 375, 768, 1024, 1440, 1920]) {
+      await page.setViewportSize({ width: largura, height: 900 });
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      await page.screenshot({ path: test.info().outputPath(`assinaturas-${tema}-${largura}.png`), fullPage: true });
+    }
+    const a11y = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+    expect(a11y.violations).toEqual([]);
+  }
+  await page.getByRole("button", { name: "Pausar Streaming da jornada" }).focus();
+  await page.keyboard.press("Enter");
+  await expect.poll(async () => (await contrato())?.status).toBe("PAUSADA");
+  await expect(page.getByRole("button", { name: "Reativar Streaming da jornada" })).toBeVisible();
+  await page.getByRole("button", { name: "Reativar Streaming da jornada" }).click();
+  await expect.poll(async () => (await contrato())?.status).toBe("ATIVA");
+  await expect(page.getByRole("button", { name: "Pausar Streaming da jornada" })).toBeVisible();
+  await page.getByRole("button", { name: "Cancelar Streaming da jornada" }).click();
+  const dialogo = page.getByRole("dialog", { name: "Cancelar assinatura" });
+  await expect(dialogo).toContainText("não cancela junto ao fornecedor");
+  await dialogo.getByRole("button", { name: "Cancelar assinatura", exact: true }).click();
+  await expect.poll(async () => (await contrato())?.status).toBe("CANCELADA");
+  await page.reload();
+  await expect(page.getByText("cancelada", { exact: true })).toBeVisible();
+  expect((await conta.db.from("transacoes_origem").select("id")).data).toEqual([]);
+  expect((await conta.db.from("faturas").select("id")).data).toEqual([]);
 });
 
 test("cria, edita e exporta transação com persistência real", async ({ page, conta }) => {

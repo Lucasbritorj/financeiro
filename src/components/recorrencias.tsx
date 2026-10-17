@@ -50,6 +50,7 @@ export default function Recorrencias({ categorias }: { categorias: CategoriaOpca
     return createClient()
       .from("recorrencias")
       .select("id, descricao, valor, tipo, forma_pagamento, categoria_id, dia_do_mes, proxima_data, ativa")
+      .eq("finalidade", "LANCAMENTO")
       .order("dia_do_mes")
       .then(({ data, error }) => {
         if (error) {

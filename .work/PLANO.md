@@ -1,4 +1,15 @@
 # Plano — Fechar jornadas financeiras
+Rodada atual: **Integração da Central de Assinaturas**, spec `docs/specs/integrar-central-assinaturas.md`. Histórico das fases anteriores preservado abaixo.
+
+## Integração — fase A: regressões e incorporação
+Trazer testes de assinaturas antes do produto, demonstrar ausência da implementação, integrar os commits 8a9d5d1/d4c6285 sem perder as edições atuais. Incluir auditoria CI de forma mínima. Conferir ordem das migrações e resolver conflitos por contrato, sem selecionar uma versão inteira por conveniência.
+
+## Integração — fase B: consistência e jornadas
+Corrigir falhas comprovadas de datas, paginação/rede e integração SQL. Executar unitários/componentes dirigidos, Postgres efêmero local e jornadas autenticadas com Supabase local. Seguir design existente e conferir celular/desktop.
+
+## Integração — fase C: entrega revisada
+Executar gate, segurança e revisão independente somente leitura. Registrar prova por CA, atualizar pendências e fechar commits locais. Instalação remota é etapa separada; nenhum teste escreve no banco remoto.
+
 Autorização: Lucas pediu «execute a sua recomendação». Execução sequencial nesta raiz.
 
 ## Fase 1 — Relatórios e histórico (CA1–CA3)
