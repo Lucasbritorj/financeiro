@@ -16,7 +16,8 @@ test('instala assinaturas sobre a versão já publicada, sem reordenar históric
     assert.ok(pronto, 'Postgres isolado não iniciou.');
     const pendentes = ['20261006120000_central_assinaturas.sql', '20261007120000_corrigir_central_assinaturas.sql', '20261016210000_integrar_assinaturas_cadastros.sql'];
     const migracoes = readdirSync('supabase/migrations').filter(nome => nome.endsWith('.sql')).sort();
-    const ordem = [...migracoes.filter(nome => !pendentes.includes(nome)), ...pendentes];
+    const novas = migracoes.filter(nome => nome > '20261016210000_integrar_assinaturas_cadastros.sql');
+    const ordem = [...migracoes.filter(nome => !pendentes.includes(nome) && !novas.includes(nome)), ...pendentes, ...novas];
     assert.ok(ordem.indexOf('20261016200000_editar_cadastros.sql') < ordem.indexOf(pendentes[0]));
     const entrada = readFileSync('tests/sql/00_shim_auth.sql', 'utf8') + '\n' + ordem.map(nome => readFileSync(`supabase/migrations/${nome}`, 'utf8')).join('\n');
     const comando = ['exec', '-i', container, 'psql', '-U', 'postgres', '-d', 'app', '-v', 'ON_ERROR_STOP=1', '-q'];
