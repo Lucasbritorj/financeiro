@@ -11,6 +11,37 @@ import ImportadorFatura from '@/components/importador-fatura';
 import {useImportacaoFatura} from '@/components/use-importacao-fatura';
 import ImportadorCsv from '@/components/importador-csv';
 
+test('CA1–CA2: confirmação conjunta inclui somente datas pendentes e edição pede reconferência',async()=>{
+ const compra=analisarLinhaFatura({data:'2026-09-01',valor:1000,descricao:'COMPRA FICTICIA'});
+ ler.mockResolvedValue({linhas:[{...compra,data_confirmada:false},{...compra,ignorar:true,data_confirmada:false},{...compra,tipo:'INFORMATIVO',data_confirmada:false,ignorar:true}],descartadas:0,total_informado:null});
+ const {result}=renderHook(()=>useImportacaoFatura());
+ await act(()=>{result.current.setCartaoId('cartao');result.current.setCompetencia('2026-09');});
+ await act(()=>result.current.processar(new File(['pdf'],'fatura.pdf')));
+ await act(()=>result.current.confirmarDatas());
+ expect(result.current.revisao?.linhas.map(l=>l.data_confirmada)).toEqual([true,false,false]);
+ await act(()=>result.current.alterar(0,{data:'2025-09-01'}));
+ expect(result.current.revisao?.linhas[0].data_confirmada).toBe(false);
+});
+
+test('CA1: revisão filtra pendências e só confirma em conjunto após declaração explícita',async()=>{
+ const compra=analisarLinhaFatura({data:'2026-09-01',valor:1000,descricao:'COMPRA FICTICIA'});
+ ler.mockResolvedValue({linhas:[{...compra,data_confirmada:false},{...compra,descricao:'IGNORADA',ignorar:true,data_confirmada:false}],descartadas:0,total_informado:1000});
+ render(<ImportadorFatura cartoes={[{id:'cartao',nome:'Cartão fictício'}]} categorias={[]}/>);
+ fireEvent.change(screen.getByLabelText('Cartão da fatura'),{target:{value:'cartao'}});
+ fireEvent.change(screen.getByLabelText('Mês da fatura'),{target:{value:'2026-09'}});
+ fireEvent.change(screen.getByLabelText(/Arquivo da fatura/),{target:{files:[new File(['pdf'],'fatura.pdf')]}});
+ const botao=await screen.findByRole('button',{name:'Confirmar as 1 datas conferidas'});
+ expect(botao).toBeDisabled();
+ fireEvent.click(screen.getByLabelText('Mostrar somente datas pendentes'));
+ expect(screen.queryByLabelText('Descrição da linha 2')).not.toBeInTheDocument();
+ fireEvent.click(screen.getByLabelText('Conferi as datas pendentes das compras selecionadas, incluindo o ano.'));
+ fireEvent.click(botao);
+ expect(await screen.findByText(/Todas as datas selecionadas foram conferidas/)).toBeVisible();
+ fireEvent.click(screen.getByLabelText('Mostrar somente datas pendentes'));
+ fireEvent.change(screen.getByLabelText('Data da linha 1'),{target:{value:'2025-09-01'}});
+ expect(screen.getByRole('button',{name:'Confirmar as 1 datas conferidas'})).toBeDisabled();
+});
+
 test('CA1: importação exige escolha explícita antes de mostrar upload',()=>{
  render(<ImportadorCsv categorias={[]}/>);
  expect(screen.getByLabelText('O que você quer importar?')).toHaveValue('');
