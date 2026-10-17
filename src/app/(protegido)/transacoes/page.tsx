@@ -77,6 +77,9 @@ export default async function TransacoesPage({
   return (
     <div className="grid gap-6">
       <h1 className="serifa text-2xl font-medium">Transações</h1>
+      <a className="botao-fantasma justify-self-start text-sm" href={`/transacoes/exportar${queryDosFiltros(filtros)}`}>
+        Exportar CSV com os filtros atuais
+      </a>
       <NovaTransacaoForm cartoes={cartoesRes.data} categorias={categoriasRes.data} />
 
       <Recorrencias categorias={categoriasRes.data} />
@@ -149,7 +152,7 @@ export default async function TransacoesPage({
       </form>
 
       <ListaTransacoes
-        key={queryDosFiltros(filtros) || "sem-filtro"}
+        key={`${queryDosFiltros(filtros)}:${JSON.stringify(primeira)}`}
         inicial={primeira}
         categorias={categoriasRes.data}
         cartoes={cartoesRes.data}

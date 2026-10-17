@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { formatarCentavos, paraCentavos } from "@/lib/money";
+import { formatarCentavos, paraCentavos, centavosParaDecimalEditavel } from "@/lib/money";
+import EditarCadastro from "@/components/editar-cadastro";
 import { mensagemDeErro } from "@/lib/erros";
 import BotaoAcaoRpc from "@/components/botao-acao-rpc";
 import {
@@ -141,6 +142,7 @@ export default function CofrinhoCard({
         </div>
       </div>
 
+      <EditarCadastro tipo="cofrinho" id={cofrinho.id} valores={{ nome: cofrinho.nome, valor_alvo: centavosParaDecimalEditavel(cofrinho.valor_alvo), horizonte: cofrinho.horizonte, data_alvo: cofrinho.data_alvo ?? "" }} />
       <form onSubmit={movimentar} className="flex flex-wrap items-center gap-2">
         <select
           value={modo}

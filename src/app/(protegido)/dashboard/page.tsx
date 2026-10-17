@@ -24,6 +24,7 @@ import LetreiroBcb from "@/components/dashboard/letreiro-bcb";
 import AplicadorRecorrencias from "@/components/dashboard/aplicador-recorrencias";
 import FechamentoMensal from "@/components/dashboard/fechamento-mensal";
 import { montarFechamentoMensal } from "@/lib/fechamento-mensal";
+import { lerTodasPaginas } from "@/lib/leitura-paginada";
 
 export default async function DashboardPage({
   searchParams,
@@ -51,17 +52,21 @@ export default async function DashboardPage({
   // A janela do histórico já cobre o comparativo do herói e a análise.
   // gastoPorCategoria/resumoDoMes filtram por mês, então o histórico extra não
   // contamina donut/KPIs.
-  const [{ data, error }, categoriasRes, carteiraRes, contasRes, cofrinhosRes] = await Promise.all([
-    supabase
+  const [data, categoriasRes, carteiraRes, contasRes, cofrinhosRes] = await Promise.all([
+    lerTodasPaginas((cursor, tamanho) => {
+      let consulta = supabase
       .from("transacoes_origem")
       .select(
         // `natureza` (0023) é o que impede o pagamento de fatura importado do
         // extrato de somar junto com as compras que ele quita.
-        "descricao, valor_total, tipo, data_compra, natureza, categorias(id, nome, cor, orcamento_mensal)"
+        "id, descricao, valor_total, tipo, data_compra, natureza, categorias(id, nome, cor, orcamento_mensal)"
       )
       .gte("data_compra", janela.inicioJanela)
       .lt("data_compra", janela.fimJanela)
-      .order("data_compra", { ascending: false }),
+      .order("id").limit(tamanho);
+      if (cursor) consulta = consulta.gt("id", cursor);
+      return consulta.abortSignal(AbortSignal.timeout(15000));
+    }),
     supabase.from("categorias").select("id, orcamento_mensal"),
     // Carteira (regime de caixa): uma linha só. Contas a pagar = faturas de
     // cartão não pagas ∪ boletos pendentes, unificadas por vencimento.
@@ -76,14 +81,6 @@ export default async function DashboardPage({
       .select("saldo_atual, valor_alvo, data_alvo")
       .eq("arquivado", false),
   ]);
-
-  if (error) {
-    return (
-      <p className="text-sm" style={{ color: "var(--telha)" }}>
-        Falha ao carregar o dashboard: {error.message}
-      </p>
-    );
-  }
 
   const { mes } = janela;
   const { categorias, despesas, historico, frase, stats, destaque, resumo, projecao } = montarPainel({

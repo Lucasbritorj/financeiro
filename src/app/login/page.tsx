@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { mensagemDeErro } from "@/lib/erros";
@@ -92,6 +93,7 @@ export default function LoginPage() {
             {pendente ? "Aguarde..." : modo === "entrar" ? "Entrar" : "Cadastrar"}
           </button>
         </form>
+        <Link href="/login/recuperar" className="mt-4 block text-sm">Esqueci minha senha</Link>
         <button
           onClick={() => setModo(modo === "entrar" ? "cadastrar" : "entrar")}
           className="mt-4 text-sm transition-colors hover:text-[var(--ouro)]"

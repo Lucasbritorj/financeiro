@@ -1,5 +1,7 @@
 # Modelo Final — Evolução do `financeiro-web`
 
+> **Documento histórico.** Para o estado e as pendências atuais, consulte [pendências atuais](pendencias-atuais.md). As instruções de framework deste plano não devem ser executadas literalmente; use a documentação instalada da versão atual.
+
 > Documento único para importar no Claude Code (Fable). Consolida a análise estrutural, o segundo plano ("Sovereign Glass 2.0" + categorias + IA + Pluggy) e resolve as divergências. Priorizado para **budget limitado (~10% de Fable)**: os blocos estão em ordem de impacto e cada um é entregável sozinho — dá pra parar entre blocos sem deixar nada quebrado.
 >
 > Companion visual: `mockup_dashboard.html` (o alvo de design). Este .md é a fonte da verdade de escopo.

@@ -25,7 +25,7 @@ function transacao(over: Partial<ComandoTransacao> = {}): ComandoTransacao {
 
 test("comando nulo cai nas sugestões de rota, filtradas pelo texto", () => {
   const todas = montarOpcoes(null, "", HOJE);
-  assert.equal(todas.length, 8);
+  assert.equal(todas.length, 9);
   assert.ok(todas.every((o) => o.acao.tipo === "rota"));
 
   const filtradas = montarOpcoes(null, "cof", HOJE);

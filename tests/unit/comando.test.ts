@@ -132,7 +132,7 @@ test("sugerirRotas: prefixo filtra, vazio lista tudo", () => {
     sugerirRotas("cof").map((r) => r.rota),
     ["/cofrinhos"],
   );
-  assert.equal(sugerirRotas("").length, 8);
+  assert.equal(sugerirRotas("").length, 9);
   assert.deepEqual(
     sugerirRotas("abrir importar").map((r) => r.rota),
     ["/importar"],

@@ -1,0 +1,15 @@
+.work/
+.maestri/
+.playwright-mcp/
+.claude/
+memory/
+supabase/.temp/
+.env*
+node_modules/
+.next/
+coverage/
+playwright-report/
+test-results/
+.lighthouseci/
+*.tsbuildinfo
+*.log

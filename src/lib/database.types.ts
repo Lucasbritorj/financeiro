@@ -426,11 +426,16 @@ export type Database = {
           descricao: string;
           valor: number;
           tipo: string;
-          forma_pagamento: string;
+          forma_pagamento: string | null;
           categoria_id: string | null;
           dia_do_mes: number;
           proxima_data: string;
           ativa: boolean;
+          finalidade: string;
+          periodicidade: string | null;
+          cartao_id: string | null;
+          cancelada_em: string | null;
+          status: string;
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
@@ -441,11 +446,15 @@ export type Database = {
           descricao: string;
           valor: number;
           tipo: string;
-          forma_pagamento: string;
+          forma_pagamento: string | null;
           categoria_id?: string | null;
           dia_do_mes: number;
           proxima_data: string;
           ativa?: boolean;
+          finalidade?: string;
+          periodicidade?: string | null;
+          cartao_id?: string | null;
+          cancelada_em?: string | null;
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
@@ -453,10 +462,15 @@ export type Database = {
         Update: {
           descricao?: string;
           valor?: number;
+          forma_pagamento?: string | null;
           categoria_id?: string | null;
           dia_do_mes?: number;
           proxima_data?: string;
           ativa?: boolean;
+          finalidade?: string;
+          periodicidade?: string | null;
+          cartao_id?: string | null;
+          cancelada_em?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [
@@ -465,6 +479,13 @@ export type Database = {
             columns: ["categoria_id"];
             isOneToOne: false;
             referencedRelation: "categorias";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recorrencias_cartao_id_fkey";
+            columns: ["cartao_id"];
+            isOneToOne: false;
+            referencedRelation: "cartoes_credito";
             referencedColumns: ["id"];
           },
         ];
@@ -682,6 +703,18 @@ export type Database = {
         Args: { p_cartao_id: string };
         Returns: Json;
       };
+      editar_cartao: {
+        Args: { p_cartao_id: string; p_nome: string; p_limite_total: number; p_dia_fechamento: number; p_dia_vencimento: number };
+        Returns: Json;
+      };
+      editar_cofrinho: {
+        Args: { p_cofrinho_id: string; p_nome: string; p_valor_alvo: number; p_horizonte: string; p_data_alvo: string | null };
+        Returns: Json;
+      };
+      editar_recorrencia: {
+        Args: { p_recorrencia_id: string; p_descricao: string; p_valor: number; p_tipo: string; p_forma_pagamento: string; p_dia_do_mes: number; p_categoria_id: string | null };
+        Returns: Json;
+      };
       editar_transacao: {
         Args: {
           p_transacao_id: string;
@@ -787,6 +820,33 @@ export type Database = {
           p_categoria_id?: string | null;
           p_iniciar_em?: string | null;
         };
+        Returns: Json;
+      };
+      criar_assinatura: {
+        Args: {
+          p_nome: string;
+          p_valor: number;
+          p_periodicidade: string;
+          p_proxima_cobranca: string;
+          p_categoria_id?: string | null;
+          p_cartao_id?: string | null;
+        };
+        Returns: Json;
+      };
+      editar_assinatura: {
+        Args: {
+          p_assinatura_id: string;
+          p_nome: string;
+          p_valor: number;
+          p_periodicidade: string;
+          p_proxima_cobranca: string;
+          p_categoria_id?: string | null;
+          p_cartao_id?: string | null;
+        };
+        Returns: Json;
+      };
+      alterar_status_assinatura: {
+        Args: { p_assinatura_id: string; p_status: string };
         Returns: Json;
       };
       alternar_recorrencia: {

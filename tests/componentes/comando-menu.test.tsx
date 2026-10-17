@@ -126,7 +126,7 @@ test("campo vazio sugere todas as rotas", async () => {
   await abrir(user);
 
   const opcoes = await screen.findAllByRole("option");
-  expect(opcoes.length).toBe(8); // as 8 rotas de lib/comando.ts
+  expect(opcoes.length).toBe(9); // as 9 rotas de lib/comando.ts
 });
 
 test("frase ambígua mostra o motivo da recusa, sem opção executável", async () => {

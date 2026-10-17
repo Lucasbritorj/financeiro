@@ -53,3 +53,13 @@ __pycache__/
 /.lighthouseci
 /playwright-report
 /test-results
+
+# Saídas locais de verificação; documentos de plano/prova seguem versionáveis.
+/.work/*.log
+/.work/*-id.txt
+/.work/*.json
+/.work/tooling/
+/.work/*.html
+/.work/*.png
+/.playwright-mcp/
+/.maestri/

@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import NovoCartaoForm from "@/components/novo-cartao-form";
 import BotaoAcaoRpc from "@/components/botao-acao-rpc";
-import { formatarCentavos } from "@/lib/money";
+import { formatarCentavos, centavosParaDecimalEditavel } from "@/lib/money";
+import EditarCadastro from "@/components/editar-cadastro";
 import { LIMITE_CARTOES_LISTA } from "@/lib/constantes";
 
 export default async function CartoesPage() {
@@ -41,6 +42,7 @@ export default async function CartoesPage() {
               <p className="text-sm" style={{ color: "var(--grafite)" }}>
                 Fecha dia {c.dia_fechamento} · Vence dia {c.dia_vencimento}
               </p>
+              <EditarCadastro tipo="cartao" id={c.id} valores={{ nome: c.nome, limite_total: centavosParaDecimalEditavel(c.limite_total), dia_fechamento: String(c.dia_fechamento), dia_vencimento: String(c.dia_vencimento) }} />
             </li>
           ))}
         </ul>

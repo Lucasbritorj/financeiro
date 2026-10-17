@@ -3,6 +3,7 @@ import BotaoAcaoRpc from "@/components/botao-acao-rpc";
 import { formatarCentavos, formatarCompetencia, formatarData } from "@/lib/money";
 import { LIMITE_FATURAS_LISTA } from "@/lib/constantes";
 import { hojeSaoPaulo } from "@/lib/data";
+import Link from "next/link";
 
 const CLASSE_SELO: Record<string, string> = {
   ABERTA: "selo selo-aberta",
@@ -21,8 +22,13 @@ type ContaAPagar = {
   valor: number;
 };
 
-export default async function ContasAPagarPage() {
+export default async function ContasAPagarPage({ searchParams }: {
+  searchParams: Promise<{ pagina?: string }>;
+}) {
   const supabase = await createClient();
+  const parametro = (await searchParams).pagina;
+  const pagina = parametro && /^\d{1,5}$/.test(parametro) ? Math.max(1, Number(parametro)) : 1;
+  const inicio = (pagina - 1) * LIMITE_FATURAS_LISTA;
 
   // Lista unificada (faturas de cartão não pagas ∪ boletos pendentes), o
   // resumo de "o que devo", ordenado por vencimento.
@@ -38,7 +44,8 @@ export default async function ContasAPagarPage() {
         "id, status, competencia, data_vencimento, cartoes_credito(nome), parcelas(id, numero, valor, status, transacoes_origem(descricao, num_parcelas, tipo))"
       )
       .order("competencia", { ascending: false })
-      .limit(LIMITE_FATURAS_LISTA),
+      .order("id", { ascending: false })
+      .range(inicio, inicio + LIMITE_FATURAS_LISTA),
     // Boletos já pagos (parcela PAGA): dão o "desfazer pagamento" (estorno) e o
     // "duplicar p/ próximo mês" (recorrência), já que somem de contas a pagar.
     supabase
@@ -55,6 +62,8 @@ export default async function ContasAPagarPage() {
   if (contasRes.error) throw new Error(contasRes.error.message);
   if (faturasRes.error) throw new Error(faturasRes.error.message);
   if (boletosPagosRes.error) throw new Error(boletosPagosRes.error.message);
+  const temProxima = faturasRes.data.length > LIMITE_FATURAS_LISTA;
+  faturasRes.data = faturasRes.data.slice(0, LIMITE_FATURAS_LISTA);
 
   const contas = (contasRes.data as ContaAPagar[]) ?? [];
   const totalDevido = contas.reduce((s, c) => s + c.valor, 0);
@@ -85,6 +94,11 @@ export default async function ContasAPagarPage() {
       <div className="grid gap-6">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <h1 className="serifa text-2xl font-medium">Contas a pagar</h1>
+          <nav aria-label="Histórico de faturas" className="flex items-center gap-3 text-sm">
+            {pagina > 1 && <Link className="botao-fantasma" href={`/faturas?pagina=${pagina - 1}`}>Mais recentes</Link>}
+            <span>Página {pagina}</span>
+            {temProxima && <Link className="botao-fantasma" href={`/faturas?pagina=${pagina + 1}`}>Mais antigas</Link>}
+          </nav>
           <span className="numero-soberano text-sm" style={{ color: "var(--grafite)" }}>
             {totalDevido > 0 ? `total em aberto ${formatarCentavos(totalDevido)}` : "nada em aberto"}
           </span>

@@ -6,7 +6,8 @@ import FeedbackProvider from "@/components/feedback";
 type Resposta = { data: unknown; error: unknown };
 const rpc = vi.fn<(nome: string, params: unknown) => Promise<Resposta>>();
 const order = vi.fn<() => Promise<Resposta>>();
-const select = vi.fn(() => ({ order }));
+const eq = vi.fn(() => ({ order }));
+const select = vi.fn(() => ({ eq }));
 const from = vi.fn(() => ({ select }));
 const refresh = vi.fn();
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ rpc, from }) }));
@@ -37,6 +38,7 @@ beforeEach(() => {
   order.mockReset();
   order.mockResolvedValue({ data: [linha], error: null });
   select.mockClear();
+  eq.mockClear();
   from.mockClear();
   refresh.mockReset();
 });
@@ -57,6 +59,7 @@ test("criar envia centavos inteiros, dia numérico e categoria vazia como null",
   });
   expect(Number.isInteger((rpc.mock.calls[0][1] as { p_valor: number }).p_valor)).toBe(true);
   expect(from).toHaveBeenCalledWith("recorrencias");
+  expect(eq).toHaveBeenCalledWith("finalidade", "LANCAMENTO");
   await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
 });
 
