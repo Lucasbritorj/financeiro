@@ -26,7 +26,7 @@ Fonte de escopo desta rodada: `docs/specs/fechar-jornadas-financeiras.md`. O ant
 - Publicação e migração executadas em 16/10/2026 após autorização; detalhes e provas em `docs/publicacao-jornadas.md`.
 - URL de recuperação confirmada pelo Lucas. Ainda falta conferir envio real, SMTP, template e políticas de confirmação/senha em conta de teste autorizada.
 - Consulta remota de backups retornou lista vazia e PITR desativado. Definição anterior da função substituída preservada em `C:\Backup`; definir uma política de backup integral continua pendente.
-- Commits locais ainda sem push ao GitHub; uma futura publicação pela branch antiga pode substituir a versão atual.
+- Commits enviados ao GitHub na branch `codex/fechar-jornadas-financeiras`, com integração proposta no [PR #12](https://github.com/Lucasbritorj/financeiro/pull/12). A master ainda não recebeu a integração; coordenar merge, migrações e publicação para não substituir a versão atual por código antigo ou publicar a central sem schema.
 
 ## Melhorias futuras, sem implementação nesta rodada
 

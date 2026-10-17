@@ -35,7 +35,7 @@ Os 22 testes anteriores passaram na primeira execução. Os dois novos falharam 
 
 ## Instalação remota ainda pendente
 
-O site publicado continua na versão de 16/10, sem a Central de Assinaturas. Nenhuma migração desta integração foi aplicada remotamente; nenhum push ou nova publicação foi realizado.
+O site de produção continua na versão de 16/10, sem a Central de Assinaturas. Nenhuma migração desta integração foi aplicada remotamente. Em 17/10, a branch foi enviada ao GitHub e o [PR #12](https://github.com/Lucasbritorj/financeiro/pull/12) foi aberto em rascunho, sem merge na master. A integração GitHub/Vercel gera uma prévia automaticamente; isso não representa atualização do domínio de produção nem instalação das migrações.
 
 Simulação somente de leitura confirmou estes três arquivos pendentes:
 

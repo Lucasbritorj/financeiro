@@ -123,3 +123,12 @@ Correções: filtrar cobranças futuras antes do limite; paginação por ID com 
 
 2026-10-17 commit fbbc092 feat: integrar central de assinaturas e validar jornadas — merge local com pais 6cbcc7a e d4c6285, preservando a origem da implementação. Sem push.
 2026-10-17 Prova: limpeza do Supabase local temporário -> interrompido sem backup de fixtures; somente os dois containers ERP preexistentes permanecem. git merge-base confirmou a branch remota de assinaturas incorporada ao HEAD. Nenhum serviço remoto foi alterado nesta integração.
+
+## GitHub público — 17/10/2026
+
+Autorização: Lucas pediu começar pelo GitHub, com cuidado explícito com credenciais. Usadas skills seguranca/pr; envio à branch de trabalho e abertura de PR, sem merge na master.
+
+2026-10-17 Prova: gitleaks git --log-opts=--all --no-banner --redact -> 175 commits e nenhum vazamento encontrado. Conferência de nomes do índice/histórico -> nenhum arquivo real de ambiente, chave privada, backup ou estado de autenticação versionado; somente .env.example. Logs e relatórios da auditoria permanecem ignorados em .work.
+2026-10-17 Prova: configuração remota do GitHub confirmada -> repositório público; secret_scanning e secret_scanning_push_protection estavam desativados, foram ativados e retornaram enabled. Consulta filtrada dos alertas abertos -> lista vazia; nenhum valor de credencial exibido.
+2026-10-17 PR https://github.com/Lucasbritorj/financeiro/pull/12 — branch codex/fechar-jornadas-financeiras enviada, proposta em rascunho para coordenar as três migrações ainda pendentes. Sem merge nem publicação em produção. Verificações hospedadas estão em execução; não confundir provas locais com CI remoto verde.
+2026-10-17 Revisão: aprovado — revisão de código e segurança anterior preservada; diff desta etapa é documental. Status remoto de CI deve ser consultado no próprio PR, sem inferir aprovação a partir deste registro.
