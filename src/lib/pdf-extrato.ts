@@ -61,6 +61,9 @@ export function parsePdfExtrato(
   linhasTexto: string[],
   anoReferencia: number,
 ): ResultadoParse {
+  if (linhasTexto.some(l=>/resumo da fatura|total (?:da|desta) fatura|compras parceladas\s*[-–]?\s*pr[oó]ximas faturas/i.test(l))) {
+    throw new Error('Este PDF parece uma fatura de cartão. Escolha Fatura de cartão para revisar compras, parcelas e assinaturas.');
+  }
   const linhas: LinhaImportacao[] = [];
   let descartadas = 0;
   for (const bruta of linhasTexto) {

@@ -127,7 +127,8 @@ Licença [MIT](LICENSE).
    - `20261007120000_corrigir_central_assinaturas.sql`
    - `20261016200000_editar_cadastros.sql` (edição segura de cartões, cofrinhos e recorrências)
    - `20261016210000_integrar_assinaturas_cadastros.sql` (integração e proteção dos vínculos com cartão)
-   - `20261017130000_importar_faturas_cartao.sql` (faturas importadas, vínculo de assinaturas e previsões sem despesas duplicadas; instalação remota desta funcionalidade ainda pendente)
+   - `20261017130000_importar_faturas_cartao.sql` (faturas importadas, vínculo de assinaturas e previsões sem despesas duplicadas)
+   - `20261017150000_corrigir_fatura_itau.sql` (conferência estrita de PDF, datas revisadas, valor de previsão e movimentos por competência; aplicar antes de publicar esta correção)
 
    > Os bundles de `supabase/APLICAR.md` cobrem apenas até `0019`. De `0020`
    > em diante, aplique os arquivos de `supabase/migrations/` direto.

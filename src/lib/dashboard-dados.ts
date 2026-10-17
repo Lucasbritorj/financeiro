@@ -3,7 +3,7 @@
 // raciocínio de importacao-preview.ts.
 //
 // Nada aqui faz I/O: a página busca as linhas e passa para cá. Base temporal
-// é data_compra (visão caixa "quanto gastei no mês"), fuso de negócio
+// é o movimento da view: data à vista ou competência do cartão, fuso de negócio
 // America/Sao_Paulo (CLAUDE.md).
 
 import { formatarCentavos } from "./money.ts";

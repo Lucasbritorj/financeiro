@@ -29,8 +29,8 @@ import {
 const ESPERADO = {
   tabelas: 14,
   /** DECLARAÇÕES, não nomes: vw_carteira é redefinida três vezes. */
-  views: 6,
-  viewsDistintas: 4,
+  views: 7,
+  viewsDistintas: 5,
   policies: 26,
   rls: 14,
 } as const;

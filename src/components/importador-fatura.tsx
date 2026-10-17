@@ -12,6 +12,7 @@ export default function ImportadorFatura({cartoes,categorias}:{cartoes:{id:strin
   <div><h2 className="serifa text-xl">Sua fatura, antes de entrar nas contas</h2>
    <p className="mt-2 text-sm">Escolha o cartão e o mês. Você revisará compras, parcelas e possíveis assinaturas antes de confirmar.</p></div>
   {cartoes.length===0&&<p className="text-sm">Primeiro, <Link href="/cartoes" className="underline">cadastrar cartão</Link>. Depois volte para importar a fatura.</p>}
+  {categorias.length===0&&<p className="text-sm">Você ainda não tem categorias. Pode <Link href="/categorias" className="underline">cadastrar categorias</Link> antes de importar ou classificar as despesas depois.</p>}
   <div className="grid gap-3 sm:grid-cols-2">
    <label className="text-sm">Cartão da fatura<select className="campo-soberano" value={f.cartaoId} onChange={e=>f.setCartaoId(e.target.value)} disabled={f.pendente}>
     <option value="">Selecione o cartão</option>{cartoes.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}</select></label>

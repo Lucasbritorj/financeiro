@@ -55,7 +55,7 @@ export function PainelUpload({ preset, onPreset, onArquivo, pendente, erro, avis
           importar.
         </p>
         {erro && (
-          <p className="text-sm" style={{ color: "var(--telha)" }}>
+          <p role="alert" className="text-sm" style={{ color: "var(--telha)" }}>
             {erro}
           </p>
         )}

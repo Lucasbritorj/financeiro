@@ -1,4 +1,25 @@
-# Execução — Importação de faturas (17/10/2026)
+# Execução — Corrigir fatura Itaú (17/10/2026)
+Spec: docs/specs/corrigir-fatura-itau.md.
+- [x] CA1: escolha explícita e bloqueio de fatura como extrato.
+- [x] CA2: colunas preservadas com dados fictícios.
+- [x] CA3: seções atuais/futuras/pagamentos/ofertas separadas.
+- [x] CA4: valor em reais e IOF reconciliados.
+- [x] CA5: valor futuro explícito preservado na previsão.
+- [x] CA6: datas revisadas e competência validada.
+- [x] CA7: sugestões de assinaturas com decisão obrigatória.
+- [x] CA8: conferência bloqueia inconsistência.
+- [x] CA9: SQL local, idempotência e isolamento.
+- [x] CA10: painel/Análise por competência sem duplicação.
+- [x] CA11: fallback honesto e mês selecionável.
+- [x] CA12: jornada, acessibilidade e regressões.
+- [x] Fase A: testes vermelhos.
+- [x] Fase B: leitura e revisão.
+- [x] Fase C: integridade e competência.
+- [x] Fase D: jornada e entrega revisada.
+
+---
+
+# Histórico — Importação de faturas (17/10/2026)
 Spec: docs/specs/importar-faturas-cartao.md. Execução autorizada; marcas correspondem às provas locais registradas no LOG.
 - [x] CA1: cinco formatos compartilham revisão; Itaú PDF tem exemplos testados e limites explícitos.
 - [x] CA2: cartão e mês confirmados; conta sem cadastros orientada.

@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { formatarCentavos } from "@/lib/money";
 import { analisarFinancas } from "@/lib/analise";
 import { nomeMes, deslocarMes } from "@/lib/insights";
-import { mesCorrenteSaoPaulo, normalizarTransacoes } from "@/lib/dashboard-dados";
+import { ehMesValido, mesCorrenteSaoPaulo, normalizarTransacoes, type LinhaTransacao } from "@/lib/dashboard-dados";
+import SeletorMes from '@/components/dashboard/seletor-mes';
 import { lerTodasPaginas } from "@/lib/leitura-paginada";
 import CartaoObservacao from "@/components/analise/cartao-observacao";
 import { hojeSaoPaulo } from "@/lib/data";
@@ -15,16 +16,18 @@ function inicioJanela(mesISO: string): string {
   return new Date(Date.UTC(ano, mes - 1 - 3, 1)).toISOString().slice(0, 10);
 }
 
-export default async function AnalisePage() {
+export default async function AnalisePage({searchParams}: {searchParams?:Promise<{mes?:string}>}={}) {
   const supabase = await createClient();
-  const mes = mesCorrenteSaoPaulo();
+  const sp=await searchParams;
+  const corrente=mesCorrenteSaoPaulo();
+  const mes = ehMesValido(sp?.mes) ? sp.mes : corrente;
   const hoje = hojeSaoPaulo();
 
   const data = await lerTodasPaginas((cursor, tamanho) => {
     let consulta = supabase
-    .from("transacoes_origem")
+    .from("vw_movimentos_competencia")
     .select(
-      "id, descricao, valor_total, tipo, data_compra, natureza, categorias(id, nome, cor, orcamento_mensal)"
+      "id, descricao, valor_total, tipo, data_compra, natureza, categorias"
     )
     .gte("data_compra", inicioJanela(mes))
     .lt("data_compra", `${deslocarMes(mes, 1)}-01`)
@@ -33,7 +36,7 @@ export default async function AnalisePage() {
     return consulta.abortSignal(AbortSignal.timeout(15000));
   });
 
-  const transacoes = normalizarTransacoes(data);
+  const transacoes = normalizarTransacoes(data as LinhaTransacao[]);
 
   const observacoes = analisarFinancas(transacoes, {
     mesISO: mes,
@@ -46,10 +49,11 @@ export default async function AnalisePage() {
     <div className="grid gap-6">
       <div className="grid gap-1">
         <h1 className="serifa text-2xl font-medium">Análise</h1>
+        <SeletorMes mes={mes} proximoAtivo={mes<corrente} base="/analise"/>
         <p className="text-sm" style={{ color: "var(--grafite)" }}>
           Uma leitura dos seus números em {nomeMes(mes)} — tendências, limites e
-          padrões. Tudo calculado a partir das suas transações, sem enviar nada
-          para fora.
+          padrões. Cartão pelo mês da cobrança, movimentos à vista pela data;
+          previsões ficam separadas. Os dados são calculados no aplicativo.
         </p>
       </div>
 

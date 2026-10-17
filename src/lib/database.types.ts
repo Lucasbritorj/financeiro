@@ -588,6 +588,7 @@ export type Database = {
       };
     };
     Views: {
+      vw_movimentos_competencia: {Row:{id:string;user_id:string;descricao:string;valor_total:number;tipo:string;data_compra:string;natureza:'CONSUMO'|'LIQUIDACAO_FATURA';categorias:Json|null};Relationships:[]};
       vw_previsoes_parcelamento: {Row:{id:string;user_id:string;plano_id:string;cartao_id:string;descricao:string;numero:number;competencia:string;valor:number};Relationships:[]};
       vw_faturas_consolidadas: {
         Row: {

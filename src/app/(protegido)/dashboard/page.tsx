@@ -36,12 +36,13 @@ export default async function DashboardPage({
 
   // Descobre o mês mais recente com lançamento (a competência mais alta):
   // é o default do dashboard, para nunca cair num mês vazio por acaso.
-  const { data: ultimaTx } = await supabase
-    .from("transacoes_origem")
+  const { data: ultimaTx, error: ultimoErro } = await supabase
+    .from("vw_movimentos_competencia")
     .select("data_compra")
     .order("data_compra", { ascending: false })
     .limit(1)
-    .maybeSingle();
+    .abortSignal(AbortSignal.timeout(15000)).maybeSingle();
+  if(ultimoErro)throw ultimoErro;
 
   const janela = resolverJanela({
     mesQuery: sp.mes,
@@ -55,11 +56,11 @@ export default async function DashboardPage({
   const [data, categoriasRes, carteiraRes, contasRes, cofrinhosRes] = await Promise.all([
     lerTodasPaginas((cursor, tamanho) => {
       let consulta = supabase
-      .from("transacoes_origem")
+      .from("vw_movimentos_competencia")
       .select(
         // `natureza` (0023) é o que impede o pagamento de fatura importado do
         // extrato de somar junto com as compras que ele quita.
-        "id, descricao, valor_total, tipo, data_compra, natureza, categorias(id, nome, cor, orcamento_mensal)"
+        "id, descricao, valor_total, tipo, data_compra, natureza, categorias"
       )
       .gte("data_compra", janela.inicioJanela)
       .lt("data_compra", janela.fimJanela)
@@ -115,6 +116,7 @@ export default async function DashboardPage({
         <h1 className="serifa text-2xl font-medium">Dashboard</h1>
         <SeletorMes mes={mes} proximoAtivo={janela.proximoAtivo} />
       </div>
+      <p className="text-sm" style={{color:'var(--grafite)'}}>Despesas do cartão pelo mês da cobrança; movimentos à vista pela data. Previsões ficam separadas.</p>
 
       <FechamentoMensal fechamento={fechamento} mes={nomeMes(mes)} />
 

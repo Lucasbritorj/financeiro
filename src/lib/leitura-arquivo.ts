@@ -107,7 +107,23 @@ export async function matrizDoXlsx(arquivo: File): Promise<string[][]> {
 }
 
 /** Os pedaços de uma página agrupados pela coordenada Y, do topo para a base. */
-export function linhasDaPagina(itens: readonly unknown[]): string[] {
+export function linhasDaPagina(itens: readonly unknown[], separarTabelas = false): string[] {
+  if (separarTabelas) {
+    // A borda vem dos cabeçalhos das tabelas, nunca do meio da folha:
+    // faturas podem ter margens assimétricas e colunas de larguras diferentes.
+    const inicios = [...new Set(itens.flatMap(item => {
+      if (!item || typeof item !== 'object' || !('str' in item) || !('transform' in item)) return [];
+      const i = item as {str:string;transform:number[]};
+      return /^DATA(?:\s|$)/.test(i.str.trim()) ? [Math.round(i.transform[4])] : [];
+    }))].sort((a,b)=>a-b);
+    const colunas = inicios.filter((x,i)=>i===0 || x-inicios[i-1]>80);
+    if (colunas.length>2) throw new Error('PDF com tabelas ambíguas. Use outro arquivo ou revise o layout antes de importar.');
+    if (colunas.length===2) {
+      const borda=colunas[1]-8;
+      const x=(item:unknown)=>item && typeof item==='object' && 'transform' in item ? (item as {transform:number[]}).transform[4] : 0;
+      return [...linhasDaPagina(itens.filter(i=>x(i)<borda)),...linhasDaPagina(itens.filter(i=>x(i)>=borda))];
+    }
+  }
   const porY = new Map<number, { x: number; texto: string }[]>();
   for (const item of itens) {
     if (!item || typeof item !== "object" || !("str" in item)) continue;
@@ -130,20 +146,24 @@ export function linhasDaPagina(itens: readonly unknown[]): string[] {
 
 // PDF -> linhas de texto (pdfjs-dist, import dinâmico). Agrupa os pedaços
 // pela coordenada Y para reconstruir as linhas visuais do extrato.
-export async function linhasDoPdf(arquivo: File): Promise<string[]> {
+export async function linhasDoPdf(arquivo: File, fatura = false): Promise<string[]> {
   const pdfjs = await import("pdfjs-dist");
   pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     "pdfjs-dist/build/pdf.worker.min.mjs",
     import.meta.url,
   ).toString();
-  const doc = await pdfjs.getDocument({ data: await arquivo.arrayBuffer() }).promise;
+  const carregamento = pdfjs.getDocument({ data: await arquivo.arrayBuffer() });
+  const doc = await carregamento.promise;
   const linhas: string[] = [];
+  try {
   for (let p = 1; p <= doc.numPages; p++) {
+    if(fatura) linhas.push('[[PAGINA]]');
     const pagina = await doc.getPage(p);
     const conteudo = await pagina.getTextContent();
-    linhas.push(...linhasDaPagina(conteudo.items));
+    linhas.push(...linhasDaPagina(conteudo.items,fatura));
   }
   return linhas;
+  } finally { await carregamento.destroy(); }
 }
 
 /**
@@ -169,7 +189,7 @@ export async function lerArquivoImportacao(
 
 /** Decoders compartilhados; o contexto de fatura determina o significado do sinal. */
 export async function lerArquivoFatura(arquivo: File, origem: OrigemImportacao, competencia: string) {
-  if (origem === 'PDF') return parsePdfFatura(await linhasDoPdf(arquivo), competencia);
+  if (origem === 'PDF') return parsePdfFatura(await linhasDoPdf(arquivo,true), competencia);
   const resultado = origem==='CSV' ? parseCsvExtrato(await lerTexto(arquivo),'itau',true)
     : origem==='XLSX' ? parseMatrizExtrato(await matrizDoXlsx(arquivo),true)
     : await lerArquivoImportacao(arquivo, origem, 'itau');

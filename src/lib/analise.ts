@@ -57,11 +57,11 @@ export function analisarFinancas(
     obs({
       id: "estavel",
       severidade: "neutro",
-      titulo: "Mês sob controle",
+      titulo: "Sem alertas nas regras consultadas",
       segmentos: [
         {
           texto:
-            "Nada fora do padrão este mês — seus gastos seguem o ritmo dos meses anteriores.",
+            "A ausência de alertas não comprova equilíbrio financeiro. Confira receitas, despesas e importações antes de tirar conclusões sobre o mês.",
         },
       ],
     }),
