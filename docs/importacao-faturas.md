@@ -27,8 +27,14 @@ Cada linha mantém evidência original e permite corrigir descrição, data, val
 
 Nova migração: `20261017130000_importar_faturas_cartao.sql`, aditiva após as 33 anteriores. Cria três tabelas com RLS e leitura autenticada, uma view invoker e duas funções com escrita controlada. Não modifica as funções de confirmação de extrato existentes.
 
-**Ainda não instalada no Supabase remoto e ainda não publicada em produção.** Antes dessa etapa, conferir alvo e pendências por simulação, preservar definições/dados afetados em `C:\Backup` e obter autorização de instalação/publicação. Não executar testes SQL em produção. Reverter frontend não apaga novas tabelas nem reverte o histórico de migrações automaticamente.
+**Instalada e publicada em 17/10/2026 após autorização explícita do Lucas.** A simulação identificou somente `20261017130000_importar_faturas_cartao.sql`; instalação terminou com saída zero, sem seeds, roles ou Vault. Cópia privada dos registros das 11 tabelas financeiras e definições das funções anteriores em `C:\Backup\financeiro-web\importacao-faturas` (não equivale a backup integral do Supabase/Auth).
+
+Conferência posterior somente de leitura: migração registrada, três tabelas com RLS/leitura autenticada/escrita direta revogada, view invoker e duas funções definer com search_path vazio, execução autenticada e vedada a anon. Contagens/hashes das 11 tabelas existentes permaneceram idênticos; nenhuma linha criada pela instalação. Simulação final sem migrações pendentes.
+
+[PR #13](https://github.com/Lucasbritorj/financeiro/pull/13) integrado à master em `7666835`. Vercel produção `dpl_EfBigTQ7LBUgQ8eSjLSK55PbtN6u` READY, versão imutável `https://financeiro-7zzr3yvyo-brito-s.vercel.app`, domínio principal `https://financeiro-brito-s.vercel.app`. Sete verificações HTTP de acesso/proteção aprovadas; jornadas com gravação continuam comprovadas no ambiente local, sem dados de teste em produção.
+
+Retorno de frontend: versão anterior `https://financeiro-8k0vshpv9-brito-s.vercel.app`. Não apagar tabelas, funções ou dados para desfazer a interface nem reescrever histórico de migrações automaticamente.
 
 ## Provas da implementação
 
-Provas completas por fase ficam em `.work/LOG.md`; capturas e relatórios gerados permanecem ignorados. Regressões iniciais mostraram módulo/RPC ausentes; revisão encontrou e testou crédito CSV, parcela manual duplicada, PDF com dois cartões e compra legítima igual marcada NOVA. Nenhuma alteração remota foi necessária para esses testes.
+Provas completas por fase ficam em `.work/LOG.md`; capturas e relatórios gerados permanecem ignorados. Regressões iniciais mostraram módulo/RPC ausentes; revisão encontrou e testou crédito CSV, parcela manual duplicada, PDF com dois cartões e compra legítima igual marcada NOVA. Testes com gravação usaram somente instância local; a instalação/publicação remota posterior teve autorização específica.
