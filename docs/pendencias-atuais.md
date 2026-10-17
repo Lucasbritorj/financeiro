@@ -7,7 +7,7 @@ Fonte de escopo desta rodada: `docs/specs/fechar-jornadas-financeiras.md`. O ant
 - Central de Assinaturas de 07/10 e complementos de 11/10 integrados localmente, com contratos no cartão, status, periodicidades, custos e impacto por cartão. Critérios e provas: `docs/specs/integrar-central-assinaturas.md` e `docs/integracao-assinaturas.md`.
 - Corrigidos paginação, próximas cobranças, recuperação de erros e concorrência com exclusão de cartão. Auditoria de dependências incorporada ao CI e ao gate local.
 - Testes locais aprovados: 559 unitários, 147 componentes, 12 arquivos SQL, upgrade na ordem real, concorrência e 24 jornadas de navegador (22 anteriores + 2 novas). Lighthouse local: desempenho 77/acessibilidade 100.
-- **Ainda não publicada:** três migrações da central e nova publicação aguardam a etapa específica de instalação. O site segue na versão anterior; esta lista não é prova de central instalada remotamente.
+- **Banco instalado em 17/10:** três migrações da central aplicadas após autorização, com permissões e preservação dos dados conferidas; simulação final sem pendências. Ainda falta publicar a interface; o site segue na versão anterior.
 
 ## Entregas desta rodada (validação detalhada em .work/LOG.md)
 
@@ -26,7 +26,7 @@ Fonte de escopo desta rodada: `docs/specs/fechar-jornadas-financeiras.md`. O ant
 - Publicação e migração executadas em 16/10/2026 após autorização; detalhes e provas em `docs/publicacao-jornadas.md`.
 - URL de recuperação confirmada pelo Lucas. Ainda falta conferir envio real, SMTP, template e políticas de confirmação/senha em conta de teste autorizada.
 - Consulta remota de backups retornou lista vazia e PITR desativado. Definição anterior da função substituída preservada em `C:\Backup`; definir uma política de backup integral continua pendente.
-- Commits enviados ao GitHub na branch `codex/fechar-jornadas-financeiras`, com integração proposta no [PR #12](https://github.com/Lucasbritorj/financeiro/pull/12). A master ainda não recebeu a integração; coordenar merge, migrações e publicação para não substituir a versão atual por código antigo ou publicar a central sem schema.
+- Commits enviados ao GitHub na branch `codex/fechar-jornadas-financeiras`, com integração proposta no [PR #12](https://github.com/Lucasbritorj/financeiro/pull/12). A master ainda não recebeu a integração; com as migrações instaladas, faltam merge e publicação da versão revisada.
 
 ## Melhorias futuras, sem implementação nesta rodada
 

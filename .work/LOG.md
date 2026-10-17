@@ -132,3 +132,12 @@ Autorização: Lucas pediu começar pelo GitHub, com cuidado explícito com cred
 2026-10-17 Prova: configuração remota do GitHub confirmada -> repositório público; secret_scanning e secret_scanning_push_protection estavam desativados, foram ativados e retornaram enabled. Consulta filtrada dos alertas abertos -> lista vazia; nenhum valor de credencial exibido.
 2026-10-17 PR https://github.com/Lucasbritorj/financeiro/pull/12 — branch codex/fechar-jornadas-financeiras enviada, proposta em rascunho para coordenar as três migrações ainda pendentes. Sem merge nem publicação em produção. Verificações hospedadas estão em execução; não confundir provas locais com CI remoto verde.
 2026-10-17 Revisão: aprovado — revisão de código e segurança anterior preservada; diff desta etapa é documental. Status remoto de CI deve ser consultado no próprio PR, sem inferir aprovação a partir deste registro.
+
+## Instalação autorizada das assinaturas — 17/10/2026
+
+Lucas autorizou explicitamente a instalação das três migrações. Alvo confirmado: bqkichuwmugkjumpvrio. Preflight imediatamente anterior: zero recorrências acima do teto. Cópia privada direcionada das cinco funções existentes e respectivos privilégios, registros e estrutura de recorrências em C:\Backup\financeiro-web\assinaturas; não equivale a backup integral.
+
+2026-10-17 Prova: supabase.cmd db push --linked --include-all --skip-vault --yes -> exit0; instaladas 20261006120000, 20261007120000 e 20261016210000, sem seeds/roles/Vault. Registro operacional ignorado: .work/assinaturas-instalacao-producao.log.
+2026-10-17 Prova: consultas posteriores READ ONLY -> três versões registradas, cinco colunas, nove funções, RLS e permissões corretos; sete conjuntos financeiros com contagens/hashes idênticos antes/depois e mesma quantidade de recorrências. Nenhum dado privado impresso ou enviado ao GitHub; nenhum registro de teste em produção.
+2026-10-17 Prova: supabase.cmd db push --linked --dry-run --skip-vault --include-all -> exit0, upToDate true, migrations [] (nenhuma pendência).
+2026-10-17 Revisão: aprovado — conferência operacional e documental; código previamente revisado sem alteração nesta etapa. Não houve merge nem publicação do frontend, que continua na versão de 16/10.

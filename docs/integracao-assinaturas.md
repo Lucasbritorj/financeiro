@@ -33,17 +33,17 @@ Lighthouse na rota autenticada, com Supabase local e conta temporária: desempen
 
 Os 22 testes anteriores passaram na primeira execução. Os dois novos falharam por seletor de teste de cartão; o seletor foi ajustado para o papel acessível `combobox` e os dois passaram. Não foi necessário repetir as jornadas anteriores sem alteração funcional relevante.
 
-## Instalação remota ainda pendente
+## Instalação remota realizada em 17/10/2026
 
-O site de produção continua na versão de 16/10, sem a Central de Assinaturas. Nenhuma migração desta integração foi aplicada remotamente. Em 17/10, a branch foi enviada ao GitHub e o [PR #12](https://github.com/Lucasbritorj/financeiro/pull/12) foi aberto em rascunho, sem merge na master. A integração GitHub/Vercel gera uma prévia automaticamente; isso não representa atualização do domínio de produção nem instalação das migrações.
+Após autorização explícita do Lucas, as três migrações foram instaladas no projeto `bqkichuwmugkjumpvrio`. O site de produção continua na versão de 16/10, sem a interface da Central de Assinaturas. O [PR #12](https://github.com/Lucasbritorj/financeiro/pull/12) permanece em rascunho, sem merge na master. Instalar o banco não publica o aplicativo.
 
-Simulação somente de leitura confirmou estes três arquivos pendentes:
+Arquivos instalados:
 
 1. `20261006120000_central_assinaturas.sql`.
 2. `20261007120000_corrigir_central_assinaturas.sql`.
 3. `20261016210000_integrar_assinaturas_cadastros.sql`.
 
-Antes da aplicação, conferir novamente o alvo `bqkichuwmugkjumpvrio` e executar a consulta abaixo. O resultado conferido nesta rodada foi **zero**, mas é obrigatório repetir imediatamente antes da instalação; valores acima do teto interrompem a migração e não devem ser reduzidos automaticamente.
+O preflight imediatamente anterior à instalação confirmou o alvo e **zero** valores acima do teto, usando a consulta abaixo. Nenhum valor foi reduzido automaticamente.
 
 ```sql
 begin read only;
@@ -52,6 +52,10 @@ from public.recorrencias where valor > 999999999999;
 commit;
 ```
 
-Como duas migrações são anteriores à última já instalada, a simulação usa `supabase db push --linked --dry-run --skip-vault --include-all`. A atualização real exige aprovação específica, preservação das definições atuais e cuidados de backup registrados em `docs/publicacao-jornadas.md`. O teste de upgrade local reproduziu exatamente essa ordem: versão já publicada primeiro, depois as três pendentes. Não modificar o histórico remoto nem reaplicar migrações já registradas.
+Como duas migrações são anteriores à última já instalada, a aplicação usou `supabase db push --linked --include-all --skip-vault --yes`, com saída zero. O teste de upgrade local já havia reproduzido essa ordem. Não houve alteração de seeds, roles ou Vault nem reescrita do histórico remoto.
 
-Após autorização: aplicar somente as pendentes, verificar schema/privilégios, gerar prévia com configurações reais, conferir rotas e então publicar a mesma versão aprovada. O rollback anterior de frontend não desfaz automaticamente as funções novas no banco; preservar a definição atual das funções substituídas antes da instalação.
+Antes da instalação, foram preservadas definições e permissões das cinco funções existentes, registros e estrutura das recorrências, em cópia privada em `C:\Backup\financeiro-web\assinaturas`. É uma cópia direcionada, não um backup integral do banco.
+
+Conferência posterior somente de leitura: três versões registradas, cinco colunas esperadas, nove funções, isolamento por RLS e permissões corretas. Contagens e hashes dos sete conjuntos financeiros permaneceram idênticos; a quantidade de recorrências foi preservada. A simulação final retornou `upToDate: true` e nenhuma migração pendente. Não foram criados registros de teste em produção.
+
+Ainda faltam integrar o PR e publicar/conferir a interface em produção, mediante autorização específica. O rollback de frontend não desfaz automaticamente as funções novas no banco.
