@@ -6,7 +6,7 @@ import { readFile } from "node:fs/promises";
 import type { Database } from "../../src/lib/database.types";
 import { hojeSaoPaulo } from "../../src/lib/data";
 import AxeBuilder from "@axe-core/playwright";
-import { pdfFicticio } from './pdf-ficticio';
+import { pdfFicticio, pdfFicticioColunas } from './pdf-ficticio';
 
 // Serviço de autenticação, API e Postgres reais. Não usa banco nem usuário remoto.
 base.skip(process.env.E2E_LOCAL !== "1", "Execute npm run test:e2e:local com Supabase local.");
@@ -37,6 +37,54 @@ const test = base.extend<{ conta: { db: SupabaseClient<Database>; email: string 
   },
 });
 
+test('Itaú duas colunas: pagamento, moeda, IOF, futuras e competência sem misturar',async({page,conta})=>{
+ test.setTimeout(180_000);
+ const erros:string[]=[];page.on('pageerror',e=>erros.push(e.message));
+ const c=await conta.db.rpc('criar_cartao',{p_nome:'Cartão colunas',p_limite_total:100000,p_dia_fechamento:1,p_dia_vencimento:8});
+ expect(c.error).toBeNull();const id=(c.data as {cartao_id:string}).cartao_id;
+ const arquivo={name:'fatura-ficticia-colunas.pdf',mimeType:'application/pdf',buffer:pdfFicticioColunas()};
+ await page.goto('/importar');
+ await expect(page.getByLabel('O que você quer importar?')).toHaveValue('');
+ await page.getByLabel('O que você quer importar?').selectOption('extrato');
+ await page.getByLabel('Arquivo do extrato').setInputFiles(arquivo);
+ await expect(page.getByRole('alert').filter({hasText:'fatura de cartão'})).toContainText('fatura de cartão');
+ expect((await conta.db.from('importacoes').select('id')).data).toHaveLength(0);
+ await page.getByLabel('O que você quer importar?').selectOption('fatura');
+ await page.getByLabel('Cartão da fatura').selectOption(id);await page.getByLabel('Mês da fatura').fill('2026-09');
+ await page.getByLabel(/Arquivo da fatura/).setInputFiles(arquivo);
+ await expect(page.getByRole('heading',{name:/Confira a fatura/})).toBeVisible();
+ await expect(page.getByText(/Cobranças selecionadas/)).toContainText('208,02');
+ await expect(page.getByText(/Cobranças selecionadas/)).toContainText('164,18');
+ expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
+ await page.getByLabel('Decisão sobre assinatura da linha 3').selectOption('NOVA');
+ await page.getByLabel('Próxima cobrança da linha 3').fill('2027-11-20');
+ await page.getByLabel('Decisão sobre assinatura da linha 4').selectOption('NAO');
+ for(const checkbox of await page.getByLabel(/Conferi a data sugerida da linha/).all())await checkbox.check();
+ for(const tema of ['escuro','claro']){
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.evaluate(t=>{if(t==='claro')document.documentElement.setAttribute('data-tema','claro');else document.documentElement.removeAttribute('data-tema');},tema);
+  for(const largura of [320,375,768,1024,1440,1920]){
+   await page.setViewportSize({width:largura,height:900});
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+   await page.screenshot({path:test.info().outputPath(`colunas-${tema}-${largura}.png`),fullPage:true});
+  }
+  expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
+ }
+ await page.getByRole('button',{name:'Confirmar importação da fatura'}).focus();await page.keyboard.press('Enter');
+ await expect(page.getByRole('status')).toContainText('4 cobrança(s) registrada(s)');
+ const efetivas=await conta.db.from('parcelas').select('valor');expect(efetivas.data?.reduce((s,l)=>s+l.valor,0)).toBe(20802);
+ const previstas=await conta.db.from('vw_previsoes_parcelamento').select('valor');expect(previstas.data?.map(p=>p.valor)).toEqual([8209,8209]);
+ expect((await conta.db.from('recorrencias').select('id').eq('finalidade','ASSINATURA')).data).toHaveLength(1);
+ const movimentos=await conta.db.from('vw_movimentos_competencia').select('valor_total,data_compra');
+ expect(movimentos.error).toBeNull();expect(movimentos.data).toHaveLength(4);
+ expect(movimentos.data?.every(m=>m.data_compra==='2026-09-01')).toBe(true);
+ expect(movimentos.data?.reduce((s,m)=>s+m.valor_total,0)).toBe(20802);
+ await page.goto('/dashboard?mes=2026-09');await expect(page.getByRole('heading',{name:'Dashboard'})).toBeVisible();
+ await page.goto('/analise?mes=2026-09');await expect(page.getByRole('heading',{name:'Análise',exact:true})).toBeVisible();
+ await expect(page.getByRole('link',{name:'Mês anterior'})).toHaveAttribute('href','/analise?mes=2026-08');
+ expect(erros).toEqual([]);
+});
+
 test('fatura Itaú PDF: revisão, parcelas futuras, assinatura e mês seguinte sem duplicidade',async({page,conta})=>{
  test.setTimeout(180_000);
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
@@ -50,6 +98,7 @@ test('fatura Itaú PDF: revisão, parcelas futuras, assinatura e mês seguinte s
  await expect(page.getByLabel('Parcela atual da linha 1')).toHaveValue('3');
  await page.getByLabel('Decisão sobre assinatura da linha 2').selectOption('NOVA');
  await page.getByLabel('Próxima cobrança da linha 2').fill('2027-11-06');
+ for(const checkbox of await page.getByLabel(/Conferi a data sugerida da linha/).all())await checkbox.check();
  for(const tema of ['escuro','claro']) {
   await page.evaluate(t=>{if(t==='claro')document.documentElement.setAttribute('data-tema','claro');else document.documentElement.removeAttribute('data-tema');},tema);
   for(const largura of [320,375,768,1024,1440,1920]) {
@@ -75,6 +124,7 @@ test('fatura Itaú PDF: revisão, parcelas futuras, assinatura e mês seguinte s
  await page.getByLabel(/Arquivo da fatura/).setInputFiles({name:'itau-novembro.pdf',mimeType:'application/pdf',buffer:pdfFicticio(['05/11 LOJA MOVEIS 04/10 100,00','Total desta fatura 100,00'])});
  await expect(page.getByRole('heading',{name:/Confira a fatura/})).toBeVisible();
  await page.getByLabel('Vínculo da linha 1').selectOption(plano);
+ for(const checkbox of await page.getByLabel(/Conferi a data sugerida da linha/).all())await checkbox.check();
  await page.getByRole('button',{name:'Confirmar importação da fatura'}).click();
  await expect(page.getByRole('status')).toContainText('1 cobrança(s) registrada(s)');
  expect((await conta.db.from('vw_previsoes_parcelamento').select('*')).data).toHaveLength(6);
@@ -174,6 +224,7 @@ test("importa pagamento, concilia fatura uma vez e estorna pela tela", async ({ 
   expect(fatura.error).toBeNull();
   const carteiraAntes = await conta.db.from("vw_carteira").select("saldo_caixa").single();
   await page.goto("/importar");
+  await page.getByLabel('O que você quer importar?').selectOption('extrato');
   await page.getByLabel("Banco / formato").selectOption("generico");
   await page.getByLabel("Arquivo do extrato").setInputFiles({ name: "extrato-jornada.csv", mimeType: "text/csv", buffer: Buffer.from(`data;descricao;valor\n${fatura.data!.data_vencimento};FATURA PAGA ITAU UNICLAS;-100,00\n`) });
   await page.getByRole("button", { name: "Importar 1 transação(ões)", exact: true }).click();

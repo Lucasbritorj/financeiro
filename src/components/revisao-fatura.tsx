@@ -23,11 +23,14 @@ function Linha({l,index,fluxo,categorias}:{l:LinhaFatura;index:number;fluxo:Flux
    <label className="text-sm">Categoria da linha {index+1}<select className="campo-soberano" value={l.categoria_id??''} onChange={e=>alterar({categoria_id:e.target.value||null})}>
     <option value="">Sem categoria</option>{categorias.filter(c=>c.tipo==='DESPESA').map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}</select></label>
   </div>}
+  {!especiais&&l.data_confirmada!==undefined&&<label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={l.data_confirmada} onChange={e=>alterar({data_confirmada:e.target.checked})}/>Conferi a data sugerida da linha {index+1}, incluindo o ano.</label>}
   {l.tipo==='PARCELA'&&<div className="grid gap-3 sm:grid-cols-3">
    <label className="text-sm">Parcela atual da linha {index+1}<input className="campo-soberano" type="number" min="1" max="120" value={l.parcela_numero} onChange={e=>alterar({parcela_numero:Number(e.target.value)})}/></label>
    <label className="text-sm">Total de parcelas da linha {index+1}<input className="campo-soberano" type="number" min="2" max="120" value={l.parcelas_total} onChange={e=>alterar({parcelas_total:Number(e.target.value)})}/></label>
    <label className="text-sm">Vínculo da linha {index+1}<select className="campo-soberano" value={l.plano_id??''} onChange={e=>alterar({plano_id:e.target.value||null})}>
     <option value="">Novo parcelamento</option>{fluxo.planos.map(p=><option key={p.id} value={p.id}>{p.descricao} · {p.parcelas_total} parcelas</option>)}</select></label>
+   <label className="text-sm">Valor previsto por parcela da linha {index+1} (R$)<input className="campo-soberano" inputMode="decimal" key={l.valor_previsto??l.valor} defaultValue={centavosParaDecimalEditavel(l.valor_previsto??l.valor)} onBlur={e=>{const valor=paraCentavos(e.target.value)??0;if(valor!==(l.valor_previsto??l.valor))alterar({valor_previsto:valor});}}/></label>
+   {l.previsao_original&&<p className="break-words text-xs sm:col-span-3">Previsão no arquivo: {l.previsao_original}. Esse valor afeta somente as parcelas futuras.</p>}
   </div>}
   {l.tipo==='ASSINATURA'&&<div className="grid gap-3 sm:grid-cols-2">
    <label className="text-sm">Decisão sobre assinatura da linha {index+1}<select className="campo-soberano" value={l.decisao_assinatura} onChange={e=>alterar({decisao_assinatura:e.target.value as LinhaFatura['decisao_assinatura']})}>
@@ -52,8 +55,10 @@ export function RevisaoFatura({fluxo,categorias,cartaoNome}:{fluxo:Fluxo;categor
    <p className="text-sm">Cobranças selecionadas: <strong>{formatarCentavos(resumo.cobrancas)}</strong>. Novas previsões de parcelas: {formatarCentavos(resumo.previsoes)}.</p>
    <p className="text-sm">Ajustes pendentes: {formatarCentavos(resumo.ajustes)} · {resumo.ignoradas} linha(s) excluída(s) · {r.descartadas} linha(s) não reconhecida(s).</p>
    {r.total_informado!==null&&<p className="text-sm">Total informado no arquivo: {formatarCentavos(r.total_informado)}.</p>}
-   <label className="text-sm">Total da fatura para conferência (R$, opcional)<input className="campo-soberano" inputMode="decimal" defaultValue={r.total_informado===null?'':centavosParaDecimalEditavel(r.total_informado)} onBlur={e=>fluxo.alterarTotal(e.target.value.trim()===''?null:paraCentavos(e.target.value))}/></label>
-   {(diferenca||r.descartadas>0)&&<label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={fluxo.conferido} onChange={e=>fluxo.setConferido(e.target.checked)}/>Conferi a diferença de total e as linhas não reconhecidas. Quero importar somente as cobranças selecionadas.</label>}
+   {diferenca&&<p role="alert" style={{color:'var(--telha)'}}>Diferença: {formatarCentavos(Math.abs(resumo.cobrancas-r.total_informado!))}. {r.origem==='PDF'?'Corrija os valores ou a seleção para fechar o total antes de importar.':'Confira os valores antes de importar.'}</p>}
+   {(r.origem!=='PDF'||r.total_extraido===null)&&<label className="text-sm">Total da fatura para conferência (R$, opcional)<input className="campo-soberano" inputMode="decimal" defaultValue={r.total_informado===null?'':centavosParaDecimalEditavel(r.total_informado)} onBlur={e=>fluxo.alterarTotal(e.target.value.trim()===''?null:paraCentavos(e.target.value))}/></label>}
+   {((diferenca&&r.origem!=='PDF')||r.descartadas>0)&&<label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={fluxo.conferido} onChange={e=>fluxo.setConferido(e.target.checked)}/>Conferi a diferença de total e as linhas não reconhecidas. Quero importar somente as cobranças selecionadas.</label>}
+   {r.linhas.some(l=>!l.ignorar&&l.data_confirmada===false)&&<p className="border-l-2 pl-3 text-sm" style={{borderColor:'var(--ouro)',color:'var(--grafite)'}}>O PDF não informa o ano de todas as compras. Confira as datas sugeridas em cada linha; o encargo usa uma data de referência.</p>}
    <p className="text-xs" style={{color:'var(--grafite)'}}>Parcelas futuras são estimativas; meses anteriores não serão recriados. Assinaturas controlam contratos e não criam outra despesa. Créditos e estornos precisam ser excluídos explicitamente nesta versão.</p>
   </div>
   {r.linhas.map((l,i)=><Linha key={i} l={l} index={i} fluxo={fluxo} categorias={categorias}/>)}

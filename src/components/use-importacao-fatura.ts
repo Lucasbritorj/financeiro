@@ -12,7 +12,7 @@ import type { Database, Json } from '@/lib/database.types';
 
 type Cobranca = Database['public']['Tables']['cobrancas_importadas']['Row'];
 export type ContratoFatura = {id:string;descricao:string;cartao_id:string|null};
-export type RevisaoFatura = {chave:string;sha:string|null;origem:OrigemImportacao;cartaoId:string;competencia:string;linhas:LinhaFatura[];descartadas:number;total_informado:number|null};
+export type RevisaoFatura = {chave:string;sha:string|null;origem:OrigemImportacao;cartaoId:string;competencia:string;linhas:LinhaFatura[];descartadas:number;total_extraido:number|null;total_informado:number|null};
 const normalizar=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
 async function carregarContexto(cartaoId:string) {
  const db=createClient();
@@ -56,27 +56,33 @@ export function useImportacaoFatura() {
     return l;
    });
    setPlanos(contexto.planos);setContratos(contexto.contratos);setCobrancas(contexto.cobrancas);setConferido(false);
-   setRevisao({chave:crypto.randomUUID(),sha,origem,cartaoId,competencia,linhas,descartadas:resultado.descartadas,total_informado:resultado.total_informado});
+   setRevisao({chave:crypto.randomUUID(),sha,origem,cartaoId,competencia,linhas,descartadas:resultado.descartadas,total_extraido:resultado.total_informado,total_informado:resultado.total_informado});
   }catch(e){setErro(mensagemDeErro(e));}finally{enviando.current=false;setPendente(false);}
  }
  function alterar(index:number,patch:Partial<LinhaFatura>) {
   setErro(null);setConferido(false);
   setRevisao(r=>r?{...r,chave:crypto.randomUUID(),linhas:r.linhas.map((l,i)=>i===index?{...l,...patch}:l)}:r);
  }
- function alterarTotal(total:number|null) {setConferido(false);setRevisao(r=>r?{...r,chave:crypto.randomUUID(),total_informado:total}:r);}
+ function alterarTotal(total:number|null) {
+  if(revisao?.origem==='PDF'&&revisao.total_extraido!==null){setErro('O total extraído do PDF não pode ser alterado. Confira as cobranças selecionadas.');return;}
+  if(total===revisao?.total_informado)return;
+  setConferido(false);setRevisao(r=>r?{...r,chave:crypto.randomUUID(),total_informado:total}:r);
+ }
  async function confirmar() {
   if(!revisao||enviando.current)return;
   const validacao=validarLinhasFatura(revisao.linhas);if(validacao){setErro(validacao);return;}
   const ativas=revisao.linhas.filter(l=>!l.ignorar);
   if(!ativas.length){setErro('Selecione ao menos uma cobrança.');return;}
   const total=ativas.reduce((s,l)=>s+l.valor,0);
+  const totalConferencia=revisao.origem==='PDF'?revisao.total_extraido??revisao.total_informado:revisao.total_informado;
+  if(revisao.origem==='PDF'&&totalConferencia!==null&&total!==totalConferencia){setErro('O total selecionado difere da fatura. Corrija os valores ou a seleção antes de confirmar.');return;}
   if((revisao.descartadas>0||(revisao.total_informado!==null&&total!==revisao.total_informado))&&!conferido){setErro('Revise as linhas descartadas ou a diferença de total e confirme a conferência.');return;}
   enviando.current=true;setPendente(true);setErro(null);
   try {
    const {data,error}=await createClient().rpc('confirmar_fatura_importada',{
     p_chave:revisao.chave,p_sha:revisao.sha,p_cartao_id:revisao.cartaoId,p_competencia:revisao.competencia+'-01',p_origem:revisao.origem,
-    p_linhas:JSON.parse(JSON.stringify(revisao.linhas)) as Json,p_total:revisao.total_informado,p_conferido:conferido,
-   });
+    p_linhas:JSON.parse(JSON.stringify(revisao.linhas)) as Json,p_total:totalConferencia,p_conferido:conferido,
+   }).abortSignal(AbortSignal.timeout(20000));
    if(error)throw error;
    const res=data as {criadas:number;duplicadas:number;repetida:boolean};
    setAviso(res.repetida?'Esse lote já foi confirmado. Nenhuma cobrança duplicada.':`${res.criadas} cobrança(s) registrada(s); ${res.duplicadas} duplicada(s) ignorada(s).`);

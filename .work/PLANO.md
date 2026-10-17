@@ -1,4 +1,21 @@
-# Plano — Importar faturas de cartão
+# Plano — Corrigir fatura Itaú
+Spec: docs/specs/corrigir-fatura-itau.md. Execução autorizada em 17/10/2026; trabalho sequencial nesta raiz.
+
+## Fase A — Regressões (CA1–CA11)
+Criar exemplos fictícios de duas colunas, seções e câmbio; testes de extração/classificação/previsão, bloqueios do hook, competência e SQL local. Demonstrar falhas antes do código. Não usar PDF real como fixture pública.
+
+## Fase B — Leitura e revisão (CA1–CA8)
+Corrigir leitura-arquivo/importacao-fatura e componentes existentes: contexto explícito, colunas por cabeçalhos, futuras separadas, IOF e datas revisáveis, sugestões e totais. Provar unitários e componentes dirigidos. Usar sistema visual existente.
+
+## Fase C — Integridade e competência (CA5, CA8–CA11)
+Migration aditiva para validar/persistir valor previsto e confirmação de datas; view de movimentos por competência com RLS do chamador. Painel/Análise usam view paginada; fallback honesto. Provar SQL efêmero local, upgrade e suites dependentes.
+
+## Fase D — Jornada e entrega (CA12)
+Jornada real com Supabase local e PDF fictício de duas colunas; screenshots/acessibilidade. Testes, lint, build, segurança, revisão independente só leitura, LOG e commits locais. Sem instalação/publicação remota nem alteração do lote real.
+
+---
+
+# Histórico — Importar faturas de cartão
 Rodada aprovada em 17/10/2026: `docs/specs/importar-faturas-cartao.md`. Lucas autorizou executar o planejamento. Desenvolvimento/testes locais; instalação e publicação remotas permanecem em etapa operacional separada. Histórico anterior preservado abaixo.
 
 ## Fase 1 — Exemplos, contratos e testes antes do código (CA1–CA10)

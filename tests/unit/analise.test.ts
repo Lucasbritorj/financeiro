@@ -7,6 +7,13 @@ const fmt = (c: number) => `R$ ${(c / 100).toFixed(0)}`;
 const HOJE = "2026-07-23";
 const MES = "2026-07";
 
+test('CA11: ausência de alerta não afirma equilíbrio nem estabilidade histórica',()=>{
+ const observacoes=analisarFinancas([{descricao:'COMPRA',valor_total:1000,tipo:'DESPESA',data_compra:'2026-07-02',categoria:null}],{mesISO:MES,hojeISO:HOJE,formatar:fmt});
+ const texto=JSON.stringify(observacoes);
+ assert.doesNotMatch(texto,/sob controle|ritmo dos meses anteriores|nada fora do padrão/i);
+ assert.match(texto,/insuficiente|não permite concluir|não comprova/i);
+});
+
 function tx(
   valor: number,
   tipo: "DESPESA" | "RECEITA",

@@ -7,9 +7,11 @@ import { deslocarMes, nomeMes } from "@/lib/insights";
 export default function SeletorMes({
   mes,
   proximoAtivo,
+  base='/dashboard',
 }: {
   mes: string;
   proximoAtivo: boolean;
+  base?: '/dashboard'|'/analise';
 }) {
   const ano = mes.slice(0, 4);
   const anterior = deslocarMes(mes, -1);
@@ -21,7 +23,7 @@ export default function SeletorMes({
       style={{ borderColor: "var(--borda)", background: "rgba(255,255,255,.015)" }}
     >
       <Link
-        href={`/dashboard?mes=${anterior}`}
+        href={`${base}?mes=${anterior}`}
         aria-label="Mês anterior"
         className="grid h-8 w-8 place-items-center rounded-full border text-sm transition-colors hover:text-[var(--giz)]"
         style={{ borderColor: "var(--borda)", color: "var(--grafite)" }}
@@ -33,7 +35,7 @@ export default function SeletorMes({
       </span>
       {proximoAtivo ? (
         <Link
-          href={`/dashboard?mes=${proximo}`}
+          href={`${base}?mes=${proximo}`}
           aria-label="Próximo mês"
           className="grid h-8 w-8 place-items-center rounded-full border text-sm transition-colors hover:text-[var(--giz)]"
           style={{ borderColor: "var(--borda)", color: "var(--grafite)" }}

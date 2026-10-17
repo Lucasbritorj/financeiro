@@ -11,7 +11,7 @@ import { useState } from 'react';
 import ImportadorFatura from '../importador-fatura';
 
 export default function ImportadorCsv({ categorias, cartoes=[] }: { categorias: CategoriaOpcao[]; cartoes?:{id:string;nome:string}[] }) {
-  const [modo,setModo]=useState('extrato');
+  const [modo,setModo]=useState('');
   const {
     preset,
     setPreset,
@@ -30,9 +30,9 @@ export default function ImportadorCsv({ categorias, cartoes=[] }: { categorias: 
     return (
       <div className="grid gap-4">
       <label className="text-sm">O que você quer importar?<select className="campo-soberano" value={modo} onChange={e=>setModo(e.target.value)} disabled={pendente}>
-        <option value="extrato">Extrato bancário</option><option value="fatura">Fatura de cartão</option>
+        <option value="">Selecione o tipo de arquivo</option><option value="extrato">Extrato bancário</option><option value="fatura">Fatura de cartão</option>
       </select></label>
-      {modo==='fatura'?<ImportadorFatura cartoes={cartoes} categorias={categorias}/>:
+      {modo==='fatura'?<ImportadorFatura cartoes={cartoes} categorias={categorias}/>:modo==='extrato'?
       <PainelUpload
         preset={preset}
         onPreset={setPreset}
@@ -40,7 +40,7 @@ export default function ImportadorCsv({ categorias, cartoes=[] }: { categorias: 
         pendente={pendente}
         erro={erro}
         aviso={aviso}
-      />
+      />:<p className="text-sm">Para compras, parcelas e assinaturas do cartão, escolha Fatura de cartão. Para movimentações da conta, escolha Extrato bancário.</p>
       }</div>
     );
   }
