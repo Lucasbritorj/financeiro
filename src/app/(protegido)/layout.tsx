@@ -12,6 +12,7 @@ import NavegacaoMovel from "@/components/navegacao-movel";
 const NAV_PRINCIPAL = [
   { href: "/dashboard", rotulo: "Dashboard" },
   { href: "/analise", rotulo: "Análise" },
+  { href: "/planejamento", rotulo: "Planejamento" },
   { href: "/transacoes", rotulo: "Transações" },
   { href: "/assinaturas", rotulo: "Assinaturas" },
   { href: "/faturas", rotulo: "Contas a pagar" },

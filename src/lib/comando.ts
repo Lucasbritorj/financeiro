@@ -45,6 +45,7 @@ export type ContextoComando = {
 const ROTAS: { rota: string; rotulo: string; aliases: string[] }[] = [
   { rota: "/dashboard", rotulo: "Dashboard", aliases: ["dashboard", "inicio", "painel"] },
   { rota: "/analise", rotulo: "Análise", aliases: ["analise", "insights", "observacoes"] },
+  { rota: "/planejamento", rotulo: "Planejamento", aliases: ["planejamento", "previsoes", "proximos meses", "alertas"] },
   { rota: "/transacoes", rotulo: "Transações", aliases: ["transacoes", "lancamentos", "extrato"] },
   {
     rota: "/assinaturas",
