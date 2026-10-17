@@ -120,3 +120,6 @@ Correções: filtrar cobranças futuras antes do limite; paginação por ID com 
 | CA4: agenda sem duplicidade/ordem/travas | SQL 12/12, upgrade real e duas sessões concorrentes | Passou |
 | CA5: interface/jornadas | Duas novas jornadas, seis larguras/dois temas, axe/teclado e capturas | Passou |
 | CA6: entrega revisada | Gate/build/segurança e revisor aprovado; documentação atualizada | Passou |
+
+2026-10-17 commit fbbc092 feat: integrar central de assinaturas e validar jornadas — merge local com pais 6cbcc7a e d4c6285, preservando a origem da implementação. Sem push.
+2026-10-17 Prova: limpeza do Supabase local temporário -> interrompido sem backup de fixtures; somente os dois containers ERP preexistentes permanecem. git merge-base confirmou a branch remota de assinaturas incorporada ao HEAD. Nenhum serviço remoto foi alterado nesta integração.
