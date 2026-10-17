@@ -6,10 +6,14 @@ const status = JSON.parse(execFileSync(windows ? "supabase.cmd" : "supabase", ["
 if (new URL(status.API_URL).origin !== "http://127.0.0.1:54321") throw new Error("Inicie o Supabase local desta raiz na porta 54321.");
 const env = { ...process.env, NEXT_PUBLIC_SUPABASE_URL: status.API_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY: status.ANON_KEY,
   E2E_LOCAL_SERVICE_ROLE: status.SERVICE_ROLE_KEY, E2E_LOCAL: "1", E2E_PORT: "3100" };
+if(process.env.GITHUB_ACTIONS==='true') {
+  // Apenas credenciais da instância descartável; os valores não aparecem nos logs do job.
+  for(const segredo of [status.ANON_KEY,status.SERVICE_ROLE_KEY]) if(segredo)process.stdout.write(`::add-mask::${segredo}\n`);
+}
 function executar(comando, args) {
   const result = spawnSync(comando, args, { env, stdio: "inherit", shell: windows && comando !== process.execPath });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 executar(windows ? "npm.cmd" : "npm", ["run", "build"]);
-executar(process.execPath, ["node_modules/@playwright/test/cli.js", "test", "--project=desktop-1440", "--project=mobile-320", "--workers=1"]);
+executar(process.execPath, ["node_modules/@playwright/test/cli.js", "test", "--project=desktop-1440", "--project=mobile-320", "--workers=1", ...process.argv.slice(2)]);

@@ -109,6 +109,32 @@ jobs:
           path: .lighthouseci/
           retention-days: 7
 
+  autenticado:
+    name: jornadas autenticadas · Supabase local · desktop + celular
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - name: pin do npm declarado em packageManager
+        run: |
+          NPM_PIN=$(node -p "require('./package.json').packageManager.replace('npm@','')")
+          npm i -g npm@$NPM_PIN
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Supabase local efêmero
+        run: |
+          mkdir -p .work
+          npm exec --yes --package=supabase@2.115.0 -- supabase start --exclude studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta > .work/ci-supabase-start.log 2>&1
+      - name: Jornadas com autenticação e banco reais locais
+        run: npm exec --yes --package=supabase@2.115.0 -- npm run test:e2e:local
+      - name: Encerrar banco descartável
+        if: always()
+        run: npm exec --yes --package=supabase@2.115.0 -- supabase stop --no-backup
+
   sql:
     name: migrações + asserts em Postgres real
     runs-on: ubuntu-latest
