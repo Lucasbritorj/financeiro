@@ -17,7 +17,7 @@ Spec: docs/specs/importar-faturas-cartao.md. Execução autorizada; marcas corre
 - [x] Fase 3: persistência e conciliação.
 - [x] Fase 4: revisão na interface.
 - [x] Fase 5: jornada completa e regressões.
-- [ ] Fase 6: segurança, revisão e preparação da entrega.
+- [x] Fase 6: segurança, revisão e preparação da entrega (PR #13 em rascunho; instalação/publicação separadas).
 
 ---
 

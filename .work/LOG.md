@@ -190,3 +190,5 @@ Limites: PDF real do Lucas não fornecido; OCR/senha/garantia universal de layou
 2026-10-17 commit ce2cd26 feat: revisar faturas e assinaturas antes de importar — fase testada, sem push individual.
 2026-10-17 commit 332a1ba feat: conciliar faturas e prever parcelas sem duplicar despesas — fase testada, sem push individual.
 2026-10-17 commit 6a7d932 feat: identificar compras e parcelas em faturas importadas — fase testada, sem push individual.
+2026-10-17 commit 11f37b4 docs: registrar provas e instalação pendente das faturas.
+2026-10-17 PR https://github.com/Lucasbritorj/financeiro/pull/13 — rascunho para master, branch codex/importar-faturas-cartao enviada conforme fase 6 aprovada. Sem merge nem instalação/publicação da funcionalidade em produção. Gitleaks origin/master..HEAD -> cinco commits, zero vazamentos; índice contém somente .env.example entre os nomes de ambiente/chave/log/backup conferidos. Checks remotos e prévia automática devem ser consultados no PR, sem inferir aprovação pelo gate local.
