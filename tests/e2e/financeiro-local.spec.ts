@@ -37,6 +37,92 @@ const test = base.extend<{ conta: { db: SupabaseClient<Database>; email: string 
   },
 });
 
+test('planejamento: meses, alertas e cobranças vinculadas sem dupla contagem',async({page,conta})=>{
+ test.setTimeout(180_000);
+ const erros:string[]=[];page.on('pageerror',e=>erros.push(e.message));
+ const c=await conta.db.rpc('criar_cartao',{p_nome:'Cartão planejamento fictício',p_limite_total:100000,p_dia_fechamento:20,p_dia_vencimento:8});
+ expect(c.error).toBeNull();const cartaoId=(c.data as {cartao_id:string}).cartao_id;
+ const assinatura=await conta.db.rpc('criar_assinatura',{p_nome:'Serviço planejamento',p_valor:3000,p_periodicidade:'MENSAL',p_proxima_cobranca:'2030-11-10',p_cartao_id:cartaoId});
+ expect(assinatura.error).toBeNull();const aid=(assinatura.data as {assinatura_id:string}).assinatura_id;
+ const atual=await conta.db.rpc('confirmar_fatura_importada',{p_chave:randomUUID(),p_sha:null,p_cartao_id:cartaoId,p_competencia:'2030-10-01',p_origem:'PDF',p_total:10000,p_linhas:[{data:'2030-10-01',descricao:'PARCELA PLANEJAMENTO',valor:10000,tipo:'PARCELA',parcela_numero:1,parcelas_total:3}]});
+ expect(atual.error).toBeNull();
+ const plano=(await conta.db.from('planos_parcelamento').select('id').single()).data!.id;
+ const seguinte=await conta.db.rpc('confirmar_fatura_importada',{p_chave:randomUUID(),p_sha:null,p_cartao_id:cartaoId,p_competencia:'2030-11-01',p_origem:'PDF',p_total:13000,p_linhas:[{data:'2030-10-01',descricao:'PARCELA PLANEJAMENTO',valor:10000,tipo:'PARCELA',parcela_numero:2,parcelas_total:3,plano_id:plano},{data:'2030-11-10',descricao:'Serviço planejamento',valor:3000,tipo:'ASSINATURA',decisao_assinatura:'VINCULAR',assinatura_id:aid}]});
+ expect(seguinte.error).toBeNull();
+ const hoje=hojeSaoPaulo();const proxima=new Date(hoje+'T12:00:00Z');proxima.setUTCDate(proxima.getUTCDate()+3);
+ for(let i=0;i<2;i++)expect((await conta.db.rpc('criar_assinatura',{p_nome:'Alerta fictício',p_valor:1000,p_periodicidade:'MENSAL',p_proxima_cobranca:proxima.toISOString().slice(0,10)})).error).toBeNull();
+ const antes=(await conta.db.from('transacoes_origem').select('id')).data!.length;
+ await page.goto('/planejamento?mes=2030-10');
+ await expect(page.getByRole('heading',{name:'Planejamento',exact:true})).toBeVisible();
+ const compromissos=page.getByRole('region',{name:'Compromissos dos próximos 12 meses'});
+ await expect(compromissos.locator('summary')).toHaveCount(12);
+ await compromissos.locator('summary').filter({hasText:'novembro 2030'}).click();
+ const novembro=page.getByRole('region',{name:'Cartão planejamento fictício em 2030-11'});
+ await expect(novembro.getByText('Registrado na fatura').locator('..')).toContainText('R$ 130,00');
+ await expect(novembro.getByText('Parcelas previstas').locator('..')).toContainText('R$ 0,00');
+ await expect(novembro.getByText('Assinaturas previstas',{exact:true}).locator('..')).toContainText('R$ 0,00');
+ await expect(page.getByRole('link',{name:'Possível duplicidade · Alerta fictício'})).toBeVisible();
+ const aba=compromissos.locator('summary').first();await aba.focus();await page.keyboard.press('Enter');
+ await expect(aba.locator('..')).not.toHaveAttribute('open','');await page.keyboard.press('Enter');
+ await page.emulateMedia({reducedMotion:'reduce'});
+ for(const tema of ['escuro','claro']) {
+  await page.evaluate(t=>{if(t==='claro')document.documentElement.setAttribute('data-tema','claro');else document.documentElement.removeAttribute('data-tema');},tema);
+  for(const largura of [320,375,768,1024,1440,1920]) {
+   await page.setViewportSize({width:largura,height:900});
+   await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(largura);
+   await page.evaluate(()=>window.scrollTo(0,0));
+   await page.screenshot({path:test.info().outputPath(`planejamento-${tema}-${largura}.png`),fullPage:true});
+  }
+  expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
+ }
+ expect((await conta.db.from('transacoes_origem').select('id')).data).toHaveLength(antes);
+ if(process.env.AUDIT_PLANEJAMENTO==='1'&&test.info().project.name==='desktop-1440') {
+  const saida=execFileSync(process.execPath,['tests/e2e/auditar-rota-autenticada.mjs',page.url(),test.info().outputPath('lighthouse-planejamento.json')],{input:JSON.stringify(await page.context().cookies()),encoding:'utf8',stdio:['pipe','pipe','pipe'],timeout:120000});
+  console.log(`Lighthouse Planejamento: ${saida.trim()}`);
+ }
+ expect(erros).toEqual([]);
+});
+
+test('reversão: prévia, confirmação, histórico e reimportação do arquivo',async({page,conta})=>{
+ test.setTimeout(120_000);
+ const c=await conta.db.rpc('criar_cartao',{p_nome:'Cartão reversão fictício',p_limite_total:100000,p_dia_fechamento:20,p_dia_vencimento:8});
+ expect(c.error).toBeNull();const cartaoId=(c.data as {cartao_id:string}).cartao_id;
+ const chave=randomUUID();const linhas=[{data:'2030-10-01',descricao:'COMPRA REVERSAO FICTICIA',valor:1234,tipo:'GASTO'}];
+ const criar=()=>conta.db.rpc('confirmar_fatura_importada',{p_chave:randomUUID(),p_sha:'a'.repeat(64),p_cartao_id:cartaoId,p_competencia:'2030-10-01',p_origem:'PDF',p_total:1234,p_linhas:linhas});
+ expect((await conta.db.rpc('confirmar_fatura_importada',{p_chave:chave,p_sha:'a'.repeat(64),p_cartao_id:cartaoId,p_competencia:'2030-10-01',p_origem:'PDF',p_total:1234,p_linhas:linhas})).error).toBeNull();
+ await page.goto('/importar');await page.getByRole('button',{name:'Conferir reversão'}).click();
+ await expect(page.getByRole('region',{name:'Prévia da reversão'})).toContainText('R$ 12,34');
+ expect((await conta.db.from('transacoes_origem').select('id')).data).toHaveLength(1);
+ await page.getByText('Conferir lançamentos deste lote').click();
+ await expect(page.getByText(/COMPRA REVERSAO FICTICIA/)).toBeVisible();
+ for(const tema of ['escuro','claro']) {
+  await page.evaluate(t=>{if(t==='claro')document.documentElement.setAttribute('data-tema','claro');else document.documentElement.removeAttribute('data-tema');},tema);
+  for(const largura of [320,375,768,1024,1440,1920]) {
+   await page.setViewportSize({width:largura,height:900});
+   await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(largura);
+   await page.evaluate(()=>window.scrollTo(0,0));
+   await page.screenshot({path:test.info().outputPath(`reversao-${tema}-${largura}.png`),fullPage:true});
+  }
+  expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
+ }
+ await page.getByRole('button',{name:'Desfazer esta importação'}).click();
+ await expect(page.getByRole('dialog')).toContainText('R$ 12,34');
+ await page.getByRole('button',{name:'Desfazer importação',exact:true}).click();
+ await expect(page.getByRole('status')).toContainText('Importação desfeita');
+ await expect(page.getByText(/lançamento\(s\) · Desfeita/)).toBeVisible();
+ expect((await conta.db.from('transacoes_origem').select('id')).data).toHaveLength(0);
+ const reimportada=await criar();expect(reimportada.error).toBeNull();expect((reimportada.data as {criadas:number}).criadas).toBe(1);
+ await page.getByRole('button',{name:'Atualizar histórico'}).click();
+ await expect(page.getByRole('button',{name:'Conferir reversão'})).toHaveCount(1);
+ const usuario=(await conta.db.auth.getUser()).data.user!.id;expect(usuario).toMatch(/^[a-f0-9-]{36}$/);
+ execFileSync('docker',['exec','-i','supabase_db_financeiro-web','psql','-U','postgres','-d','postgres','-q','-v','ON_ERROR_STOP=1'],{input:`insert into public.importacoes(user_id,origem,status) values('${usuario}','CSV','CONFIRMADA');`,stdio:['pipe','pipe','pipe'],timeout:15000});
+ await page.getByRole('button',{name:'Atualizar histórico'}).click();
+ await expect(page.getByText('Quantidade não disponível',{exact:false})).toBeVisible();
+ await page.getByRole('listitem').filter({hasText:'Extrato CSV'}).getByRole('button',{name:'Conferir reversão'}).click();
+ await expect(page.getByRole('region',{name:'Prévia da reversão'})).toContainText('não possui vínculo suficiente');
+ await expect(page.getByRole('button',{name:'Desfazer esta importação'})).toBeDisabled();
+});
+
 test('maiores despesas mantém descrição, data e valor dentro do cartão',async({page,conta})=>{
  const descricao='DESPESA FICTICIA COM DESCRICAO MUITO LONGA '+ 'REFERENCIA'.repeat(14);
  const criada=await conta.db.rpc('processar_transacao_completa',{p_descricao:descricao,p_valor_total:123456789,p_tipo:'DESPESA',p_forma_pagamento:'DEBITO',p_cartao_id:null,p_data_compra:'2026-09-10',p_num_parcelas:1});

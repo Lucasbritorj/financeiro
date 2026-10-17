@@ -1,4 +1,5 @@
 "use client";
+import { useState } from 'react';
 import { formatarCentavos, centavosParaDecimalEditavel, paraCentavos } from '@/lib/money';
 import { resumoFatura, type LinhaFatura, type TipoLinhaFatura } from '@/lib/importacao-fatura';
 import type { CategoriaOpcao } from './importador-csv/tabela-revisao';
@@ -47,7 +48,10 @@ function Linha({l,index,fluxo,categorias}:{l:LinhaFatura;index:number;fluxo:Flux
  </fieldset>;
 }
 export function RevisaoFatura({fluxo,categorias,cartaoNome}:{fluxo:Fluxo;categorias:CategoriaOpcao[];cartaoNome:string}) {
+ const [somenteDatas,setSomenteDatas]=useState(false);
+ const [datasConferidas,setDatasConferidas]=useState<string|null>(null);
  const r=fluxo.revisao;if(!r)return null;
+ const pendentes=r.linhas.filter(l=>!l.ignorar&&l.tipo!=='INFORMATIVO'&&l.tipo!=='AJUSTE'&&l.data_confirmada===false).length;
  const resumo=resumoFatura(r.linhas);const diferenca=r.total_informado!==null&&r.total_informado!==resumo.cobrancas;
  return <section className="grid min-w-0 gap-5" aria-label="Revisão da fatura">
   <div className="vidro-soberano grid gap-3 p-5">
@@ -61,7 +65,15 @@ export function RevisaoFatura({fluxo,categorias,cartaoNome}:{fluxo:Fluxo;categor
    {r.linhas.some(l=>!l.ignorar&&l.data_confirmada===false)&&<p className="border-l-2 pl-3 text-sm" style={{borderColor:'var(--ouro)',color:'var(--grafite)'}}>O PDF não informa o ano de todas as compras. Confira as datas sugeridas em cada linha; o encargo usa uma data de referência.</p>}
    <p className="text-xs" style={{color:'var(--grafite)'}}>Parcelas futuras são estimativas; meses anteriores não serão recriados. Assinaturas controlam contratos e não criam outra despesa. Créditos e estornos precisam ser excluídos explicitamente nesta versão.</p>
   </div>
-  {r.linhas.map((l,i)=><Linha key={i} l={l} index={i} fluxo={fluxo} categorias={categorias}/>)}
+  <section className="vidro-soberano grid gap-3 p-5" aria-label="Conferência de datas">
+   <h3 className="serifa text-lg">Datas para conferir: {pendentes}</h3>
+   <p className="text-sm">Confira o dia, mês e ano de cada compra selecionada. Encargos usam uma data de referência. Se precisar corrigir, edite a data da linha.</p>
+   <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={somenteDatas} onChange={e=>setSomenteDatas(e.target.checked)}/>Mostrar somente datas pendentes</label>
+   {pendentes>0&&<><label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={datasConferidas===r.chave} onChange={e=>setDatasConferidas(e.target.checked?r.chave:null)} disabled={fluxo.pendente}/>Conferi as datas pendentes das compras selecionadas, incluindo o ano.</label>
+   <button type="button" className="botao-fantasma justify-self-start" disabled={datasConferidas!==r.chave||fluxo.pendente} onClick={()=>{fluxo.confirmarDatas();setDatasConferidas(null);}}>Confirmar as {pendentes} datas conferidas</button></>}
+   {somenteDatas&&pendentes===0&&<p role="status">Todas as datas selecionadas foram conferidas. Desmarque o filtro para continuar a revisão completa.</p>}
+  </section>
+  {r.linhas.map((l,i)=>(!somenteDatas||(!l.ignorar&&l.tipo!=='INFORMATIVO'&&l.tipo!=='AJUSTE'&&l.data_confirmada===false))&&<Linha key={i} l={l} index={i} fluxo={fluxo} categorias={categorias}/>)}
   {fluxo.erro&&<p role="alert" style={{color:'var(--telha)'}}>{fluxo.erro}</p>}
   <div className="flex flex-wrap gap-3"><button className="botao-soberano" disabled={fluxo.pendente} onClick={()=>void fluxo.confirmar()}>{fluxo.pendente?'Confirmando…':'Confirmar importação da fatura'}</button>
    <button className="botao-fantasma" disabled={fluxo.pendente} onClick={fluxo.descartar}>Descartar revisão</button></div>

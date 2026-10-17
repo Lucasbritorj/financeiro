@@ -233,6 +233,10 @@ function classificar(
 // Não-teto (count que não é teto anti-abuso):
 const ALLOWLIST_NAO_TETO: ItemAllow[] = [
   {
+    funcao: "public.consultar_reversao_importacao",
+    motivo: "RPC somente de leitura: count resume contratos e planos na prévia, sem criar linhas nem impor teto. A reversão reconsulta sob trava por usuário e travas de linhas antes de gravar.",
+  },
+  {
     funcao: "public.criar_importacao",
     motivo:
       "count(*) filter só resume a classificação (NOVO/DUPLICADO/AMBIGUO/LIQUIDACAO) no retorno; o teto de lote usa jsonb_array_length(p_linhas), estado da própria chamada, não count de linhas compartilhadas — sem corrida entre chamadas.",
@@ -452,8 +456,8 @@ test("migrações reais: todo teto anti-abuso tem advisory lock antes do count",
   assert.equal(r.tetoComLock.length, 4);
   assert.deepEqual(
     new Set(r.naoTeto.map((n) => n.nome)),
-    new Set(["public.criar_importacao", "public.excluir_transacao"]),
-    "os dois counts não-teto da allowlist casam com funções reais",
+    new Set(["public.criar_importacao", "public.excluir_transacao", "public.consultar_reversao_importacao"]),
+    "os três counts de resumo da allowlist casam com funções reais",
   );
-  assert.equal(r.naoTeto.length, 2);
+  assert.equal(r.naoTeto.length, 3);
 });

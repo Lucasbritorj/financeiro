@@ -14,7 +14,7 @@ export type Database = {
     Tables: {
       planos_parcelamento: TabelaLeitura<{id:string;user_id:string;cartao_id:string;descricao:string;competencia_base:string;parcela_base:number;parcelas_total:number;valor_previsto:number;created_at:string}>;
       cobrancas_importadas: TabelaLeitura<{id:string;user_id:string;lote_id:string;cartao_id:string;competencia:string;transacao_id:string;plano_id:string|null;parcela_numero:number|null;assinatura_id:string|null;data:string;descricao:string;valor:number;fingerprint:string;id_externo:string|null}>;
-      lotes_fatura: TabelaLeitura<{id:string;user_id:string;cartao_id:string;competencia:string;arquivo_sha256:string|null;conteudo_hash:string;origem:string;resultado:Json;created_at:string}>;
+      lotes_fatura: TabelaLeitura<{id:string;user_id:string;cartao_id:string;competencia:string;arquivo_sha256:string|null;conteudo_hash:string;origem:string;resultado:Json;created_at:string;desfeita_em:string|null}>;
       cartoes_credito: {
         Row: {
           id: string;
@@ -588,6 +588,9 @@ export type Database = {
       };
     };
     Views: {
+      vw_historico_importacoes: {Row:{id:string;lote_id:string;user_id:string;tipo:'FATURA'|'EXTRATO';origem:string;competencia:string|null;cartao_id:string|null;created_at:string;desfeita_em:string|null;quantidade:number|null};Relationships:[]};
+      vw_parcelas_planejamento: {Row:{id:string;user_id:string;cartao_id:string;competencia:string;valor:number};Relationships:[]};
+      vw_cobrancas_assinaturas: {Row:{id:string;user_id:string;cartao_id:string;competencia:string;valor:number;assinatura_id:string;data:string};Relationships:[]};
       vw_movimentos_competencia: {Row:{id:string;user_id:string;descricao:string;valor_total:number;tipo:string;data_compra:string;natureza:'CONSUMO'|'LIQUIDACAO_FATURA';categorias:Json|null};Relationships:[]};
       vw_previsoes_parcelamento: {Row:{id:string;user_id:string;plano_id:string;cartao_id:string;descricao:string;numero:number;competencia:string;valor:number};Relationships:[]};
       vw_faturas_consolidadas: {
@@ -629,6 +632,8 @@ export type Database = {
       };
     };
     Functions: {
+      consultar_reversao_importacao: {Args:{p_tipo:string;p_id:string};Returns:Json};
+      desfazer_importacao: {Args:{p_tipo:string;p_id:string;p_token:string};Returns:Json};
       confirmar_fatura_importada: {Args:{p_chave:string;p_sha:string|null;p_cartao_id:string;p_competencia:string;p_origem:string;p_linhas:Json;p_total?:number|null;p_conferido?:boolean};Returns:Json};
       editar_previsao_parcelamento: {Args:{p_plano_id:string;p_valor:number};Returns:Json};
       processar_transacao_completa: {

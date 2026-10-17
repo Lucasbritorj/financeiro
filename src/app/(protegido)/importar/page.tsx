@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import ImportadorCsv from "@/components/importador-csv";
 import { lerTodasPaginas } from '@/lib/leitura-paginada';
+import HistoricoImportacoes, { type LoteHistorico } from '@/components/historico-importacoes';
 
 export default async function ImportarPage() {
   const supabase = await createClient();
@@ -12,6 +13,13 @@ export default async function ImportarPage() {
       let q=supabase.from('cartoes_credito').select('id,nome');if(id)q=q.gt('id',id);return q.order('id').limit(n);
     }),
   ]);
+  let lotes:LoteHistorico[]=[];let erroHistorico=false;
+  try {
+    lotes=await lerTodasPaginas<LoteHistorico>((cursor,n)=>{
+      let q=supabase.from('vw_historico_importacoes').select('*').order('id').limit(n);
+      if(cursor)q=q.gt('id',cursor);return q;
+    });
+  }catch{erroHistorico=true;}
 
   return (
     <div className="grid gap-6">
@@ -22,6 +30,7 @@ export default async function ImportarPage() {
         </p>
       </div>
       <ImportadorCsv categorias={categorias} cartoes={cartoes} />
+      <HistoricoImportacoes lotes={lotes} erroConsulta={erroHistorico}/>
     </div>
   );
 }

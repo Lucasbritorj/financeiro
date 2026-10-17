@@ -1,4 +1,23 @@
-# Execução — Corrigir fatura Itaú (17/10/2026)
+# Obra atual — Planejamento e importação segura
+Spec: docs/specs/planejamento-e-importacao-segura.md.
+- [x] CA1: revisão e confirmação conjunta de datas.
+- [x] CA2: edição invalida confirmação e mantém bloqueios.
+- [x] CA3: 12 meses por cartão com registrado/previsões.
+- [x] CA4: ciclos corretos e sem dupla contagem.
+- [x] CA5: histórico e prévia sem gravação.
+- [x] CA6: reversão atômica, idempotente e reimportação.
+- [x] CA7: pagamentos, edições, ambiguidades e isolamento protegidos.
+- [x] CA8: vencimentos e próximas cobranças em 7 dias.
+- [x] CA9: possíveis aumentos e contratos duplicados.
+- [ ] CA10: jornadas autenticadas em CI local efêmero.
+- [x] CA11: vazio, falha e migração ausente explícitos.
+- [x] CA12: responsivo, temas, teclado, axe e Lighthouse.
+- [x] Fase 1: domínio e revisão de datas, vermelho/verde.
+- [x] Fase 2: persistência e histórico de reversão.
+- [x] Fase 3: Planejamento, alertas e jornada visual.
+- [ ] Fase 4: CI, segurança e revisão.
+
+# Histórico — Corrigir fatura Itaú (17/10/2026)
 Spec: docs/specs/corrigir-fatura-itau.md.
 - [x] CA1: escolha explícita e bloqueio de fatura como extrato.
 - [x] CA2: colunas preservadas com dados fictícios.

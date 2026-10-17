@@ -61,7 +61,12 @@ export function useImportacaoFatura() {
  }
  function alterar(index:number,patch:Partial<LinhaFatura>) {
   setErro(null);setConferido(false);
-  setRevisao(r=>r?{...r,chave:crypto.randomUUID(),linhas:r.linhas.map((l,i)=>i===index?{...l,...patch}:l)}:r);
+  setRevisao(r=>r?{...r,chave:crypto.randomUUID(),linhas:r.linhas.map((l,i)=>i===index?{...l,...patch,...(patch.data!==undefined&&patch.data!==l.data?{data_confirmada:false}:{})}:l)}:r);
+ }
+ function confirmarDatas() {
+  if(enviando.current)return;
+  setErro(null);
+  setRevisao(r=>r?{...r,chave:crypto.randomUUID(),linhas:r.linhas.map(l=>!l.ignorar&&l.tipo!=='INFORMATIVO'&&l.tipo!=='AJUSTE'&&l.data_confirmada===false?{...l,data_confirmada:true}:l)}:r);
  }
  function alterarTotal(total:number|null) {
   if(revisao?.origem==='PDF'&&revisao.total_extraido!==null){setErro('O total extraído do PDF não pode ser alterado. Confira as cobranças selecionadas.');return;}
@@ -89,6 +94,6 @@ export function useImportacaoFatura() {
    setRevisao(null);router.refresh();
   }catch(e){setErro(mensagemDeErro(e));}finally{enviando.current=false;setPendente(false);}
  }
- return {cartaoId,setCartaoId,competencia,setCompetencia,revisao,planos,contratos,cobrancas,pendente,erro,aviso,conferido,setConferido,processar,alterar,alterarTotal,confirmar,
+ return {cartaoId,setCartaoId,competencia,setCompetencia,revisao,planos,contratos,cobrancas,pendente,erro,aviso,conferido,setConferido,processar,alterar,alterarTotal,confirmarDatas,confirmar,
   descartar:()=>{setRevisao(null);setErro(null);}};
 }

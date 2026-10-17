@@ -25,6 +25,7 @@ import AplicadorRecorrencias from "@/components/dashboard/aplicador-recorrencias
 import FechamentoMensal from "@/components/dashboard/fechamento-mensal";
 import { montarFechamentoMensal } from "@/lib/fechamento-mensal";
 import { lerTodasPaginas } from "@/lib/leitura-paginada";
+import ResumoAlertas from './resumo-alertas';
 
 export default async function DashboardPage({
   searchParams,
@@ -119,6 +120,7 @@ export default async function DashboardPage({
       <p className="text-sm" style={{color:'var(--grafite)'}}>Despesas do cartão pelo mês da cobrança; movimentos à vista pela data. Previsões ficam separadas.</p>
 
       <FechamentoMensal fechamento={fechamento} mes={nomeMes(mes)} />
+      <Suspense fallback={<p role="status" className="text-sm">Consultando pontos de atenção…</p>}><ResumoAlertas/></Suspense>
 
       {temDestaque && (
         <Link href="/analise" className="group block mb-2 transition-transform hover:scale-[1.01]">
