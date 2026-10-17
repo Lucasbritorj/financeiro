@@ -4,6 +4,8 @@ Fonte de escopo desta rodada: `docs/specs/fechar-jornadas-financeiras.md`. O ant
 
 ## Integração mais recente
 
+- Importação de faturas de cartão implementada e validada localmente: Itaú PDF fictício, revisão de compras/parcelas/assinaturas, parcelas futuras separadas dos gastos e conciliação entre meses. Provas e limites: `docs/importacao-faturas.md`. Migração `20261017130000_importar_faturas_cartao.sql` e publicação dessa funcionalidade ainda pendentes; produção continua na versão do PR #12. Conferência com o PDF particular do Lucas ainda necessária.
+
 - Central de Assinaturas de 07/10 e complementos de 11/10 integrados localmente, com contratos no cartão, status, periodicidades, custos e impacto por cartão. Critérios e provas: `docs/specs/integrar-central-assinaturas.md` e `docs/integracao-assinaturas.md`.
 - Corrigidos paginação, próximas cobranças, recuperação de erros e concorrência com exclusão de cartão. Auditoria de dependências incorporada ao CI e ao gate local.
 - Testes locais aprovados: 559 unitários, 147 componentes, 12 arquivos SQL, upgrade na ordem real, concorrência e 24 jornadas de navegador (22 anteriores + 2 novas). Lighthouse local: desempenho 77/acessibilidade 100.

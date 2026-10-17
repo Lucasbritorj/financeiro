@@ -1,3 +1,26 @@
+# Execução — Importação de faturas (17/10/2026)
+Spec: docs/specs/importar-faturas-cartao.md. Execução autorizada; marcas correspondem às provas locais registradas no LOG.
+- [x] CA1: cinco formatos compartilham revisão; Itaú PDF tem exemplos testados e limites explícitos.
+- [x] CA2: cartão e mês confirmados; conta sem cadastros orientada.
+- [x] CA3: gasto/parcela/possível assinatura com evidência e correção.
+- [x] CA4: parcela atual efetiva e futuras previstas, sem passado inventado.
+- [x] CA5: cobrança posterior concilia previsão sem duplicidade.
+- [x] CA6: assinatura confirmada ou vinculada sem segunda despesa.
+- [x] CA7: pagamento/total/juros/créditos tratados com limites claros.
+- [x] CA8: subtotais, descartadas e divergências revisáveis.
+- [x] CA9: reenvio, concorrência e ambiguidade sem duplicação.
+- [x] CA10: isolamento e lote integralmente atômico.
+- [x] CA11: regressões do extrato bancário preservadas.
+- [x] CA12: jornada autenticada, celular/desktop, teclado e axe.
+- [x] Fase 1: exemplos, contratos e testes vermelhos.
+- [x] Fase 2: leitura e reconhecimento.
+- [x] Fase 3: persistência e conciliação.
+- [x] Fase 4: revisão na interface.
+- [x] Fase 5: jornada completa e regressões.
+- [ ] Fase 6: segurança, revisão e preparação da entrega.
+
+---
+
 # Checklist — Fechar jornadas financeiras
 ## Rodada atual: Central de Assinaturas
 - [x] CA1: integrar central e preservar entregas atuais; auditoria no CI.

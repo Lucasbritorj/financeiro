@@ -153,3 +153,40 @@ Lucas pediu explicitamente executar o PR e publicar o aplicativo. Mantida a auto
 2026-10-17 Prova: verify-staged.cjs em produção -> seis verificações HTTP aprovadas: login200, recuperação200, dashboard307, assinaturas307, exportação307, callback sem código303. verify-browser.cjs em produção -> login/recuperação aprovados, zero erros de execução, captura .work/production-recuperacao.png; sem envio de e-mail. Consulta aos logs de erro da nova publicação -> nenhum encontrado no intervalo consultado; não equivale a monitoramento contínuo.
 2026-10-17 Prova: supabase db push --linked --dry-run --skip-vault --include-all -> upToDate true, nenhuma migração pendente. Nenhuma gravação de teste em produção. Retorno possível: versão anterior financeiro-bdjzloygq-brito-s.vercel.app; não desfaz funções do banco.
 2026-10-17 Revisão: aprovado — provas operacionais e diff documental conferidos, sem alteração de código. Registros documentais finais locais; código publicado corresponde à master dc4d686.
+
+## Importação e revisão de faturas — 17/10/2026
+
+Autorização: Lucas aprovou executar docs/specs/importar-faturas-cartao.md. Prioridade Itaú PDF, extrato CSV preservado e previsões das parcelas futuras. Branch codex/importar-faturas-cartao. Skills spec/design-system/revisar/seguranca/commit; gravações somente em Supabase local confirmado (API127.0.0.1:54321, Postgres local/container deste projeto). Nenhuma migração, teste ou publicação dessa funcionalidade em produção.
+
+Decisão (fundamentos): lote, cobranças e vínculos em uma transação; trava por usuário e chaves de arquivo/lote impedem repetição; plano e view mantêm estimativas fora das despesas efetivas. Interfaces seguem tokens/botões Ateliê e documentação local Next 16.3.8. Nenhuma dependência nova.
+
+2026-10-17 Prova: node --test tests/unit/importacao-fatura.test.ts -> vermelho por ERR_MODULE_NOT_FOUND antes do produto; 13 testes iniciais verdes depois. Regressões adicionais reproduziram duas compras na mesma linha, cartões distintos e crédito CSV/XLSX; arquivo final tem 16 testes da funcionalidade. .work/fatura-creditos-green.log -> 47 testes dirigidos novos/legados aprovados.
+2026-10-17 Prova: SQL local antes da migração -> função confirmar_fatura_importada ausente; .work/fatura-sql-red.log. Componentes antes do produto -> módulo ausente em .work/fatura-componentes-red.log. Primeira chamada de npm test:sql encontrou bash WSL ausente; usado Git Bash instalado, sem instalar dependências.
+2026-10-17 Prova: testes/gate executado com Node24.21.0/npm11.17.0 e variáveis públicas da instância local em memória -> 575 unitários, 151 componentes, tipos/lint/build e auditoria aprovados. .work/fatura-gate-revisado.log. Lint 0 erros/18 avisos (14 anteriores e 4 novos de complexidade/tamanho). Não esconder os avisos nem confundir gate local com ações hospedadas do CI. Primeira execução interrompeu por contagens estáticas/README ainda anteriores ao novo schema; contagens foram atualizadas mantendo todas as regras de isolamento/privilégios.
+2026-10-17 Prova: Git Bash tests/sql/run_local.sh -> 13/13 arquivos aprovados em Postgres17 efêmero; 23 asserts da nova função e teste com role authenticated real. .work/fatura-sql-revisao.log. Testes incluem parcela atual sem passado/futuro inventado, conciliação, edição só da previsão, assinatura sem despesa dupla, resposta repetida, categoria/cartão e chave de conteúdo.
+2026-10-17 Prova: node --test tests/sql/upgrade-assinaturas.test.mjs -> 1 passed, 34 migrações na ordem de upgrade real e 13 arquivos SQL aprovados. .work/fatura-upgrade.log. node --test tests/sql/importacao-fatura-concorrencia.test.mjs -> 1 passed, duas sessões locais, uma cobrança/um plano/sete previsões; .work/fatura-concorrencia-final.log.
+2026-10-17 Prova: navegador com build de produção e API/Auth/Postgres locais -> 26 passed em 1.8m; .work/fatura-e2e-final.log. Inclui PDF fictício renderizado/extrato por pdfjs, três cobranças, sete previsões, contrato e mês seguinte com seis previsões sem duplicidade, edição do valor previsto e regressões anteriores (CSV/relatórios >1000/recuperação/cadastros/faturas). Execução exploratória anterior apontou build ainda antigo e foi interrompida; somente a execução após build atualizado conta como prova.
+2026-10-17 Prova: capturas da revisão em 320/375/768/1024/1440/1920 e dois temas, sem overflow; axe zero violações nos cenários exercitados e confirmação por teclado. Capturas 320 escuro e 1440 claro inspecionadas; artefatos ignorados em test-results.
+2026-10-17 Prova: Lighthouse na página inicial autenticada /importar -> desempenho93/acessibilidade100/LCP1.2s/CLS0; .work/fatura-lighthouse.json. Medição local única, não é desempenho da extração de 1000 linhas nem promessa de produção.
+2026-10-17 Prova: gitleaks git --log-opts=--all --redact -> 178 commits e zero vazamentos; gitleaks dir em src/tests/supabase-migrations/supabase-tests/docs -> zero vazamentos. npm audit --omit=dev --audit-level=high -> zero vulnerabilidades de produção. Logs/sessões/status de serviços e PDFs particulares não versionados.
+2026-10-17 Revisão: aprovado — revisor independente somente leitura em segunda rodada não encontrou achado concreto remanescente. Quatro achados iniciais corrigidos com regressões: crédito CSV preservado e bloqueado, parcela manual comparada por pa.valor, dois cartões bloqueados no PDF, compra legítima igual marcada NOVA preservada. T21/T22 mostraram falha na função local anterior antes da correção. Ressalva inicial de gate/navegador atendida pelos registros acima; diff próprio conferido. Sem terceira rodada de mudanças funcionais.
+
+| Critério | Evidência final | Resultado |
+|---|---|---|
+| CA1 formatos | decoders compartilhados, testes CSV/XLSX/OFX legados e PDF fictício no navegador | passou dentro dos layouts declarados |
+| CA2 contexto | seleção obrigatória de cartão/mês, orientação para conta vazia, data por competência | passou |
+| CA3 identificação | regras puras, evidência e campos de correção | passou |
+| CA4 parcelas | SQL e navegador: atual10000, sete previstas separadas, nenhuma anterior | passou |
+| CA5 conciliação | segundo mês confirma parcela4 e deixa seis previsões | passou |
+| CA6 assinaturas | contrato confirmado com uma única despesa | passou |
+| CA7 especiais | ajustes bloqueados, D/C preservado, sinal desconhecido confirmado | passou |
+| CA8 conferência | subtotais separados, total editável e confirmação da divergência | passou |
+| CA9 repetição | chave/arquivo, duas sessões, compra legítima igual e parcela manual | passou |
+| CA10 integridade | lote atômico, vínculos por usuário, RLS e privilégios | passou |
+| CA11 regressão | extrato/carteira/faturas/relatórios nas suítes anteriores | passou |
+| CA12 jornada | 26 jornadas, screenshots, axe/teclado e persistência real local | passou |
+
+Limites: PDF real do Lucas não fornecido; OCR/senha/garantia universal de layouts/contabilidade completa de créditos fora do escopo aprovado. Instalação remota da migração 20261017130000 e publicação dessa funcionalidade ainda pendentes de etapa operacional específica. Produção continua na versão publicada pelo PR12.
+2026-10-17 commit ce2cd26 feat: revisar faturas e assinaturas antes de importar — fase testada, sem push individual.
+2026-10-17 commit 332a1ba feat: conciliar faturas e prever parcelas sem duplicar despesas — fase testada, sem push individual.
+2026-10-17 commit 6a7d932 feat: identificar compras e parcelas em faturas importadas — fase testada, sem push individual.

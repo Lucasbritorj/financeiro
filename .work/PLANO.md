@@ -1,4 +1,29 @@
-# Plano — Fechar jornadas financeiras
+# Plano — Importar faturas de cartão
+Rodada aprovada em 17/10/2026: `docs/specs/importar-faturas-cartao.md`. Lucas autorizou executar o planejamento. Desenvolvimento/testes locais; instalação e publicação remotas permanecem em etapa operacional separada. Histórico anterior preservado abaixo.
+
+## Fase 1 — Exemplos, contratos e testes antes do código (CA1–CA10)
+Obter exemplo Itaú PDF privado autorizado ou fictício; definir interpretação de data/valor/parcela, modelo de plano versus cobrança efetiva, vínculos entre meses, casos ambíguos e créditos. Exemplos públicos somente fictícios. Escrever regressões em tests/unit e asserts em tests/sql e comprovar vermelho pelo comportamento ausente. Arquivos centrais: src/lib/csv.ts, pdf-extrato.ts, importacao-preview.ts, leitura-arquivo.ts, tipos e RPCs atuais de importação. Ler a documentação Next instalada antes de código que a envolva. Prova: node --test tests/unit/<arquivo>.test.ts; SQL em Postgres local confirmado. Não modificar migrações publicadas.
+
+## Fase 2 — Leitura e reconhecimento compartilhados (CA1–CA3, CA7–CA8)
+Preservar o fluxo de extrato e acrescentar contexto de fatura; adaptadores dos cinco formatos alimentam contrato único, preservando origem/evidência e indicando suporte por layout. Reconhecer parcelas e possíveis assinaturas com regras revisáveis; normalizar sinal e mês por contexto. PDF sem texto informa ausência de suporte, não inventa linhas. Verificar testes dirigidos de CSV/PDF/OFX e das regras novas; provar falso positivo de data versus parcela e virada de ano.
+
+## Fase 3 — Persistência e conciliação (CA4–CA6, CA9–CA11)
+Migration aditiva e RPCs específicas de fatura sem mudar silenciosamente confirmar_importacao do extrato. Usar plano/metadata para previsões separadas e cobrança efetiva na fatura selecionada; evitar alterar dinheiro efetivo com projeções. Validar isolamento, unicidade, travas, resposta perdida, importação posterior e associação explícita de ambiguidades. Contratos de assinatura não geram outra despesa. Arquivos: nova migração, src/lib/database.types.ts, consultas afetadas e tests/sql. Prova: npm run test:sql com alvo local confirmado; upgrade real e concorrência conforme impacto; testes de dinheiro e persistência dependentes.
+
+## Fase 4 — Revisão na interface (CA2–CA8, CA12)
+Alterar src/app/(protegido)/importar/page.tsx e src/components/importador-csv/: escolher extrato/fatura, cartão e mês; cadastro quando ausente; linha original, sugestão/motivo, edição de parcelas e assinaturas, escolha de vínculo e pendências. Exibir valores reais e previstos separados. Aplicar design-system e padrões existentes. Prova: npm run test:componentes -- tests/componentes/<arquivo>, teclado, screenshots celular/desktop e testes de falha de rede/novo envio.
+
+## Fase 5 — Jornada completa e regressões (CA1–CA12)
+Supabase local e contas temporárias: Itaú PDF, conta sem cadastros, confirmação, reload, mês seguinte, reenvio, ambiguidades, falha e usuário distinto; extrato CSV continua válido. Fixtures e faturas reais não vão ao repositório público. Prova: navegador autenticado com API/Postgres reais locais, totais de faturas/relatórios, axe e screenshots; npm run lint/build e suítes dependentes. Registrar vermelho/verde e evidência por critério, sem repetir suítes válidas sem motivo.
+
+## Fase 6 — Revisão e preparação da entrega
+Skill seguranca, auditoria do diff e revisor independente somente leitura conforme skill revisar. Atualizar docs, limites por formato e procedimentos de migração/retorno; commits pequenos em branch codex/. Preparar PR/prévia. Instalação remota e publicação apenas na etapa autorizada correspondente, sem dados de teste em produção.
+
+Execução sequencial: as fases compartilham contratos, tipos, RPCs e componentes. Sem lote paralelo proposto.
+
+---
+
+# Histórico — Fechar jornadas financeiras
 Rodada atual: **Integração da Central de Assinaturas**, spec `docs/specs/integrar-central-assinaturas.md`. Histórico das fases anteriores preservado abaixo.
 
 ## Integração — fase A: regressões e incorporação
