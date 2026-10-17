@@ -35,7 +35,7 @@ Os 22 testes anteriores passaram na primeira execução. Os dois novos falharam 
 
 ## Instalação remota realizada em 17/10/2026
 
-Após autorização explícita do Lucas, as três migrações foram instaladas no projeto `bqkichuwmugkjumpvrio`. O site de produção continua na versão de 16/10, sem a interface da Central de Assinaturas. O [PR #12](https://github.com/Lucasbritorj/financeiro/pull/12) permanece em rascunho, sem merge na master. Instalar o banco não publica o aplicativo.
+Após autorização explícita do Lucas, as três migrações foram instaladas no projeto `bqkichuwmugkjumpvrio`. Em seguida, com autorização para integrar e publicar, o [PR #12](https://github.com/Lucasbritorj/financeiro/pull/12) foi integrado à master no commit `dc4d686`. A Vercel publicou a interface da Central de Assinaturas em `https://financeiro-brito-s.vercel.app`.
 
 Arquivos instalados:
 
@@ -58,4 +58,4 @@ Antes da instalação, foram preservadas definições e permissões das cinco fu
 
 Conferência posterior somente de leitura: três versões registradas, cinco colunas esperadas, nove funções, isolamento por RLS e permissões corretas. Contagens e hashes dos sete conjuntos financeiros permaneceram idênticos; a quantidade de recorrências foi preservada. A simulação final retornou `upToDate: true` e nenhuma migração pendente. Não foram criados registros de teste em produção.
 
-Ainda faltam integrar o PR e publicar/conferir a interface em produção, mediante autorização específica. O rollback de frontend não desfaz automaticamente as funções novas no banco.
+Publicação de produção `dpl_BRdR2kMfMgdBPT9jxmSxDZ2AKjp5`, versão imutável `https://financeiro-8k0vshpv9-brito-s.vercel.app`, confirmada como READY e associada ao domínio principal. As seis verificações HTTP passaram, incluindo proteção da rota `/assinaturas` sem sessão. As jornadas completas de assinaturas com gravação continuam comprovadas no ambiente local; não foram gravados dados de teste em produção. O rollback de frontend não desfaz automaticamente as funções novas no banco.

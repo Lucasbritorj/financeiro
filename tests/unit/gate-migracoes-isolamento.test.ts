@@ -30,7 +30,8 @@ import {
 // já são cumpridas pelo disco de hoje, então o gate nasce verde, e um verde
 // que não leu nada é indistinguível de um verde que leu tudo.
 
-const ESPERADO = { tabelas: 11, views: 5, policies: 23, rls: 11 } as const;
+// Importação de faturas: três tabelas isoladas e uma view invoker.
+const ESPERADO = { tabelas: 14, views: 6, policies: 26, rls: 14 } as const;
 
 // ---------------------------------------------------------------- o gate real
 

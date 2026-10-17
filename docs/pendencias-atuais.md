@@ -4,10 +4,12 @@ Fonte de escopo desta rodada: `docs/specs/fechar-jornadas-financeiras.md`. O ant
 
 ## Integração mais recente
 
+- Importação de faturas de cartão implementada e validada localmente: Itaú PDF fictício, revisão de compras/parcelas/assinaturas, parcelas futuras separadas dos gastos e conciliação entre meses. Provas e limites: `docs/importacao-faturas.md`. Migração `20261017130000_importar_faturas_cartao.sql` e publicação dessa funcionalidade ainda pendentes; produção continua na versão do PR #12. Conferência com o PDF particular do Lucas ainda necessária.
+
 - Central de Assinaturas de 07/10 e complementos de 11/10 integrados localmente, com contratos no cartão, status, periodicidades, custos e impacto por cartão. Critérios e provas: `docs/specs/integrar-central-assinaturas.md` e `docs/integracao-assinaturas.md`.
 - Corrigidos paginação, próximas cobranças, recuperação de erros e concorrência com exclusão de cartão. Auditoria de dependências incorporada ao CI e ao gate local.
 - Testes locais aprovados: 559 unitários, 147 componentes, 12 arquivos SQL, upgrade na ordem real, concorrência e 24 jornadas de navegador (22 anteriores + 2 novas). Lighthouse local: desempenho 77/acessibilidade 100.
-- **Banco instalado em 17/10:** três migrações da central aplicadas após autorização, com permissões e preservação dos dados conferidas; simulação final sem pendências. Ainda falta publicar a interface; o site segue na versão anterior.
+- **Banco e interface publicados em 17/10:** três migrações aplicadas após autorização, com permissões e preservação dos dados conferidas; simulação final sem pendências. PR #12 integrado à master e versão `dc4d686` publicada na Vercel. Seis verificações HTTP de produção aprovadas.
 
 ## Entregas desta rodada (validação detalhada em .work/LOG.md)
 
@@ -26,7 +28,7 @@ Fonte de escopo desta rodada: `docs/specs/fechar-jornadas-financeiras.md`. O ant
 - Publicação e migração executadas em 16/10/2026 após autorização; detalhes e provas em `docs/publicacao-jornadas.md`.
 - URL de recuperação confirmada pelo Lucas. Ainda falta conferir envio real, SMTP, template e políticas de confirmação/senha em conta de teste autorizada.
 - Consulta remota de backups retornou lista vazia e PITR desativado. Definição anterior da função substituída preservada em `C:\Backup`; definir uma política de backup integral continua pendente.
-- Commits enviados ao GitHub na branch `codex/fechar-jornadas-financeiras`, com integração proposta no [PR #12](https://github.com/Lucasbritorj/financeiro/pull/12). A master ainda não recebeu a integração; com as migrações instaladas, faltam merge e publicação da versão revisada.
+- [PR #12](https://github.com/Lucasbritorj/financeiro/pull/12) integrado à master após aprovação dos seis checks. Publicação de produção confirmada como READY no domínio principal, com a Central de Assinaturas.
 
 ## Melhorias futuras, sem implementação nesta rodada
 

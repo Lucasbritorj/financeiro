@@ -7,8 +7,11 @@
 import { useImportacao } from "./use-importacao";
 import { PainelUpload } from "./painel-upload";
 import { TabelaRevisao, type CategoriaOpcao } from "./tabela-revisao";
+import { useState } from 'react';
+import ImportadorFatura from '../importador-fatura';
 
-export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpcao[] }) {
+export default function ImportadorCsv({ categorias, cartoes=[] }: { categorias: CategoriaOpcao[]; cartoes?:{id:string;nome:string}[] }) {
+  const [modo,setModo]=useState('extrato');
   const {
     preset,
     setPreset,
@@ -25,6 +28,11 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
 
   if (etapa.fase === "upload") {
     return (
+      <div className="grid gap-4">
+      <label className="text-sm">O que você quer importar?<select className="campo-soberano" value={modo} onChange={e=>setModo(e.target.value)} disabled={pendente}>
+        <option value="extrato">Extrato bancário</option><option value="fatura">Fatura de cartão</option>
+      </select></label>
+      {modo==='fatura'?<ImportadorFatura cartoes={cartoes} categorias={categorias}/>:
       <PainelUpload
         preset={preset}
         onPreset={setPreset}
@@ -33,6 +41,7 @@ export default function ImportadorCsv({ categorias }: { categorias: CategoriaOpc
         erro={erro}
         aviso={aviso}
       />
+      }</div>
     );
   }
 

@@ -81,7 +81,7 @@ Licença [MIT](LICENSE).
 
 1. Crie um projeto em [supabase.com](https://supabase.com).
 2. No **SQL Editor**, execute **todas** as migrações de `supabase/migrations/`
-   em ordem alfabética — são **33**: `0001` a `0027` e seis migrações com
+   em ordem alfabética — são **34**: `0001` a `0027` e sete migrações com
    timestamp. Aplicar só o núcleo
    (`0001`–`0006`) sobe um banco sem categorias, importação, cofrinhos,
    análise, carteira, boletos nem recorrências: telas que o app oferece falham
@@ -127,6 +127,7 @@ Licença [MIT](LICENSE).
    - `20261007120000_corrigir_central_assinaturas.sql`
    - `20261016200000_editar_cadastros.sql` (edição segura de cartões, cofrinhos e recorrências)
    - `20261016210000_integrar_assinaturas_cadastros.sql` (integração e proteção dos vínculos com cartão)
+   - `20261017130000_importar_faturas_cartao.sql` (faturas importadas, vínculo de assinaturas e previsões sem despesas duplicadas; instalação remota desta funcionalidade ainda pendente)
 
    > Os bundles de `supabase/APLICAR.md` cobrem apenas até `0019`. De `0020`
    > em diante, aplique os arquivos de `supabase/migrations/` direto.

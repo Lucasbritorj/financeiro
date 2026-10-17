@@ -15,6 +15,8 @@ import { paraCentavosAssinado } from "./money.ts";
 import { LIMITE_BYTES_IMPORTACAO, LIMITE_LINHAS_IMPORTACAO } from "./constantes.ts";
 
 export type LinhaImportacao = {
+  /** Somente no modo fatura: evidência de débito/crédito do arquivo. */
+  natureza_valor?: 'DESPESA' | 'CREDITO' | 'DESCONHECIDA';
   data: string; // ISO "YYYY-MM-DD"
   valor: number; // centavos, com sinal
   descricao: string;
@@ -230,6 +232,7 @@ function extrairLinhas(
   matriz: string[][],
   idxCabecalho: number,
   mapa: MapaColunas,
+  modoFatura = false,
 ): ResultadoParse {
   const linhas: LinhaImportacao[] = [];
   let descartadas = 0;
@@ -242,7 +245,16 @@ function extrairLinhas(
       if (campos.some((c) => c.trim() !== "")) descartadas++;
       continue;
     }
-    linhas.push({ data, valor, descricao });
+    const linha: LinhaImportacao = { data, valor, descricao };
+    if (modoFatura) {
+      const par = mapa.iDebito>=0 && mapa.iCredito>=0 && mapa.iDebito!==mapa.iCredito;
+      const sufixo = separarSufixoDC((campos[mapa.iValor]??'').trim()).sinal;
+      const sinal = sufixo ?? (mapa.iDC>=0?sinalDeRotulo(campos[mapa.iDC]??''):null);
+      linha.natureza_valor = par
+        ? (magnitude(campos[mapa.iCredito])>0?'CREDITO':'DESPESA')
+        : sinal===1?'CREDITO':sinal===-1?'DESPESA':'DESCONHECIDA';
+    }
+    linhas.push(linha);
   }
   return { linhas, descartadas };
 }
@@ -256,6 +268,7 @@ function extrairLinhas(
 export function parseCsvExtrato(
   conteudo: string,
   preset: PresetBanco,
+  modoFatura = false,
 ): ResultadoParse {
   const linhasBrutas = conteudo
     .replace(/^﻿/, "") // BOM
@@ -271,7 +284,7 @@ export function parseCsvExtrato(
 
   const cab = localizarCabecalho(matriz);
   if (!cab) return { linhas: [], descartadas: linhasBrutas.length - 1 };
-  return extrairLinhas(matriz, cab.idx, cab.mapa);
+  return extrairLinhas(matriz, cab.idx, cab.mapa, modoFatura);
 }
 
 /**
@@ -279,12 +292,12 @@ export function parseCsvExtrato(
  * exceljs) -> lançamentos. Mesma detecção robusta do CSV: acha o cabeçalho
  * (pulando preâmbulo) e mapeia colunas por nome.
  */
-export function parseMatrizExtrato(matriz: string[][]): ResultadoParse {
+export function parseMatrizExtrato(matriz: string[][], modoFatura = false): ResultadoParse {
   const naoVazias = matriz.filter((l) => l.some((c) => c.trim() !== ""));
   if (naoVazias.length < 2) return { linhas: [], descartadas: 0 };
   const cab = localizarCabecalho(naoVazias);
   if (!cab) return { linhas: [], descartadas: naoVazias.length - 1 };
-  return extrairLinhas(naoVazias, cab.idx, cab.mapa);
+  return extrairLinhas(naoVazias, cab.idx, cab.mapa, modoFatura);
 }
 
 /**
