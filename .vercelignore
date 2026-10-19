@@ -7,6 +7,7 @@ supabase/.temp/
 .env*
 node_modules/
 .next/
+.next-csp/
 coverage/
 playwright-report/
 test-results/

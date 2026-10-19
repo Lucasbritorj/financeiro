@@ -19,8 +19,9 @@ export default function ImportadorFatura({cartoes,categorias}:{cartoes:{id:strin
    <label className="text-sm">Mês da fatura<input className="campo-soberano" type="month" required value={f.competencia} onChange={e=>f.setCompetencia(e.target.value)} disabled={f.pendente}/></label>
   </div>
   <label className="text-sm">Arquivo da fatura (PDF, CSV, OFX/OFC ou XLSX)<input type="file" className="campo-soberano" accept=".pdf,.csv,.ofx,.ofc,.xlsx" disabled={f.pendente||!f.cartaoId||!f.competencia} onChange={e=>{const a=e.target.files?.[0];if(a)void f.processar(a);e.target.value='';}}/></label>
-  <p className="text-xs" style={{color:'var(--grafite)'}}>PDF com texto: prioridade para fatura Itaú. Outros layouts podem exigir correção na revisão. PDF digitalizado ou protegido por senha não é suportado. Até 10 MB e 1000 linhas. O arquivo é lido no navegador; nenhum serviço de IA recebe sua fatura.</p>
-  {f.pendente&&<p role="status">Lendo arquivo e conferindo registros…</p>}
+  <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={f.ocr} onChange={e=>f.setOcr(e.target.checked)} disabled={f.pendente}/>Ler PDF digitalizado com OCR</label>
+  <p className="text-xs" style={{color:'var(--grafite)'}}>PDF com texto: prioridade para fatura Itaú. Outros layouts podem exigir correção na revisão. OCR lê páginas sem texto no seu navegador, até 20 páginas; confira datas, valores e totais. PDF protegido por senha precisa ser desbloqueado antes. Até 10 MB e 1000 linhas. Nenhum serviço externo recebe sua fatura.</p>
+  {f.pendente&&<><p role="status">{f.progresso||'Conferindo registros…'}</p>{f.progresso&&<button className="botao-fantasma" type="button" onClick={f.cancelarLeitura}>Cancelar leitura</button>}</>}
   {f.erro&&<p role="alert" style={{color:'var(--telha)'}}>{f.erro}</p>}
   {f.aviso&&<p role="status">{f.aviso}</p>}
  </section><PrevisoesParcelamento key={f.cartaoId+f.aviso} cartaoId={f.cartaoId}/></div>;

@@ -233,6 +233,14 @@ function classificar(
 // Não-teto (count que não é teto anti-abuso):
 const ALLOWLIST_NAO_TETO: ItemAllow[] = [
   {
+    funcao: "public.consultar_conta_bancaria",
+    motivo: "Consulta somente de leitura: count limita o tamanho da resposta e nunca cria movimentos. Mudanças concorrentes podem exigir repetir a consulta, sem ultrapassar teto de escrita nem duplicar dados.",
+  },
+  {
+    funcao: "public.transferir_entre_contas",
+    motivo: "Count verifica se o par de movimentos de uma chave idempotente coincide com o pedido; não é teto de cadastros. A chave tem advisory lock e ambas as contas são travadas antes desta conferência.",
+  },
+  {
     funcao: "public.consultar_reversao_importacao",
     motivo: "RPC somente de leitura: count resume contratos e planos na prévia, sem criar linhas nem impor teto. A reversão reconsulta sob trava por usuário e travas de linhas antes de gravar.",
   },
@@ -456,8 +464,8 @@ test("migrações reais: todo teto anti-abuso tem advisory lock antes do count",
   assert.equal(r.tetoComLock.length, 4);
   assert.deepEqual(
     new Set(r.naoTeto.map((n) => n.nome)),
-    new Set(["public.criar_importacao", "public.excluir_transacao", "public.consultar_reversao_importacao"]),
+    new Set(["public.criar_importacao", "public.excluir_transacao", "public.consultar_reversao_importacao", "public.consultar_conta_bancaria", "public.transferir_entre_contas"]),
     "os três counts de resumo da allowlist casam com funções reais",
   );
-  assert.equal(r.naoTeto.length, 3);
+  assert.equal(r.naoTeto.length, 5);
 });

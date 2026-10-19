@@ -37,15 +37,16 @@ export function useImportacaoFatura() {
  const [cobrancas,setCobrancas]=useState<Cobranca[]>([]);
  const [pendente,setPendente]=useState(false);const [erro,setErro]=useState<string|null>(null);const [aviso,setAviso]=useState<string|null>(null);
  const [conferido,setConferido]=useState(false);
+ const [ocr,setOcr]=useState(false);const [progresso,setProgresso]=useState('');const cancelamento=useRef<AbortController|null>(null);
  async function processar(arquivo:File) {
   if(enviando.current)return;setErro(null);setAviso(null);
   if(!cartaoId||!/^\d{4}-(0[1-9]|1[0-2])$/.test(competencia)) {setErro('Selecione o cartão e o mês da fatura.');return;}
   const erroTamanho=validarTamanhoArquivoImportacao(arquivo.size);if(erroTamanho){setErro(erroTamanho);return;}
   const ext=extensaoDoArquivo(arquivo.name);if(!['pdf','csv','ofx','ofc','xlsx'].includes(ext)){setErro('Formato não suportado. Use PDF, CSV, OFX/OFC ou XLSX.');return;}
-  enviando.current=true;setPendente(true);
+  enviando.current=true;setPendente(true);setProgresso('Lendo arquivo…');cancelamento.current=new AbortController();
   try {
    const origem=origemPorExtensao(ext);
-   const [resultado,contexto,sha]=await Promise.all([lerArquivoFatura(arquivo,origem,competencia),carregarContexto(cartaoId),sha256DoArquivo(arquivo)]);
+   const [resultado,contexto,sha]=await Promise.all([lerArquivoFatura(arquivo,origem,competencia,{ocr,progresso:setProgresso,sinal:cancelamento.current.signal}),carregarContexto(cartaoId),sha256DoArquivo(arquivo)]);
    if(resultado.linhas.length>1000)throw new Error('Divida a fatura em lotes de até 1000 linhas.');
    const linhas=resultado.linhas.map(l=>{
     const anteriores=contexto.cobrancas.filter(c=>normalizar(c.descricao)===normalizar(l.descricao));
@@ -57,7 +58,7 @@ export function useImportacaoFatura() {
    });
    setPlanos(contexto.planos);setContratos(contexto.contratos);setCobrancas(contexto.cobrancas);setConferido(false);
    setRevisao({chave:crypto.randomUUID(),sha,origem,cartaoId,competencia,linhas,descartadas:resultado.descartadas,total_extraido:resultado.total_informado,total_informado:resultado.total_informado});
-  }catch(e){setErro(mensagemDeErro(e));}finally{enviando.current=false;setPendente(false);}
+  }catch(e){setErro(mensagemDeErro(e));}finally{enviando.current=false;setPendente(false);setProgresso('');cancelamento.current=null;}
  }
  function alterar(index:number,patch:Partial<LinhaFatura>) {
   setErro(null);setConferido(false);
@@ -94,6 +95,6 @@ export function useImportacaoFatura() {
    setRevisao(null);router.refresh();
   }catch(e){setErro(mensagemDeErro(e));}finally{enviando.current=false;setPendente(false);}
  }
- return {cartaoId,setCartaoId,competencia,setCompetencia,revisao,planos,contratos,cobrancas,pendente,erro,aviso,conferido,setConferido,processar,alterar,alterarTotal,confirmarDatas,confirmar,
+ return {cartaoId,setCartaoId,competencia,setCompetencia,revisao,planos,contratos,cobrancas,pendente,erro,aviso,conferido,setConferido,ocr,setOcr,progresso,cancelarLeitura:()=>cancelamento.current?.abort(),processar,alterar,alterarTotal,confirmarDatas,confirmar,
   descartar:()=>{setRevisao(null);setErro(null);}};
 }

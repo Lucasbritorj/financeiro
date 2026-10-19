@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.next-csp/
 /out/
 
 # production
@@ -63,3 +64,6 @@ __pycache__/
 /.work/*.png
 /.playwright-mcp/
 /.maestri/
+
+# Recursos públicos gerados das dependências de OCR durante build/dev.
+/public/ocr/

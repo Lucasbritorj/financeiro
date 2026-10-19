@@ -270,7 +270,10 @@ export function queixasDeGrant(privilegios: readonly Privilegio[]): QueixaRpc[] 
   for (const p of privilegios) {
     if (p.tipo !== "grant") continue;
     for (const papel of p.papeis) {
-      if (PAPEIS_PRETENDIDOS.indexOf(papel) !== -1) continue;
+      // Exceção estreita: vínculo validado pelo servidor, nunca pelo navegador.
+      const pretendidos = p.funcao === 'public.vincular_conta_pluggy_servidor'
+        ? ['service_role'] : PAPEIS_PRETENDIDOS;
+      if (pretendidos.indexOf(papel) !== -1) continue;
       queixas.push({
         regra: "grant",
         funcao: chaveDaFuncao(p.funcao),

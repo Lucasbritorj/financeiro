@@ -17,6 +17,8 @@ import { parseOfxExtrato } from "./ofx.ts";
 import { parsePdfExtrato } from "./pdf-extrato.ts";
 import type { OrigemImportacao } from "./importacao-preview.ts";
 import { analisarLinhaFatura, parsePdfFatura } from "./importacao-fatura.ts";
+import {validarOcrPdf,reconhecerPagina,type OpcoesOcr} from './ocr-financeiro.ts';
+import {prepararXlsxSeguro} from './xlsx-seguro.ts';
 
 /**
  * Ano de referência do extrato PDF: o ano de HOJE no fuso de negócio
@@ -90,9 +92,14 @@ export function celulaParaTexto(v: unknown): string {
 // XLSX -> matriz de strings (1ª aba). exceljs entra por import dinâmico:
 // só quem importa planilha paga o peso do bundle.
 export async function matrizDoXlsx(arquivo: File): Promise<string[][]> {
-  const { Workbook } = await import("exceljs");
+  if(arquivo.size>10485760)throw new Error('Arquivo acima do limite de 10 MB.');
+  const seguro=await prepararXlsxSeguro(new Uint8Array(await arquivo.arrayBuffer()));
+  const excel = await import("exceljs");
+  const Workbook = excel.Workbook ?? excel.default.Workbook;
   const wb = new Workbook();
-  await wb.xlsx.load(await arquivo.arrayBuffer());
+  // Layout e validações do Excel não são necessários para importar valores.
+  const opcoes={ignoreNodes:['mergeCells','cols','conditionalFormatting','dataValidations','extLst'],maxRows:10000,maxCols:256};
+  await wb.xlsx.load(seguro.buffer as ArrayBuffer,opcoes);
   const aba = wb.worksheets[0];
   if (!aba) return [];
   const matriz: string[][] = [];
@@ -146,7 +153,7 @@ export function linhasDaPagina(itens: readonly unknown[], separarTabelas = false
 
 // PDF -> linhas de texto (pdfjs-dist, import dinâmico). Agrupa os pedaços
 // pela coordenada Y para reconstruir as linhas visuais do extrato.
-export async function linhasDoPdf(arquivo: File, fatura = false): Promise<string[]> {
+export async function linhasDoPdf(arquivo: File, fatura = false,opcoes:OpcoesOcr={}): Promise<string[]> {
   const pdfjs = await import("pdfjs-dist");
   pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -156,11 +163,24 @@ export async function linhasDoPdf(arquivo: File, fatura = false): Promise<string
   const doc = await carregamento.promise;
   const linhas: string[] = [];
   try {
+  if(opcoes.ocr)validarOcrPdf(doc.numPages,arquivo.size);
+  if(doc.numPages>100)throw new Error('PDF acima de 100 páginas. Divida o arquivo.');
   for (let p = 1; p <= doc.numPages; p++) {
+    opcoes.sinal?.throwIfAborted();
     if(fatura) linhas.push('[[PAGINA]]');
     const pagina = await doc.getPage(p);
     const conteudo = await pagina.getTextContent();
-    linhas.push(...linhasDaPagina(conteudo.items,fatura));
+    const texto=linhasDaPagina(conteudo.items,fatura);
+    if(texto.join('').trim().length<20) {
+     if(!opcoes.ocr)throw new Error('PDF digitalizado ou sem texto. Marque “Ler PDF digitalizado com OCR” e tente novamente.');
+     opcoes.progresso?.(`Lendo página ${p} de ${doc.numPages} no navegador…`);
+     const viewport=pagina.getViewport({scale:2});
+     if(viewport.width*viewport.height>8_000_000)throw new Error('Página muito grande para OCR. Reduza a resolução.');
+     const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+     try{await pagina.render({canvas,viewport}).promise;const itens=await reconhecerPagina(canvas,opcoes);linhas.push(...linhasDaPagina(itens,fatura));}
+     finally{canvas.width=0;canvas.height=0;}
+    }else linhas.push(...texto);
+    pagina.cleanup();
   }
   return linhas;
   } finally { await carregamento.destroy(); }
@@ -174,6 +194,7 @@ export async function lerArquivoImportacao(
   arquivo: File,
   origem: OrigemImportacao,
   preset: PresetBanco,
+  opcoes:OpcoesOcr={},
 ): Promise<ResultadoParse> {
   if (origem === "OFX" || origem === "OFC") {
     return parseOfxExtrato(await lerTexto(arquivo));
@@ -182,14 +203,14 @@ export async function lerArquivoImportacao(
     return parseMatrizExtrato(await matrizDoXlsx(arquivo));
   }
   if (origem === "PDF") {
-    return parsePdfExtrato(await linhasDoPdf(arquivo), anoReferenciaPdf());
+    return parsePdfExtrato(await linhasDoPdf(arquivo,false,opcoes), anoReferenciaPdf());
   }
   return parseCsvExtrato(await lerTexto(arquivo), preset);
 }
 
 /** Decoders compartilhados; o contexto de fatura determina o significado do sinal. */
-export async function lerArquivoFatura(arquivo: File, origem: OrigemImportacao, competencia: string) {
-  if (origem === 'PDF') return parsePdfFatura(await linhasDoPdf(arquivo,true), competencia);
+export async function lerArquivoFatura(arquivo: File, origem: OrigemImportacao, competencia: string,opcoes:OpcoesOcr={}) {
+  if (origem === 'PDF') return parsePdfFatura(await linhasDoPdf(arquivo,true,opcoes), competencia);
   const resultado = origem==='CSV' ? parseCsvExtrato(await lerTexto(arquivo),'itau',true)
     : origem==='XLSX' ? parseMatrizExtrato(await matrizDoXlsx(arquivo),true)
     : await lerArquivoImportacao(arquivo, origem, 'itau');

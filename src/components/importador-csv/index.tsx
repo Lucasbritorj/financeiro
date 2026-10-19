@@ -14,6 +14,7 @@ export default function ImportadorCsv({ categorias, cartoes=[] }: { categorias: 
   const [modo,setModo]=useState('');
   const {
     preset,
+    ocr,setOcr,progresso,
     setPreset,
     etapa,
     pendente,
@@ -34,6 +35,7 @@ export default function ImportadorCsv({ categorias, cartoes=[] }: { categorias: 
       </select></label>
       {modo==='fatura'?<ImportadorFatura cartoes={cartoes} categorias={categorias}/>:modo==='extrato'?
       <PainelUpload
+        ocr={ocr} onOcr={setOcr} progresso={progresso}
         preset={preset}
         onPreset={setPreset}
         onArquivo={processarArquivo}

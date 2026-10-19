@@ -7,6 +7,7 @@ import type { Database } from "../../src/lib/database.types";
 import { hojeSaoPaulo } from "../../src/lib/data";
 import AxeBuilder from "@axe-core/playwright";
 import { pdfFicticio, pdfFicticioColunas } from './pdf-ficticio';
+import {pdfDigitalizado} from './pdf-digitalizado';
 
 // Serviço de autenticação, API e Postgres reais. Não usa banco nem usuário remoto.
 base.skip(process.env.E2E_LOCAL !== "1", "Execute npm run test:e2e:local com Supabase local.");
@@ -35,6 +36,81 @@ const test = base.extend<{ conta: { db: SupabaseClient<Database>; email: string 
       if (removido.error) throw removido.error;
     }
   },
+});
+
+test('XLSX seguro: arquivo comprimido continua para revisão no navegador',async({page,conta})=>{
+ const excel=await import('exceljs');const Workbook=excel.Workbook??excel.default.Workbook;
+ const wb=new Workbook();const aba=wb.addWorksheet('Extrato');
+ aba.addRow(['Data','Descrição','Valor']);aba.addRow(['01/10/2026','MERCADO XLSX TESTE',-12.34]);
+ const bytes=await wb.xlsx.writeBuffer({zip:{compression:'DEFLATE'}});
+ await page.goto('/importar');
+ await page.getByLabel('O que você quer importar?').selectOption('extrato');
+ await page.getByLabel('Arquivo do extrato (CSV, OFX, OFC, XLSX ou PDF)').setInputFiles({name:'extrato-sintetico.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(bytes)});
+ await expect(page.getByRole('button',{name:/Importar 1 transa/})).toBeVisible();
+ await expect(page.getByText('MERCADO XLSX TESTE').first()).toBeVisible();
+ const transacoes=await conta.db.from('transacoes_origem').select('id');expect(transacoes.data).toEqual([]);
+});
+
+test('orçamentos: limites independentes por mês e zero pela interface',async({page,conta})=>{
+ const categoria=await conta.db.rpc('criar_categoria',{p_nome:'Mercado mensal',p_tipo:'DESPESA'});expect(categoria.error).toBeNull();
+ await page.goto('/orcamentos?mes=2030-10');
+ const secao=page.getByRole('region',{name:'Orçamento de Mercado mensal'});
+ await secao.getByLabel('Limite de Mercado mensal em reais').fill('0,00');
+ await secao.getByRole('button',{name:'Salvar limite do mês'}).click();
+ await expect(secao).toContainText('Definido para este mês');
+ const outubro=(await conta.db.from('orcamentos_mensais').select('*').eq('mes','2030-10-01')).data!;expect(outubro[0].limite).toBe(0);
+ await page.goto('/orcamentos?mes=2030-11');await expect(secao).toContainText('Sem limite');
+ await secao.getByLabel('Limite de Mercado mensal em reais').fill('250,00');await secao.getByRole('button',{name:'Salvar limite do mês'}).click();
+ await expect(secao).toContainText('R$ 250,00');
+ expect((await conta.db.from('orcamentos_mensais').select('*').eq('mes','2030-10-01')).data![0].limite).toBe(0);
+ await expect(page.getByRole('heading',{name:'Orçamentos mensais'})).toBeVisible();
+ const a11y=await new AxeBuilder({page}).analyze();expect(a11y.violations).toEqual([]);
+});
+
+test('contas: importar, vincular sem duplicar gasto, conferir saldo e reabrir',async({page,conta})=>{
+ test.setTimeout(150_000);
+ await page.goto('/contas');
+ await page.getByLabel('Nome da conta').fill('Conta de teste');await page.getByLabel('Saldo inicial em reais').fill('100,00');await page.getByLabel('Data de início').fill('2026-09-01');
+ await page.getByRole('button',{name:'Cadastrar conta',exact:true}).click();
+ await expect(page.getByLabel('Conta',{exact:true})).toContainText('Conta de teste');
+ await page.getByLabel('Mês da conferência').fill('2026-09');
+ const t=await conta.db.rpc('processar_transacao_completa',{p_descricao:'Mercado conciliação',p_valor_total:1234,p_tipo:'DESPESA',p_forma_pagamento:'DEBITO',p_data_compra:'2026-09-03'});expect(t.error).toBeNull();
+ await page.getByRole('button',{name:'Atualizar conferência'}).click();
+ await page.getByLabel('Arquivo para a conta selecionada').setInputFiles({name:'extrato-teste.csv',mimeType:'text/csv',buffer:Buffer.from('Data;Descrição;Valor\n03/09/2026;Mercado conciliação;-12,34','utf8')});
+ const linha=page.getByRole('region',{name:'Movimentação Mercado conciliação'});await expect(linha).toBeVisible();
+ const tid=(t.data as {transacao_id:string}).transacao_id;
+ await linha.getByLabel('Como tratar esta movimentação').selectOption('VINCULAR:'+tid);await linha.getByRole('button',{name:'Confirmar tratamento'}).click();
+ await expect(linha).toContainText('Conciliada');expect((await conta.db.from('transacoes_origem').select('id')).data).toHaveLength(1);
+ await page.getByLabel('Saldo final no banco em reais').fill('87,66');await page.getByRole('button',{name:'Conferir e fechar até esta data'}).click();
+ await expect(page.getByText('Fechado até 2026-09-30.')).toBeVisible();
+ await page.getByLabel('Motivo para reabrir').fill('Conferir novamente o extrato');await page.getByRole('button',{name:'Reabrir conferência'}).click();
+ await expect(page.getByText('Fechado até 2026-09-30.')).toHaveCount(0);
+ for(const largura of [320,375,768,1024,1440,1920]){
+  await page.setViewportSize({width:largura,height:900});
+  for(const tema of ['claro','escuro']){
+   await page.evaluate(t=>document.documentElement.setAttribute('data-tema',t),tema);
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+   if([320,768,1024,1440].includes(largura))await page.screenshot({path:test.info().outputPath(`contas-${largura}-${tema}.png`),fullPage:true});
+  }
+ }
+ const a11y=await new AxeBuilder({page}).analyze();expect(a11y.violations).toEqual([]);
+ await page.getByText('Conexão pessoal com Meu Pluggy',{exact:true}).click();await expect(page.getByText('A integração ainda precisa ser configurada pelo titular. Você pode continuar usando arquivos de extrato.')).toBeVisible();
+});
+
+test('OCR: PDF digitalizado é lido localmente e permanece para revisão',async({page,conta})=>{
+ test.setTimeout(180_000);
+ const c=await conta.db.rpc('criar_conta_bancaria',{p_nome:'Conta OCR',p_saldo_inicial:0,p_data_inicial:'2030-10-01'});expect(c.error).toBeNull();
+ await page.goto('/contas');await page.getByLabel('Mês da conferência').fill('2030-10');
+ const jpeg=await page.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=1200;canvas.height=1600;const ctx=canvas.getContext('2d')!;ctx.fillStyle='white';ctx.fillRect(0,0,1200,1600);ctx.fillStyle='black';ctx.font='32px Arial';ctx.fillText('EXTRATO BANCARIO',60,100);ctx.fillText('03/10/2030 MERCADO DIGITAL 12,34 D',60,200);return canvas.toDataURL('image/jpeg',0.95).split(',')[1];});
+ const pdf=pdfDigitalizado(Buffer.from(jpeg,'base64'),1200,1600);
+ const externos:string[]=[];page.on('request',r=>{const u=new URL(r.url());if(u.protocol.startsWith('http')&&u.hostname!=='127.0.0.1')externos.push(u.hostname);});
+ await page.getByLabel('Ler PDF digitalizado com OCR',{exact:true}).check();
+ await page.getByLabel('Arquivo para a conta selecionada').setInputFiles({name:'extrato-digitalizado-teste.pdf',mimeType:'application/pdf',buffer:pdf});
+ await expect(page.getByRole('region',{name:/Movimentação MERCADO DIGITAL/})).toBeVisible({timeout:120_000});
+ const linhas=await conta.db.from('linhas_extrato_conta').select('*');expect(linhas.error).toBeNull();expect(linhas.data).toHaveLength(1);expect(linhas.data![0].valor).toBe(-1234);
+ expect((await conta.db.from('transacoes_origem').select('id')).data).toHaveLength(0);
+ expect(externos).toEqual([]);
+ await page.screenshot({path:test.info().outputPath('ocr-extrato-revisao.png'),fullPage:true});
 });
 
 test('planejamento: meses, alertas e cobranças vinculadas sem dupla contagem',async({page,conta})=>{

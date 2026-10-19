@@ -54,7 +54,7 @@ export default async function DashboardPage({
   // A janela do histórico já cobre o comparativo do herói e a análise.
   // gastoPorCategoria/resumoDoMes filtram por mês, então o histórico extra não
   // contamina donut/KPIs.
-  const [data, categoriasRes, carteiraRes, contasRes, cofrinhosRes] = await Promise.all([
+  const [data, categoriasRes, carteiraRes, contasRes, cofrinhosRes, limitesRes] = await Promise.all([
     lerTodasPaginas((cursor, tamanho) => {
       let consulta = supabase
       .from("vw_movimentos_competencia")
@@ -82,6 +82,7 @@ export default async function DashboardPage({
       .from("cofrinhos")
       .select("saldo_atual, valor_alvo, data_alvo")
       .eq("arquivado", false),
+    supabase.from('orcamentos_mensais').select('categoria_id,limite').eq('mes',janela.mes+'-01'),
   ]);
 
   const { mes } = janela;
@@ -92,12 +93,13 @@ export default async function DashboardPage({
   });
   const carteira = montarCarteira(carteiraRes.data);
   const precisaSemear = (categoriasRes.data?.length ?? 0) === 0;
-  const fechamento = categoriasRes.error || cofrinhosRes.error
+  const limitesPorCategoria=new Map((limitesRes.data??[]).map(o=>[o.categoria_id,o.limite]));
+  const fechamento = categoriasRes.error || cofrinhosRes.error || limitesRes.error
     ? null
     : montarFechamentoMensal({
         realizado: resumo.saidas,
         projecao,
-        categorias: categoriasRes.data ?? [],
+        categorias: (categoriasRes.data ?? []).map(c=>({...c,orcamento_mensal:limitesPorCategoria.has(c.id)?limitesPorCategoria.get(c.id)!:c.orcamento_mensal})),
         cofrinhos: cofrinhosRes.data ?? [],
       });
   const temDestaque = destaque && destaque.id !== "estavel";

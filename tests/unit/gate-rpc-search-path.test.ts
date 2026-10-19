@@ -41,14 +41,14 @@ import {
 // excluir_cartao: +3 statements, sem nome distinto novo.
 const ESPERADO = {
   // Central de assinaturas e três RPCs de edição da entrega de 16/10.
-  statements: 95,
-  definers: 82,
+  statements: 109,
+  definers: 96,
   naoDefiners: 13,
-  definersDistintos: 48,
+  definersDistintos: 62,
   /** Statements de definer com o search_path seguro. */
-  comVazio: 81,
+  comVazio: 95,
   /** Nomes distintos de definer com o search_path seguro. */
-  distintosComVazio: 47,
+  distintosComVazio: 61,
   /** A exceção declarada: rls_auto_enable, 'pg_catalog'. */
   violacoesCruas: 1,
 } as const;

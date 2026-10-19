@@ -13,6 +13,7 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    ".next-csp/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
@@ -21,6 +22,8 @@ const eslintConfig = defineConfig([
     "supabase/.temp/**",
     // Ferramentas e registros locais não fazem parte do código entregue.
     ".work/**",
+    // Assets do OCR copiados das dependências; auditoria pelo lockfile.
+    "public/ocr/**",
   ]),
 
   // As regras locais são um plugin CommonJS: require() ali é obrigatório,

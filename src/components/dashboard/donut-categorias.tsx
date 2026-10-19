@@ -100,7 +100,7 @@ export default function DonutCategorias({ categorias }: { categorias: GastoCateg
           const quase = !estourou && c.orcamento != null && c.gasto >= c.orcamento * 0.8;
           const pctBarra =
             c.orcamento != null
-              ? Math.min((c.gasto / c.orcamento) * 100, 100)
+              ? c.orcamento===0?(c.gasto>0?100:0):Math.min((c.gasto / c.orcamento) * 100, 100)
               : (c.gasto / total) * 100;
           const corBarra = estourou
             ? "var(--telha)"

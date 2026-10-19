@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { RegistrarServiceWorker } from "@/components/registrar-service-worker";
+import { headers } from "next/headers";
 
 // Tipografia Ateliê (modelo §2): serifa com caráter no herói/títulos,
 // grotesca no corpo, mono tabular nos números.
@@ -43,11 +44,14 @@ export const viewport: Viewport = {
 // Aplica o tema salvo ANTES do paint (sem flash). Escuro é o padrão.
 const SCRIPT_TEMA = `try{var t=localStorage.getItem('atelie-tema');if(t==='claro')document.documentElement.setAttribute('data-tema','claro');}catch(e){}`;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // headers() torna o HTML dinâmico; o proxy também encaminha CSP ao Next,
+  // que aplica o mesmo nonce aos scripts do framework.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
     <html
       lang="pt-BR"
@@ -55,7 +59,7 @@ export default function RootLayout({
       className={`${fraunces.variable} ${inter.variable} ${plexMono.variable} h-full antialiased`}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
       </head>
       <body className="min-h-full flex flex-col">
         <RegistrarServiceWorker />

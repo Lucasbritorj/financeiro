@@ -52,6 +52,11 @@ test("envelope estourado vira alerta com métrica", () => {
   assert.equal(est.severidade, "alerta");
   assert.match(est.segmentos.map((s) => s.texto).join(""), /passou o orçamento/);
 });
+test('limite zero gera alerta sem percentual impossível',()=>{
+ const dados=[tx(1000,'DESPESA','2026-07-05',cat('Mercado',0))];
+ const alerta=porId(analisarFinancas(dados,{mesISO:MES,hojeISO:HOJE,formatar:fmt}),'envelope-estouro-Mercado');
+ assert.ok(alerta);assert.equal(alerta.metrica,'Limite zero');
+});
 
 test("envelope entre 80% e 100% vira atenção", () => {
   const t = [tx(30000, "DESPESA", "2026-07-05", cat("Mercado", 35000))];

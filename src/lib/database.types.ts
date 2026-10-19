@@ -12,6 +12,10 @@ type TabelaLeitura<T> = { Row: T; Insert: never; Update: never; Relationships: [
 export type Database = {
   public: {
     Tables: {
+      contas_bancarias: TabelaLeitura<{id:string;user_id:string;nome:string;saldo_inicial:number;data_inicial:string;fechado_ate:string|null;saldo_fechado:number|null;created_at:string;pluggy_account_id:string|null;pluggy_item_id:string|null}>;
+      movimentos_conta: TabelaLeitura<{id:string;user_id:string;conta_id:string;data:string;valor:number;descricao:string;transacao_id:string|null;transferencia_id:string|null;created_at:string}>;
+      linhas_extrato_conta: TabelaLeitura<{id:string;user_id:string;conta_id:string;data:string;valor:number;descricao:string;movimento_id:string|null;ignorada:boolean;ambigua:boolean;origem:string}>;
+      orcamentos_mensais: TabelaLeitura<{id:string;user_id:string;categoria_id:string;mes:string;limite:number|null;updated_at:string}>;
       planos_parcelamento: TabelaLeitura<{id:string;user_id:string;cartao_id:string;descricao:string;competencia_base:string;parcela_base:number;parcelas_total:number;valor_previsto:number;created_at:string}>;
       cobrancas_importadas: TabelaLeitura<{id:string;user_id:string;lote_id:string;cartao_id:string;competencia:string;transacao_id:string;plano_id:string|null;parcela_numero:number|null;assinatura_id:string|null;data:string;descricao:string;valor:number;fingerprint:string;id_externo:string|null}>;
       lotes_fatura: TabelaLeitura<{id:string;user_id:string;cartao_id:string;competencia:string;arquivo_sha256:string|null;conteudo_hash:string;origem:string;resultado:Json;created_at:string;desfeita_em:string|null}>;
@@ -632,6 +636,18 @@ export type Database = {
       };
     };
     Functions: {
+      vincular_conta_pluggy:{Args:{p_conta_id:string;p_account_id:string;p_item_id:string};Returns:Json};
+      vincular_conta_pluggy_servidor:{Args:{p_user_id:string;p_conta_id:string;p_account_id:string;p_item_id:string};Returns:Json};
+      criar_conta_bancaria:{Args:{p_nome:string;p_saldo_inicial:number;p_data_inicial:string};Returns:Json};
+      transferir_entre_contas:{Args:{p_origem:string;p_destino:string;p_valor:number;p_data:string;p_chave:string};Returns:Json};
+      importar_extrato_conta:{Args:{p_conta_id:string;p_origem:string;p_linhas:Json};Returns:Json};
+      conciliar_linha_conta:{Args:{p_linha_id:string;p_acao:string;p_transacao_id?:string|null;p_movimento_id?:string|null;p_categoria_id?:string|null;p_fatura_id?:string|null};Returns:Json};
+      desfazer_conciliacao_conta:{Args:{p_linha_id:string};Returns:Json};
+      fechar_conciliacao_conta:{Args:{p_conta_id:string;p_ate:string;p_saldo_informado:number};Returns:Json};
+      reabrir_conciliacao_conta:{Args:{p_conta_id:string;p_motivo:string};Returns:Json};
+      consultar_conta_bancaria:{Args:{p_conta_id:string;p_de:string;p_ate:string};Returns:Json};
+      salvar_orcamento_mensal: {Args:{p_categoria_id:string;p_mes:string;p_limite:number|null};Returns:Json};
+      consultar_orcamentos_mensais: {Args:{p_mes:string};Returns:Json};
       consultar_reversao_importacao: {Args:{p_tipo:string;p_id:string};Returns:Json};
       desfazer_importacao: {Args:{p_tipo:string;p_id:string;p_token:string};Returns:Json};
       confirmar_fatura_importada: {Args:{p_chave:string;p_sha:string|null;p_cartao_id:string;p_competencia:string;p_origem:string;p_linhas:Json;p_total?:number|null;p_conferido?:boolean};Returns:Json};

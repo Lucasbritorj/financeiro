@@ -1,10 +1,25 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { fetchComTimeout } from "./lib/supabase/fetch";
+import { criarNonce, criarPoliticaScripts } from "./lib/csp";
 
 // Renova a sessão Supabase a cada request e protege as rotas do app.
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const nonce = criarNonce();
+  const csp = criarPoliticaScripts(nonce, process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NODE_ENV === 'development');
+  const requestHeaders = new Headers(request.headers);
+  // Sempre substituir valores recebidos do cliente antes de renderizar o Next.
+  requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('Content-Security-Policy', csp);
+  let response = NextResponse.next({ request: { headers: requestHeaders } });
+  function concluir(destino: NextResponse = response) {
+    if (destino !== response) {
+      for (const cookie of response.cookies.getAll()) destino.cookies.set(cookie);
+    }
+    destino.headers.set('Content-Security-Policy', csp);
+    destino.headers.set('Cache-Control', 'private, no-store');
+    return destino;
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,7 +34,8 @@ export async function proxy(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          response = NextResponse.next({ request });
+          requestHeaders.set('cookie', request.headers.get('cookie') ?? '');
+          response = NextResponse.next({ request: { headers: requestHeaders } });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
@@ -39,15 +55,15 @@ export async function proxy(request: NextRequest) {
   if (!user && !ehLogin && !ehRecuperacao) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    return concluir(NextResponse.redirect(url));
   }
   if (user && ehLogin) {
     const url = request.nextUrl.clone();
     url.pathname = "/transacoes";
-    return NextResponse.redirect(url);
+    return concluir(NextResponse.redirect(url));
   }
 
-  return response;
+  return concluir();
 }
 
 export const config = {
@@ -74,6 +90,6 @@ export const config = {
     // ponto solto é curinga: `favicon.ico` sem escape também dispensava do proxy
     // qualquer coisa começando em `/faviconXico`. Não havia rota alcançável por
     // ali, mas é dispensa de checagem de sessão concedida por acidente de regex.
-    "/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sw\\.js|sw-rotas\\.js|manifest\\.webmanifest|icons/|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|ocr/(?:worker\\.min\\.js|tesseract-core(?:-(?:lstm|simd|relaxedsimd))*\\.wasm(?:\\.js)?|por\\.traineddata\\.gz)$|favicon\\.ico|robots\\.txt|sw\\.js|sw-rotas\\.js|manifest\\.webmanifest|icons/|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

@@ -28,7 +28,7 @@
   // na whitelist decide pelo pathname PEDIDO, e as duas rotas públicas entregam
   // /transacoes a quem tem sessão — ver o comentário de ROTAS_PUBLICAS abaixo e
   // a checagem de `resposta.redirected` no sw.js.
-  const NOME_CACHE = "atelie-v3";
+  const NOME_CACHE = "atelie-v4";
 
   // Só o que é igual para todo mundo, logado ou não — MAS a lista sozinha não
   // basta, e é importante saber por quê. Ela julga o pathname pedido; o cache
@@ -76,6 +76,9 @@
   function podeGravarNavegacao(pathname, resposta) {
     if (!podeCachearNavegacao(pathname)) return false;
     if (!resposta || typeof resposta !== "object") return false;
+    const controle = resposta.headers?.get?.('Cache-Control') ?? '';
+    const csp = resposta.headers?.get?.('Content-Security-Policy') ?? '';
+    if (/\b(?:private|no-store)\b/i.test(controle) || /'nonce-/i.test(csp)) return false;
     return resposta.ok === true && resposta.redirected !== true;
   }
 
