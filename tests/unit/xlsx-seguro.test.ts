@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {deflateRawSync,crc32} from 'node:zlib';
+import {spawnSync} from 'node:child_process';
 import {prepararXlsxSeguro} from '../../src/lib/xlsx-seguro.ts';
 import {matrizDoXlsx,lerArquivoImportacao,lerArquivoFatura} from '../../src/lib/leitura-arquivo.ts';
 import ExcelJS from 'exceljs';
@@ -50,6 +51,14 @@ test('XLSX: nomes definidos não expandem intervalos ilimitados ou codificados',
 test('XLSX: XML malformado com muitos inícios de tag é recusado sem varredura quadrática',{timeout:5000},async()=>{
  const dados=zip([{nome:'xl/worksheets/sheet1.xml',texto:'<a'.repeat(100000)}]);
  await assert.rejects(matrizDoXlsx(new File([dados],'malformado.xlsx')));
+});
+test('XLSX: nome de tag longo sem fechamento não bloqueia a leitura',()=>{
+ const dados=zip([{nome:'xl/worksheets/sheet1.xml',texto:'<'+'a-'.repeat(100000)}]);
+ const modulo=new URL('../../src/lib/xlsx-seguro.ts',import.meta.url).href;
+ const fonte=`import {readFileSync} from 'node:fs';import {prepararXlsxSeguro} from ${JSON.stringify(modulo)};await prepararXlsxSeguro(new Uint8Array(Buffer.from(readFileSync(0,'utf8'),'base64')));`;
+ // Processo separado: o prazo encerra também uma regex síncrona travada.
+ const r=spawnSync(process.execPath,['--input-type=module','-e',fonte],{input:Buffer.from(dados).toString('base64'),encoding:'utf8',timeout:2000});
+ assert.equal(r.error,undefined,'A leitura excedeu o prazo em processo isolado.');assert.equal(r.status,0,r.stderr);
 });
 test('XLSX: planilha legítima STORE e DEFLATE preserva valores, extrato e fatura',async()=>{
  for(const compression of ['STORE','DEFLATE'] as const){

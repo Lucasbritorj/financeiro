@@ -54,7 +54,7 @@ function validarXml(bytes:Uint8Array,contagem:{elementos:number;referencias:numb
  let linhas=0,celulas=0;
  // Não atravessar outro '<' ao procurar fim de tag malformada: evita
  // percorrer repetidamente o restante do XML quando falta o fechamento.
- for(const tag of xml.matchAll(/<([A-Za-z][\w:.-]*)\b[^<>]*>/g)){
+ for(const tag of xml.matchAll(/<([A-Za-z][\w:.-]*)(?=[\s/>])[^<>]*>/g)){
   if(++contagem.elementos>100000)throw erro();
   const nome=tag[1].split(':').at(-1);
   if(nome==='row'){if(++linhas>10000)throw erro();numero(atributo(tag[0],'r'),10000);}
