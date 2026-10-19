@@ -43,3 +43,12 @@ Spec: docs/specs/conciliacao-operacao-pessoal.md.
 - [x] P3 Fase 1: vermelho comprovado por módulo ausente e RPC legada acessível.
 - [x] P3 Fase 2: correções implementadas, migração incremental e sem dependência nova.
 - [x] P3 Fase 3: 621 unitários, 173 componentes, 19 SQL, 2 E2E, build e lint sem erros; revisão independente encontrou vetor adicional tratado e testado. Gate agregado interrompido por inicialização de worker; etapa completa reexecutada e aprovada separadamente. Sem aceite remoto.
+
+## Publicação autorizada em 19/10/2026
+- [x] Backup privado com restauração conferida antes da instalação.
+- [x] Quatro migrações remotas aplicadas atomicamente, dados anteriores e permissões conferidos.
+- [x] Credencial privada de serviço configurada como segredo somente em Production.
+- [x] Fonte 0be645b no GitHub com CI integralmente aprovado: 622 unitários, 173 componentes e 44 jornadas autenticadas, além de SQL/build/lint/tipagem/interface.
+- [x] Preview validada com conta fictícia, desktop/celular, sem confirmar lançamentos; contas de teste removidas.
+- [x] Produção READY, alias principal verificado e checagem HTTP autenticada aprovada; proteção Vercel preservada. Navegador completo de produção continua condicionado à sessão Vercel, conforme LOG.
+- [x] PR17 aberto; nenhuma alteração direta ou merge em master.

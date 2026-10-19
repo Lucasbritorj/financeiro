@@ -37,3 +37,9 @@ Os registros de execução estão em `.work/csp-20261018-*` e `.work/csp-2026101
 ## Correções posteriores dos dois achados de produto
 
 Os pontos acima identificados como pendentes foram corrigidos e testados localmente em uma etapa posterior: ver [especificação das correções](specs/correcoes-pluggy-xlsx.md). O vínculo agora exige validação do servidor e RPC exclusiva de serviço; XLSX tem expansão real limitada, ZIP canônico e proteção de referências/nomes definidos. Provas finais: 621 unitários, 173 componentes, 19 arquivos SQL e 2 testes de navegador aprovados, build aprovado e lint sem erros. O gate agregado parou na inicialização de um worker; a etapa completa de componentes passou ao ser repetida separadamente. A migração e a configuração privada de servidor ainda não foram instaladas no ambiente publicado. O relatório selado não foi alterado nem recertificado.
+
+## Publicação posterior autorizada
+
+Em 19/10/2026, o titular autorizou instalar e publicar. As quatro migrações necessárias foram aplicadas atomicamente após backup restaurado e conferido, preservando os dados anteriores. O acesso de serviço foi configurado como segredo de produção, sem expor o valor. A revisão encontrou e corrigiu outra forma de varredura quadrática em nome de tag XML; teste com prazo em processo separado comprovou a regressão.
+
+Código publicado: `0be645b`, em https://financeiro-brito-s.vercel.app. CI completo aprovado: 622 unitários, 173 componentes, 44 jornadas autenticadas e SQL19/19, com build/tipagem/lint/interface/Lighthouse aprovados. Preview conferida no desktop/celular com conta fictícia removida ao final, sem confirmar lançamentos. Em produção, a CLI autenticada confirmou a página de login e os redirecionamentos de proteção; o navegador automatizado ficou limitado pela autenticação externa da Vercel, que foi preservada. O PR17 permanece aberto. Este registro não substitui ou recertifica o relatório canônico original.
