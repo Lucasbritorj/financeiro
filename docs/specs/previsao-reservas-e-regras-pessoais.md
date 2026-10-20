@@ -1,5 +1,5 @@
 # Previsão de saldo, reservas assistidas e regras pessoais
-**Pronto significa:** CA1–CA9 comprovados por testes de domínio, SQL local, navegador, build/lint/segurança e revisão independente. Status: implementação local validada em20/10/2026; provas e limites em .work/LOG.md. Instalação remota e publicação fora desta etapa.
+**Pronto significa:** CA1–CA9 comprovados por testes de domínio, SQL local, navegador, build/lint/segurança e revisão independente. Status: instalada e publicada com autorização de Lucas em20/10/2026, fonte2b8994b; provas e limites em .work/LOG.md. CI integral e conferências autenticadas aprovados; sem merge em master.
 
 ## Objetivo
 Integrar receitas previstas e compromissos a uma previsão de caixa, tornar as sugestões dos cofrinhos mais explicáveis com o histórico disponível e facilitar regras pessoais de categorização. Reaproveitar Planejamento, Reserva inteligente e regras já existentes.

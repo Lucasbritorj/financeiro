@@ -1,6 +1,7 @@
 # Obra atual — Previsão, reservas e regras pessoais
-Spec: docs/specs/previsao-reservas-e-regras-pessoais.md. Validado localmente em20/10/2026; migração remota e publicação fora desta etapa.
+Spec: docs/specs/previsao-reservas-e-regras-pessoais.md. Instalada e publicada com autorização em20/10/2026; fonte2b8994b. Provas no LOG.
 - [x] Instalação autorizada: backup restaurado57tabelas, uma migração instalada e dados públicos anteriores preservados; permissões conferidas.
+- [x] Publicação autorizada: GitHub atualizado,CI integral aprovado,Preview desktop/celular e produção READY no domínio principal; três painéis autenticados HTTP200 e fixtures removidas.
 - [x] CA1: saldo-base identificado e previsão90dias separada do caixa real; domínio/componentes/navegador.
 - [x] CA2: datas de caixa e fontes deduplicadas; SQL e fotografia única em concorrência.
 - [x] CA3: déficit intermediário, origem e incerteza explícitos; domínio e navegador.
