@@ -1,5 +1,7 @@
 # Obra atual — Receitas recorrentes com confirmação
-Spec: docs/specs/receitas-recorrentes-confirmadas.md. Aprovada em20/10/2026; aceite local, ainda não instalado/publicado.
+Spec: docs/specs/receitas-recorrentes-confirmadas.md. Aprovada e publicada em20/10/2026.
+- [x] Instalação autorizada: backup restaurado55tabelas,duas migrações em transação única e dados financeiros anteriores conferidos.
+- [x] Publicação autorizada: GitHub/CI aprovado,Preview desktop/celular,produção READY e domínio principal autenticado HTTP200.
 - [x] CA1: várias partes mensais e formulário orientado por tipo; componentes e navegador.
 - [x] CA2: último dia do mês sem perder dia contratado; unidade, SQL e fevereiro bissexto no navegador.
 - [x] CA3: confirmação do recebimento antes do caixa; SQL e saldo0→30000.
@@ -14,7 +16,7 @@ Spec: docs/specs/receitas-recorrentes-confirmadas.md. Aprovada em20/10/2026; ace
 - [x] Fase3: integração de interface, sem dependências novas.
 - [x] Fase4: verificações e segunda revisão independente aprovada.
 
-# Histórico local validado, ainda não publicado — Receitas no caixa (docs/specs/receitas-no-caixa.md)
+# Receitas no caixa — instalado e publicado em20/10/2026 (docs/specs/receitas-no-caixa.md)
 - [x] CA1: formulário orientado por tipo; componentes e navegador real.
 - [x] CA2: receita normal sem crédito/parcelamento; domínio, SQL e navegador.
 - [x] CA3: transferência externa reconhecida em cadastro/lista/filtro/edição/conciliação; SQL de vínculo real.

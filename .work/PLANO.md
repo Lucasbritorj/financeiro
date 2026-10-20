@@ -1,5 +1,5 @@
 # Obra atual — Receitas recorrentes com confirmação
-Spec: docs/specs/receitas-recorrentes-confirmadas.md. Plano aprovado por Lucas em20/10/2026; implementação e provas locais registradas em LOG. Sem instalação/publicação remota.
+Spec: docs/specs/receitas-recorrentes-confirmadas.md. Plano e instalação/publicação aprovados por Lucas em20/10/2026; migrações instaladas e versão006e5f9 publicada. Provas locais/remotas e backup restaurado registrados em LOG.
 1. Confirmar modo de recebimento com titular; criar testes vermelhos de calendário (inclusive fevereiro), ocorrências e operações repetidas. Alvos previstos: tests/unit/receitas-recorrentes.test.ts e supabase/tests/verificacao_receitas_recorrentes.sql.
 2. Implementar uma migração incremental após20261020120000: reaproveitar recorrencias, adicionar partes/ocorrências privadas e RPCs atômicas para confirmar individual/em conjunto, pular e desfazer. Integrar aplicar_recorrencias sem quebrar despesas/assinaturas. Validar somente com Postgres17 descartável e SQL completo, além de concorrência de confirmação.
 3. Integrar NovaTransacaoForm, Recorrencias e tipos de banco; confirmação humana e estados claros. Consultar docs Next locais e skill design-system antes de TSX; testes de componentes e navegador com conta sintética, duas datas, férias e antecipação.
