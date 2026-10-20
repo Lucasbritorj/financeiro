@@ -1,6 +1,6 @@
 # Obra atual — Reserva inteligente (docs/specs/reserva-inteligente.md)
 - [x] Instalação autorizada20/10: backup restaurado54tabelas e migração remota conferida, dados anteriores preservados.
-- [ ] Publicação autorizada20/10: conferir Preview, produção e domínio final.
+- [x] Publicação autorizada20/10: Preview desktop/celular, CI integral aprovado, produção READY e domínio principal com painel autenticado HTTP200.
 - [x] CA1: preferências privadas, substituição idempotente e sem aportes; SQL + E2E.
 - [x] CA2: cobertura dos três meses anteriores, sem inventar completude; domínio + consulta com erro explícito.
 - [x] CA3: consumo sem duplicação e bases conservadoras; domínio + regressões SQL existentes.
