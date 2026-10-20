@@ -26,3 +26,11 @@ test('salva apenas preferências e relata erro de rede',async()=>{
  await u.click(screen.getByRole('button',{name:'Salvar preferências'}));
  await waitFor(()=>expect(screen.getByRole('alert')).toHaveTextContent('Rede indisponível'));
 });
+
+test('valores conhecidos preenchem a simulação sem aporte nem receita futura',async()=>{
+ const u=userEvent.setup();render(<ReservaInteligente dados={{...dados,sugestaoCaixa:{caixa:-1000,compromissos:40000,data:'2026-10-20'}}} metas={[{id,nome:'Reserva',valor_alvo:1000000,saldo_atual:0,data_alvo:null}]} hoje="2026-10-20"/>);
+ await u.click(screen.getByRole('checkbox'));await u.click(screen.getByRole('button',{name:'Carregar valores conhecidos para conferir'}));
+ expect(screen.getByLabelText(/Caixa livre hoje/)).toHaveValue('0,00');expect(screen.getByLabelText(/Compromissos ainda/)).toHaveValue('400,00');
+ expect(screen.getByRole('checkbox')).not.toBeChecked();expect(rpc).not.toHaveBeenCalled();
+ await u.click(screen.getByRole('checkbox'));expect(screen.getByText(/Sem valor nesta proposta/)).toBeInTheDocument();
+});

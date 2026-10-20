@@ -162,7 +162,7 @@ test("'criar regra' só aparece em linha que já tem categoria", () => {
     transacao({ id: "a", categoria_id: "cat-mercado" }),
     transacao({ id: "b", categoria_id: null }),
   ]);
-  expect(screen.getAllByRole("button", { name: /criar regra/ })).toHaveLength(1);
+  expect(screen.getAllByRole("button", { name: /criar regra/i })).toHaveLength(1);
 });
 
 // ------------------------------ Recategorizar ------------------------------
@@ -184,19 +184,14 @@ test("trocar a categoria persiste e reflete na linha", async () => {
   expect(refresh).not.toHaveBeenCalled(); // troca simples não recarrega a rota
 });
 
-test("criar regra manda o padrão e recarrega a rota", async () => {
+test("criar regra abre revisão sem gravar automaticamente", async () => {
   const user = userEvent.setup();
   montar([transacao({ categoria_id: "cat-mercado", descricao: "  SUPERMERCADO XYZ  " })]);
 
-  await user.click(screen.getByRole("button", { name: /criar regra/ }));
-
-  await waitFor(() =>
-    expect(rpc).toHaveBeenCalledWith(
-      "definir_categoria_transacao",
-      expect.objectContaining({ p_criar_regra: true, p_padrao: "SUPERMERCADO XYZ" }),
-    ),
-  );
-  await waitFor(() => expect(refresh).toHaveBeenCalled());
+  await user.click(screen.getByRole("button", { name: /criar regra/i }));
+  expect(screen.getByLabelText('Texto a reconhecer')).toHaveValue('SUPERMERCADO XYZ');
+  expect(rpc).not.toHaveBeenCalled();
+  expect(refresh).not.toHaveBeenCalled();
 });
 
 test("erro ao recategorizar avisa e não muda a linha", async () => {

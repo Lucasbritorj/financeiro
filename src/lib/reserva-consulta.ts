@@ -4,6 +4,7 @@ import { lerTodasPaginas } from './leitura-paginada';
 import { deslocarMes } from './insights';
 import { montarPlanejamento, type AssinaturaPlanejamento } from './planejamento';
 import { basesHistoricas, coberturaMes, PREFERENCIAS_INICIAIS, validarPreferencias } from './reserva-inteligente';
+import {consultarPrevisao} from './previsao-consulta';
 
 export async function consultarReserva(db:SupabaseClient<Database>,hoje:string) {
  const mes=hoje.slice(0,7),inicio=deslocarMes(mes,-3)+'-01';
@@ -27,7 +28,10 @@ export async function consultarReserva(db:SupabaseClient<Database>,hoje:string) 
   if(!r.periodicidade||!['MENSAL','TRIMESTRAL','SEMESTRAL','ANUAL'].includes(r.periodicidade))throw new Error('Periodicidade de assinatura inválida.');
   return {...r,periodicidade:r.periodicidade as AssinaturaPlanejamento['periodicidade'],status:'ATIVA' as const};
  });
+ let sugestaoCaixa:{caixa:number;compromissos:number;data:string}|null=null;
+ try{const p=await consultarPrevisao(db,hoje);sugestaoCaixa={caixa:p.livre,compromissos:p.fluxo.compromissosMes,data:hoje};}catch{/* Assistência indisponível não remove modo manual nem inventa zeros. */}
  return {
+  sugestaoCaixa,
   preferencias:preferencias.data?validarPreferencias(preferencias.data.dados):PREFERENCIAS_INICIAIS,
   atualizadoEm:preferencias.data?.updated_at??null,
   cobertura,
@@ -35,4 +39,4 @@ export async function consultarReserva(db:SupabaseClient<Database>,hoje:string) 
   pisoGasto:montarPlanejamento({mes,cartoes,parcelas,previsoes,assinaturas,cobrancas})[0].total,
  };
 }
-export type DadosReserva=Awaited<ReturnType<typeof consultarReserva>>;
+export type DadosReserva=Omit<Awaited<ReturnType<typeof consultarReserva>>,'sugestaoCaixa'>&{sugestaoCaixa?:{caixa:number;compromissos:number;data:string}|null};

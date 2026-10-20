@@ -38,6 +38,44 @@ const test = base.extend<{ conta: { db: SupabaseClient<Database>; email: string 
   },
 });
 
+test('previsão: saldo por data, reserva assistida e regra revisada',async({page,conta},testInfo)=>{
+ test.setTimeout(120000);
+ await page.emulateMedia({reducedMotion:'reduce'});
+ const hoje=hojeSaoPaulo(),d=new Date(hoje+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+1);const vencimento=d.toISOString().slice(0,10);d.setUTCDate(d.getUTCDate()+1);const recebimento=d.toISOString().slice(0,10);
+ expect((await conta.db.rpc('criar_boleto',{p_descricao:'Conta antes do salário',p_valor:10000,p_data_vencimento:vencimento})).error).toBeNull();
+ expect((await conta.db.rpc('criar_receitas_previstas',{p_chave:randomUUID(),p_descricao:'Salário previsto teste',p_forma:'PIX',p_inicio:hoje,p_partes:[{dia:Number(recebimento.slice(-2)),valor:30000}],p_categoria_id:null})).error).toBeNull();
+ expect((await conta.db.rpc('criar_cofrinho',{p_nome:'Reserva da jornada',p_valor_alvo:100000,p_horizonte:'CURTO'})).error).toBeNull();
+ await page.goto('/planejamento');const painel=page.getByRole('region',{name:'Previsão de saldo · próximos 90 dias'});
+ await expect(painel).toBeVisible();await painel.getByLabel(/Saldo-base livre/).fill('0,00');await painel.getByRole('checkbox').check();
+ await expect(painel).toContainText('Pode faltar dinheiro');await expect(painel).toContainText('−');
+ await painel.getByLabel(/Saldo-base livre/).focus();await page.keyboard.press('Tab');await expect(painel.getByRole('checkbox')).toBeFocused();
+ expect((await conta.db.from('transacoes_origem').select('id').eq('tipo','RECEITA')).data).toEqual([]);
+ expect((await conta.db.from('vw_carteira').select('saldo_caixa').single()).data?.saldo_caixa).toBe(0);
+ for(const tema of ['claro','escuro']){
+  await page.evaluate(t=>document.documentElement.dataset.tema=t,tema);
+  await page.evaluate(()=>Promise.all(document.getAnimations().map(a=>a.finished.catch(()=>{}))));
+  expect((await new AxeBuilder({page}).include('section[aria-labelledby="titulo-previsao-saldo"]').analyze()).violations).toEqual([]);
+  for(const width of [320,375,768,1024,1440,1920]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if([320,768,1024,1440].includes(width)){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:testInfo.outputPath(`previsao-${tema}-${width}.png`),fullPage:true});}}
+ }
+ await page.goto('/cofrinhos');const reserva=page.getByRole('region',{name:'Quanto posso reservar?'});
+ await reserva.getByRole('button',{name:'Carregar valores conhecidos para conferir'}).click();await expect(reserva.getByLabel(/Caixa livre hoje/)).toHaveValue('0,00');await expect(reserva.getByRole('checkbox')).not.toBeChecked();
+ expect((await conta.db.from('movimentacoes_cofrinho').select('id')).data).toEqual([]);
+ for(const tema of ['claro','escuro']){await page.evaluate(t=>document.documentElement.dataset.tema=t,tema);await page.evaluate(()=>Promise.all(document.getAnimations().map(a=>a.finished.catch(()=>{}))));expect((await new AxeBuilder({page}).include('section[aria-labelledby="titulo-reserva"]').analyze()).violations).toEqual([]);for(const width of [320,375,768,1024,1440,1920]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if([320,768,1024,1440].includes(width)){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:testInfo.outputPath(`assistencia-${tema}-${width}.png`),fullPage:true});}}}
+ const categoria=await conta.db.rpc('criar_categoria',{p_nome:'Padaria da jornada',p_tipo:'DESPESA'});expect(categoria.error).toBeNull();const cat=(categoria.data as {categoria_id:string}).categoria_id;
+ const anterior=await conta.db.rpc('processar_transacao_completa',{p_descricao:'PADARIA AZUL JORNADA antiga',p_valor_total:100,p_tipo:'DESPESA',p_forma_pagamento:'PIX',p_cartao_id:null,p_data_compra:hoje,p_num_parcelas:1});expect(anterior.error).toBeNull();
+ const atual=await conta.db.rpc('processar_transacao_completa',{p_descricao:'PADARIA AZUL JORNADA atual',p_valor_total:100,p_tipo:'DESPESA',p_forma_pagamento:'PIX',p_cartao_id:null,p_data_compra:hoje,p_num_parcelas:1});expect(atual.error).toBeNull();
+ await page.goto('/transacoes');await page.getByLabel('Categoria de PADARIA AZUL JORNADA atual').selectOption(cat);
+ const linha=page.locator('.vidro-soberano').filter({has:page.getByLabel('Categoria de PADARIA AZUL JORNADA atual')}).last();
+ await linha.getByRole('button',{name:'Criar regra',exact:true}).click();await linha.getByLabel('Texto a reconhecer').fill('PADARIA AZUL JORNADA');
+ await linha.getByRole('button',{name:'Ver prévia'}).click();await expect(linha).toContainText('2 movimentação(ões)');
+ await expect(linha.getByRole('button',{name:'Salvar regra pessoal'})).toBeDisabled();await linha.getByLabel(/Conferi o texto/).check();
+ expect((await new AxeBuilder({page}).include('fieldset').analyze()).violations).toEqual([]);
+ for(const tema of ['claro','escuro']){await page.evaluate(t=>document.documentElement.dataset.tema=t,tema);await page.evaluate(()=>Promise.all(document.getAnimations().map(a=>a.finished.catch(()=>{}))));expect((await new AxeBuilder({page}).include('fieldset').analyze()).violations).toEqual([]);for(const width of [320,375,768,1024,1440,1920]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if([320,768,1024,1440].includes(width)){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:testInfo.outputPath(`regra-${tema}-${width}.png`),fullPage:true});}}}
+ await linha.getByRole('button',{name:'Salvar regra pessoal'}).click();await expect(linha.getByRole('status')).toContainText('Regra salva');
+ const antigaId=(anterior.data as {transacao_id:string}).transacao_id;expect((await conta.db.from('transacoes_origem').select('categoria_id').eq('id',antigaId).single()).data?.categoria_id).toBeNull();
+ const futura=await conta.db.rpc('processar_transacao_completa',{p_descricao:'PADARIA AZUL JORNADA nova',p_valor_total:100,p_tipo:'DESPESA',p_forma_pagamento:'PIX',p_cartao_id:null,p_data_compra:hoje,p_num_parcelas:1});expect(futura.error).toBeNull();expect((await conta.db.from('transacoes_origem').select('categoria_id').eq('id',(futura.data as {transacao_id:string}).transacao_id).single()).data?.categoria_id).toBe(cat);
+});
+
 test('receitas: tipo primeiro, recebimento à vista e sinais do caixa',async({page,conta},testInfo)=>{
  await page.goto('/transacoes');
  const form=page.getByRole('form',{name:'Nova transação',exact:true});

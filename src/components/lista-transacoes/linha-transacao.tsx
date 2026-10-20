@@ -6,6 +6,7 @@
 
 import { formatarCentavos, formatarCentavosAcessivel, formatarData } from "@/lib/money";
 import { BotaoExcluir } from "@/components/lista-transacoes/botao-excluir";
+import RegraPessoal from '@/components/regra-pessoal';
 import type { TransacaoLista, CategoriaOpcao } from "@/components/lista-transacoes/tipos";
 
 /** Boleto se identifica pelo vencimento; o resto, por data · forma · parcelas. */
@@ -95,16 +96,7 @@ export function LinhaTransacao({
             </option>
           ))}
       </select>
-      {t.categoria_id && (
-        <button
-          type="button"
-          className="botao-fantasma text-xs"
-          title="Sempre classificar descrições parecidas nesta categoria"
-          onClick={() => onRecategorizar(t, t.categoria_id!, true)}
-        >
-          criar regra
-        </button>
-      )}
+      {t.categoria_id && t.natureza!=='LIQUIDACAO_FATURA' && <RegraPessoal key={t.categoria_id} transacaoId={t.id} categoriaId={t.categoria_id} descricao={t.descricao}/>}
 
       <span
         className="numero-soberano ml-auto font-medium"

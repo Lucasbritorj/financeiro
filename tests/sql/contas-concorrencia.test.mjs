@@ -78,3 +78,38 @@ test('receita recorrente: pular e confirmar em paralelo preservam um único esta
  assert.equal(rs.filter(r=>r.status==='fulfilled').length,1);
  assert.equal(sql(`select ((status='PULADA' and transacao_id is null) or (status='RECEBIDA' and transacao_id is not null))::text from public.ocorrencias_receita where id='${id}'`),'true');
 });
+
+function prepararRegra(descricao){
+ const cat=consulta(`select public.criar_categoria('${descricao}',null,null,'DESPESA')->>'categoria_id'`);
+ const tx=consulta(`select public.processar_transacao_completa('${descricao}',100,'DESPESA','PIX',null,'2026-01-10',1)->>'transacao_id'`);
+ const versao=consulta(`select public.consultar_previa_regra('${tx}','${cat}','${descricao}',100)->>'versao'`);
+ return {cat,tx,versao};
+}
+
+test('regra pessoal: mesma chave simultânea cria uma regra e uma confirmação',async()=>{
+ const descricao='LOJA TESTE CONCORRENTE REPETICAO';const {cat,tx,versao}=prepararRegra(descricao);const chave=randomUUID();
+ const q=`select public.salvar_regra_pessoal('${chave}','${tx}','${cat}','${descricao}',100,'${versao}')`;
+ await Promise.all([paralelo(q),paralelo(q)]);
+ assert.equal(sql(`select count(*) from public.regras_categorizacao where user_id='${uid}' and padrao='${descricao}'`),'1');
+ assert.equal(sql(`select count(*) from public.tentativas_regra_pessoal where user_id='${uid}' and chave='${chave}'`),'1');
+ assert.equal(sql(`select categoria_id from public.transacoes_origem where id='${tx}'`),cat);
+});
+
+test('regra pessoal: duas chaves com prévia antiga exigem revisar a segunda aba',async()=>{
+ const descricao='LOJA TESTE CONCORRENTE VERSAO';const {cat,tx,versao}=prepararRegra(descricao);
+ const q=chave=>`select public.salvar_regra_pessoal('${chave}','${tx}','${cat}','${descricao}',100,'${versao}')`;
+ const rs=await Promise.allSettled([paralelo(q(randomUUID())),paralelo(q(randomUUID()))]);
+ assert.equal(rs.filter(r=>r.status==='fulfilled').length,1);assert.equal(rs.filter(r=>r.status==='rejected').length,1);
+ assert.equal(sql(`select count(*) from public.regras_categorizacao where user_id='${uid}' and padrao='${descricao}'`),'1');
+});
+
+test('snapshot de caixa e eventos conserva receita durante confirmação concorrente',async()=>{
+ const descricao='RECEITA SNAPSHOT CONCORRENTE';
+ consulta(`select public.criar_receitas_previstas('${randomUUID()}','${descricao}','PIX','2026-01-01','[{"dia":15,"valor":1000}]',null);select public.consultar_receitas_previstas('2026-01-01')`);
+ const ids=sql(`select array_agg(id)::text from public.ocorrencias_receita where user_id='${uid}' and descricao='${descricao}'`);
+ const esperado=Number(consulta("select public.consultar_eventos_caixa('2026-01-01')->>'caixa'"))+1000;
+ function total(){const p=JSON.parse(consulta("select public.consultar_eventos_caixa('2026-01-01')"));return p.caixa+p.eventos.filter(e=>e.descricao===descricao&&e.data==='2026-01-15').reduce((s,e)=>s+e.valor,0);}
+ const confirmacao=paralelo(`select public.confirmar_receitas_previstas('${randomUUID()}','${ids}','2026-01-10',1000,null);select pg_sleep(0.5)`);
+ for(let i=0;i<3;i++)assert.equal(total(),esperado);
+ await confirmacao;assert.equal(total(),esperado);
+});

@@ -1,4 +1,21 @@
-# Obra atual — Receitas recorrentes com confirmação
+# Obra atual — Previsão, reservas e regras pessoais
+Spec: docs/specs/previsao-reservas-e-regras-pessoais.md. Validado localmente em20/10/2026; migração remota e publicação fora desta etapa.
+- [x] Instalação autorizada: backup restaurado57tabelas, uma migração instalada e dados públicos anteriores preservados; permissões conferidas.
+- [x] CA1: saldo-base identificado e previsão90dias separada do caixa real; domínio/componentes/navegador.
+- [x] CA2: datas de caixa e fontes deduplicadas; SQL e fotografia única em concorrência.
+- [x] CA3: déficit intermediário, origem e incerteza explícitos; domínio e navegador.
+- [x] CA4: cobertura histórica e faltas, sem ausência virar zero; motor existente preservado e cofrinhos testados.
+- [x] CA5: sugestões explicadas por cofrinho, sem aportes automáticos; componentes e navegador.
+- [x] CA6: padrão editável e prévia antes de criar regra; componentes e navegador.
+- [x] CA7: regra atômica/repetível, conflitos e histórico preservado; SQL, duas abas e navegador.
+- [x] CA8: limites, paginação, erros, isolamento e consistência; adaptador, SQL e concorrência.
+- [x] CA9: integração e regressão visual/acessível/financeira; dois temas, seis larguras, axe/teclado/reduced-motion e16casos autenticados.
+- [x] Fase1: domínio/consultas com testes vermelhos antes do código.
+- [x] Fase2: planejamento/cofrinhos assistidos.
+- [x] Fase3: prévia e persistência de regras.
+- [x] Fase4:637unitários,187componentes,23arquivosSQL,10concorrentes,16casos de navegador,build/lint/segurança e revisão independente; detalhes/limites no LOG.
+
+# Histórico publicado — Receitas recorrentes com confirmação
 Spec: docs/specs/receitas-recorrentes-confirmadas.md. Aprovada e publicada em20/10/2026.
 - [x] Instalação autorizada: backup restaurado55tabelas,duas migrações em transação única e dados financeiros anteriores conferidos.
 - [x] Publicação autorizada: GitHub/CI aprovado,Preview desktop/celular,produção READY e domínio principal autenticado HTTP200.
