@@ -1,4 +1,19 @@
-# Obra — Conciliação e operação pessoal
+# Obra atual — Reserva inteligente (docs/specs/reserva-inteligente.md)
+- [x] Instalação autorizada20/10: backup restaurado54tabelas e migração remota conferida, dados anteriores preservados.
+- [ ] Publicação autorizada20/10: conferir Preview, produção e domínio final.
+- [x] CA1: preferências privadas, substituição idempotente e sem aportes; SQL + E2E.
+- [x] CA2: cobertura dos três meses anteriores, sem inventar completude; domínio + consulta com erro explícito.
+- [x] CA3: consumo sem duplicação e bases conservadoras; domínio + regressões SQL existentes.
+- [x] CA4: limites de caixa/mês/intenção e dinheiro em centavos; domínio + E2E com 1.003 aportes arquivados.
+- [x] CA5: distribuição determinística limitada aos alvos; domínio.
+- [x] CA6: simulação distinta de estimativa e confirmação humana; componentes + E2E.
+- [x] CA7: formulário, persistência e explicações; componentes + E2E.
+- [x] CA8: falhas explícitas e interface acessível/responsiva; componentes, axe, seis larguras/dois temas e Lighthouse autenticado.
+- [x] Fase 1: vermelho e domínio.
+- [x] Fase 2: SQL/consulta.
+- [x] Fase 3: interface, validação e revisão; segunda rodada independente aprovada.
+
+# Histórico — Conciliação e operação pessoal (itens não recertificados por esta obra)
 Spec: docs/specs/conciliacao-operacao-pessoal.md.
 - [x] CA1: e-mail recebido e tela correta confirmados pelo titular; senha preservada.
 - [x] CA2: legado auditado; 26 registros ativos corrigidos, total original confere, sem exclusão.

@@ -1,4 +1,11 @@
-# Obra — Conciliação e operação pessoal
+# Obra atual — Reserva inteligente
+Spec: docs/specs/reserva-inteligente.md. Implementação autorizada por Lucas em 19/10/2026, após proposta em três etapas.
+1. Motor e testes: src/lib/reserva-inteligente.ts; node --test tests/unit/reserva-inteligente.test.ts. Vermelho antes do código.
+2. Preferências/RLS/RPC e consulta paginada; testes SQL apenas em Postgres17 descartável, sem rede.
+3. Painel integrado a Cofrinhos, componentes e jornada local, build/lint, segurança e revisor somente leitura. Direção visual: Ateliê existente (ouro/verde/telha semânticos, títulos serifa e numerais mono), referências nos próprios cofrinhos/dashboard; sem dependências novas.
+Fases sequenciais; nenhum serviço remoto ou publicação autorizado nesta etapa.
+
+# Histórico — Conciliação e operação pessoal
 Spec: docs/specs/conciliacao-operacao-pessoal.md. Execução autorizada em 17/10/2026.
 1. Operação: recuperação autorizada sem trocar senha; auditoria privada do legado sem exclusão; backup/restore descartável. Dependências externas explícitas.
 2. Orçamentos mensais: testes vermelhos, RPC e tela por categoria/mês, consumo por competência, zero/ausente e isolamento.

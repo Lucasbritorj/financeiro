@@ -27,12 +27,12 @@ import {
 // contagem é o que faz "passou" significar "passou depois de olhar".
 
 const ESPERADO = {
-  tabelas: 20,
+  tabelas: 21,
   /** DECLARAÇÕES, não nomes: vw_carteira é redefinida três vezes. */
   views: 11,
   viewsDistintas: 8,
-  policies: 32,
-  rls: 20,
+  policies: 33,
+  rls: 21,
 } as const;
 
 // ---------------------------------------------------------------- o gate real

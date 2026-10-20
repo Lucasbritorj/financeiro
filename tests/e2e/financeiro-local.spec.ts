@@ -38,6 +38,47 @@ const test = base.extend<{ conta: { db: SupabaseClient<Database>; email: string 
   },
 });
 
+test('reserva inteligente: simula, salva preferências e mantém aportes explícitos',async({page,conta},testInfo)=>{
+ const cofre=await conta.db.rpc('criar_cofrinho',{p_nome:'Reserva planejada',p_valor_alvo:1000000,p_horizonte:'CURTO'});expect(cofre.error).toBeNull();
+ await page.goto('/cofrinhos');
+ const painel=page.getByRole('region',{name:'Quanto posso reservar?'});
+ await expect(painel).toBeVisible();
+ for(const [rotulo,valor] of [['Quanto desejo guardar por mês','1500,00'],['Margem de segurança','500,00'],['Caixa livre hoje','2000,00'],['Compromissos ainda a pagar','300,00'],['Receita mensal para simulação','6000,00'],['Gasto mensal para simulação','4300,00']])await painel.getByLabel(new RegExp(rotulo)).fill(valor);
+ await painel.getByRole('checkbox').check();
+ await expect(painel).toContainText('R$ 1.200,00 disponíveis para esta proposta');
+ await painel.getByRole('button',{name:'Salvar preferências'}).click();
+ await expect(painel.getByRole('status')).toContainText('Nenhum aporte foi realizado');
+ expect((await conta.db.from('movimentacoes_cofrinho').select('id')).data).toEqual([]);
+ await page.reload();await expect(painel.getByLabel(/Quanto desejo guardar/)).toHaveValue('1500,00');
+ await painel.getByRole('checkbox').check();
+ expect((await new AxeBuilder({page}).include('section[aria-labelledby="titulo-reserva"]').analyze()).violations).toEqual([]);
+ for(const tema of ['claro','escuro']){
+  await page.evaluate(t=>document.documentElement.dataset.tema=t,tema);
+  for(const largura of [320,375,768,1024,1440,1920]){
+   await page.setViewportSize({width:largura,height:900});
+   expect(await page.locator('body *').evaluateAll(es=>es.filter(e=>e.getBoundingClientRect().right>window.innerWidth+1).map(e=>({tag:e.tagName,classe:e.className,direita:e.getBoundingClientRect().right})).slice(0,12))).toEqual([]);
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+   if([320,768,1024,1440].includes(largura))await page.screenshot({path:testInfo.outputPath(`reserva-${tema}-${largura}.png`),fullPage:true});
+  }
+ }
+ await page.setViewportSize({width:320,height:900});
+ await painel.getByLabel(/Caixa livre hoje/).focus();await page.keyboard.press('Tab');
+ await expect(painel.getByLabel(/Compromissos ainda a pagar/)).toBeFocused();
+ await painel.getByLabel(/Caixa livre hoje/).fill('0,00');await painel.getByRole('checkbox').check();
+ await expect(painel).toContainText('R$ 0,00 disponíveis para esta proposta');
+ // Regressões do revisor: arquivo com >1.000 movimentos e cofre arquivado.
+ const arquivado=await conta.db.rpc('criar_cofrinho',{p_nome:'Meta arquivada',p_valor_alvo:1000000,p_horizonte:'CURTO'});expect(arquivado.error).toBeNull();
+ const arquivadoId=(arquivado.data as {cofrinho_id:string}).cofrinho_id;
+ const uid=(await conta.db.auth.getUser()).data.user!.id;
+ if(!/^[0-9a-f-]{36}$/.test(uid)||!/^[0-9a-f-]{36}$/.test(arquivadoId))throw new Error('ID de fixture inválido.');
+ execFileSync('docker',['exec','-i','supabase_db_financeiro-web','psql','-U','postgres','-d','postgres','-v','ON_ERROR_STOP=1','-q'],{
+  input:`begin; select set_config('request.jwt.claims','{"sub":"${uid}"}',true); set local role authenticated; select public.aportar_cofrinho('${arquivadoId}',100) from generate_series(1,1003); commit;`,stdio:['pipe','pipe','pipe'],timeout:30000,
+ });
+ expect((await conta.db.rpc('arquivar_cofrinho',{p_cofrinho_id:arquivadoId,p_arquivado:true})).error).toBeNull();
+ await page.reload();await painel.getByRole('checkbox').check();
+ await expect(painel).toContainText('R$ 197,00 disponíveis para esta proposta');
+});
+
 test('XLSX seguro: arquivo comprimido continua para revisão no navegador',async({page,conta})=>{
  const excel=await import('exceljs');const Workbook=excel.Workbook??excel.default.Workbook;
  const wb=new Workbook();const aba=wb.addWorksheet('Extrato');

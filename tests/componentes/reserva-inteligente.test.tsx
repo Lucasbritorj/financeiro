@@ -1,0 +1,28 @@
+import { test,expect,vi,beforeEach } from 'vitest';
+import {render,screen,waitFor} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import ReservaInteligente from '@/components/reserva-inteligente';
+import {PREFERENCIAS_INICIAIS} from '@/lib/reserva-inteligente';
+
+const rpc=vi.fn();
+vi.mock('@/lib/supabase/client',()=>({createClient:()=>({rpc})}));
+const id='00000000-0000-0000-0000-000000000001';
+const dados={preferencias:{...PREFERENCIAS_INICIAIS,intencao:150000,margem:50000,caixa:200000,compromissos:30000,receita:600000,gasto:430000},atualizadoEm:null,cobertura:[{mes:'2026-09',completo:false,faltas:['Conferir extrato de Itaú.']}],bases:null,pisoGasto:400000};
+function montar(){render(<ReservaInteligente dados={dados} metas={[{id,nome:'Reserva',valor_alvo:1000000,saldo_atual:0,data_alvo:null}]} hoje="2026-10-19"/>);}
+beforeEach(()=>{rpc.mockReset();rpc.mockReturnValue({abortSignal:()=>Promise.resolve({error:null})});});
+test('simulação exige conferência e não cria aportes',async()=>{
+ const u=userEvent.setup();montar();expect(screen.queryByText(/disponíveis para esta proposta/)).toBeNull();
+ await u.click(screen.getByRole('checkbox'));
+ expect(screen.getByText(/1\.200,00.*disponíveis para esta proposta/)).toBeInTheDocument();
+ expect(screen.getByText('Simulação')).toBeInTheDocument();expect(rpc).not.toHaveBeenCalled();
+ await u.clear(screen.getByLabelText(/Caixa livre hoje/));
+ expect(screen.queryByText(/disponíveis para esta proposta/)).toBeNull();expect(screen.getByText(/Faltam dados: informe/)).toBeInTheDocument();
+});
+test('salva apenas preferências e relata erro de rede',async()=>{
+ const u=userEvent.setup();montar();await u.click(screen.getByRole('button',{name:'Salvar preferências'}));
+ await waitFor(()=>expect(screen.getByRole('status')).toHaveTextContent('Nenhum aporte foi realizado'));
+ expect(rpc).toHaveBeenCalledExactlyOnceWith('salvar_preferencias_reserva',{p_dados:{...dados.preferencias,prioridades:{[id]:2}}});
+ rpc.mockReturnValueOnce({abortSignal:()=>Promise.reject(new Error('Rede indisponível'))});
+ await u.click(screen.getByRole('button',{name:'Salvar preferências'}));
+ await waitFor(()=>expect(screen.getByRole('alert')).toHaveTextContent('Rede indisponível'));
+});

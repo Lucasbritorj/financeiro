@@ -12,6 +12,7 @@ type TabelaLeitura<T> = { Row: T; Insert: never; Update: never; Relationships: [
 export type Database = {
   public: {
     Tables: {
+      preferencias_reserva: TabelaLeitura<{user_id:string;dados:Json;updated_at:string}>;
       contas_bancarias: TabelaLeitura<{id:string;user_id:string;nome:string;saldo_inicial:number;data_inicial:string;fechado_ate:string|null;saldo_fechado:number|null;created_at:string;pluggy_account_id:string|null;pluggy_item_id:string|null}>;
       movimentos_conta: TabelaLeitura<{id:string;user_id:string;conta_id:string;data:string;valor:number;descricao:string;transacao_id:string|null;transferencia_id:string|null;created_at:string}>;
       linhas_extrato_conta: TabelaLeitura<{id:string;user_id:string;conta_id:string;data:string;valor:number;descricao:string;movimento_id:string|null;ignorada:boolean;ambigua:boolean;origem:string}>;
@@ -636,6 +637,7 @@ export type Database = {
       };
     };
     Functions: {
+      salvar_preferencias_reserva:{Args:{p_dados:Json};Returns:Json};
       vincular_conta_pluggy:{Args:{p_conta_id:string;p_account_id:string;p_item_id:string};Returns:Json};
       vincular_conta_pluggy_servidor:{Args:{p_user_id:string;p_conta_id:string;p_account_id:string;p_item_id:string};Returns:Json};
       criar_conta_bancaria:{Args:{p_nome:string;p_saldo_inicial:number;p_data_inicial:string};Returns:Json};
