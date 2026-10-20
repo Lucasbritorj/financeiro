@@ -37,9 +37,38 @@ function registrar() {
   return screen.getByRole("button", { name: /^Registrar/ });
 }
 
+test('receita começa pelo tipo e limpa cartão, parcelas e categoria de despesa',async()=>{
+ const user=montar();
+ expect(screen.getAllByRole('combobox')[0]).toHaveAccessibleName('Tipo');
+ await user.selectOptions(screen.getByLabelText(/Categoria/),'cat-mercado');
+ await user.selectOptions(screen.getByLabelText('Tipo',{exact:true}),'RECEITA');
+ expect(screen.getByLabelText('Forma de recebimento')).toHaveValue('PIX');
+ expect(screen.getByLabelText('Data do recebimento')).toBeInTheDocument();
+ expect(screen.queryByLabelText(/Cartão/)).toBeNull();expect(screen.queryByLabelText(/Parcelas/)).toBeNull();
+ expect(screen.queryByRole('option',{name:'Crédito'})).toBeNull();
+ expect(screen.getByRole('option',{name:'Transferência'})).toHaveValue('TRANSFERENCIA');
+ expect(screen.getByLabelText('Categoria')).toHaveValue('');
+});
+
+test('receita envia recebimento e observação atomicamente, sem cartão ou parcelas',async()=>{
+ const user=montar();await user.selectOptions(screen.getByLabelText('Tipo',{exact:true}),'RECEITA');
+ await preencher(user,'100,00');await user.selectOptions(screen.getByLabelText('Forma de recebimento'),'TRANSFERENCIA');
+ await user.type(screen.getByLabelText('Observação (opcional)'),'Serviço recebido');await user.click(registrar());
+ expect(rpc).toHaveBeenCalledExactlyOnceWith('registrar_receita',expect.objectContaining({p_descricao:'Mercado',p_valor:10000,p_forma:'TRANSFERENCIA',p_observacao:'Serviço recebido',p_data:hojeSaoPaulo(),p_categoria_id:null,p_chave:expect.any(String)}));
+});
+
+test('falha de rede libera botão e mantém a chave ao repetir o recebimento',async()=>{
+ const falha=Promise.resolve({data:null,error:{message:'Conexão indisponível'}});
+ rpc.mockReturnValueOnce(Object.assign(falha,{abortSignal:()=>falha}));
+ const user=montar();await user.selectOptions(screen.getByLabelText('Tipo',{exact:true}),'RECEITA');await preencher(user,'100,00');
+ await user.click(registrar());expect(await screen.findByRole('alert')).toHaveTextContent('Conexão indisponível');expect(registrar()).toBeEnabled();
+ const chave=(rpc.mock.calls[0][1] as {p_chave:string}).p_chave;
+ await user.click(registrar());expect((rpc.mock.calls[1][1] as {p_chave:string}).p_chave).toBe(chave);
+});
+
 beforeEach(() => {
   rpc.mockReset();
-  rpc.mockResolvedValue({ data: null, error: null });
+  rpc.mockImplementation(()=>{const p=Promise.resolve({data:null,error:null});return Object.assign(p,{abortSignal:()=>p});});
   refresh.mockReset();
   // 01:30 UTC ainda é o dia anterior em São Paulo: detecta default em UTC.
   // Só Date é falso; userEvent e os timers do provider continuam reais.
@@ -103,12 +132,14 @@ test("categoria manual é atribuída ao id retornado pela criação", async () =
   });
 });
 
-test("boleto envia centavos e vencimento e força despesa após receita", async () => {
+test("boleto exige escolher despesa e preserva centavos e vencimento", async () => {
   const user = montar();
   await preencher(user);
   await user.selectOptions(screen.getByLabelText(/^Tipo/), "RECEITA");
+  expect(screen.queryByRole('option',{name:'Boleto / conta a pagar'})).toBeNull();
+  await user.selectOptions(screen.getByLabelText(/^Tipo/), "DESPESA");
   await user.selectOptions(screen.getByLabelText(/Forma de pagamento/), "BOLETO");
-  expect(screen.queryByLabelText(/^Tipo/)).not.toBeInTheDocument();
+  expect(screen.getByLabelText(/^Tipo/)).toHaveValue('DESPESA');
   expect(screen.getByLabelText(/Categoria/)).toHaveTextContent("Mercado");
   expect(screen.getByLabelText(/Categoria/)).not.toHaveTextContent("Salário");
   await user.type(screen.getByLabelText(/Vencimento/), "2026-08-20");

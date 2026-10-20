@@ -64,6 +64,8 @@ export default function Recorrencias({ categorias }: { categorias: CategoriaOpca
 
   useEffect(() => {
     void carregar();
+    const atualizar=()=>{void carregar();};window.addEventListener('receitas-recorrentes-alteradas',atualizar);
+    return()=>window.removeEventListener('receitas-recorrentes-alteradas',atualizar);
   }, [carregar]);
 
   async function criar(e: React.FormEvent) {
@@ -134,9 +136,10 @@ export default function Recorrencias({ categorias }: { categorias: CategoriaOpca
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-medium">Recorrências</h2>
         <span className="text-xs" style={{ color: "var(--grafite)" }}>
-          lançadas sozinhas todo mês, no dia marcado, ao abrir o app
+          despesas automáticas; receitas aguardam confirmação
         </span>
       </header>
+      <p className="text-sm">Para salário em uma ou mais datas, use <a href="#receitas-recorrentes" className="underline">Receitas recorrentes</a>. Aqui você também pausa e edita as regras já cadastradas.</p>
 
       {indisponivel && (
         <p className="text-sm" style={{ color: "var(--ouro)" }}>
@@ -159,6 +162,7 @@ export default function Recorrencias({ categorias }: { categorias: CategoriaOpca
               <span className="text-xs" style={{ color: "var(--grafite)" }}>
                 todo dia {r.dia_do_mes} · {r.forma_pagamento} · {nomeCategoria(r.categoria_id)}
                 {!r.ativa && " · pausada"}
+                {r.tipo==='RECEITA'&&' · confirmar em Receitas recorrentes'}
               </span>
               <span className="ml-auto flex gap-2">
                 <button type="button" className="botao-fantasma text-xs" onClick={() => alternar(r)}>
@@ -182,7 +186,7 @@ export default function Recorrencias({ categorias }: { categorias: CategoriaOpca
       {linhas && linhas.length === 0 && !formAberto && (
         <p className="text-sm" style={{ color: "var(--grafite)" }}>
           Nenhuma recorrência. Aluguel, assinatura no Pix, salário — cadastre uma
-          vez e o lançamento entra sozinho todo mês.
+          vez. Receitas ficam previstas até você confirmar o recebimento.
         </p>
       )}
 
@@ -224,7 +228,6 @@ export default function Recorrencias({ categorias }: { categorias: CategoriaOpca
               Tipo
               <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="campo-soberano">
                 <option value="DESPESA">Despesa</option>
-                <option value="RECEITA">Receita</option>
               </select>
             </label>
             <label className="text-sm">

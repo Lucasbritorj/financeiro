@@ -458,10 +458,12 @@ test("migrações reais: todo teto anti-abuso tem advisory lock antes do count",
       "public.criar_categoria",
       "public.criar_regra_categorizacao",
       "public.criar_cofrinho",
+      "public.criar_receitas_previstas",
+      "public.consultar_receitas_previstas",
     ]),
     "as quatro RPCs com teto anti-abuso (versão final na 0019) com lock antes do count",
   );
-  assert.equal(r.tetoComLock.length, 4);
+  assert.equal(r.tetoComLock.length, 6);
   assert.deepEqual(
     new Set(r.naoTeto.map((n) => n.nome)),
     new Set(["public.criar_importacao", "public.excluir_transacao", "public.consultar_reversao_importacao", "public.consultar_conta_bancaria", "public.transferir_entre_contas"]),

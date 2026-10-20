@@ -135,6 +135,8 @@ Licença [MIT](LICENSE).
    - `20261017220000_conexao_pluggy_pessoal.sql` (vínculo de conta com Meu Pluggy)
    - `20261019100000_pluggy_vinculo_servidor.sql` (revoga vínculo direto do navegador e restringe a operação ao servidor)
    - `20261019200000_preferencias_reserva.sql` (preferências privadas para simulação de reservas por cofrinho; não movimenta saldos)
+   - `20261020120000_receitas_no_caixa.sql` (receitas à vista, transferência externa, observação e repetição segura)
+   - `20261020150000_receitas_recorrentes_confirmadas.sql` (previsões de receita, partes mensais, confirmação, férias e antecipação)
 
    O vínculo Pluggy exige `SUPABASE_SERVICE_ROLE_KEY` somente no ambiente privado do servidor, além da configuração pessoal Pluggy. Nunca use prefixo `NEXT_PUBLIC_` nessa credencial nem a envie ao repositório. A rota valida o titular configurado, a propriedade da conta local e a conta retornada pelo provedor antes da chamada privilegiada. Sem a configuração privada, o vínculo retorna indisponibilidade; não existe fallback com a sessão do navegador.
 

@@ -7,6 +7,7 @@
 export type TransacaoLista = {
   id: string;
   descricao: string;
+  observacao?: string | null;
   valor_total: number;
   tipo: string;
   forma_pagamento: string;
@@ -29,4 +30,4 @@ export type CategoriaOpcao = { id: string; nome: string; tipo: string };
 export type CartaoOpcao = { id: string; nome: string };
 
 export const COLUNAS =
-  "id, descricao, valor_total, tipo, forma_pagamento, data_compra, data_vencimento, num_parcelas, created_at, categoria_id, source, natureza";
+  "id, descricao, valor_total, tipo, forma_pagamento, data_compra, data_vencimento, num_parcelas, created_at, categoria_id, source, natureza, observacao";

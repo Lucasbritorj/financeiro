@@ -102,6 +102,9 @@ export type Database = {
       };
       transacoes_origem: {
         Row: {
+          observacao: string | null;
+          chave_receita: string | null;
+          hash_receita: string | null;
           id: string;
           user_id: string;
           descricao: string;
@@ -637,6 +640,12 @@ export type Database = {
       };
     };
     Functions: {
+      criar_receitas_previstas:{Args:{p_chave:string;p_descricao:string;p_forma:string;p_inicio:string;p_partes:Json;p_categoria_id:string|null};Returns:Json};
+      consultar_receitas_previstas:{Args:{p_mes:string};Returns:Json};
+      confirmar_receitas_previstas:{Args:{p_chave:string;p_ids:string[];p_data:string;p_valor:number;p_observacao:string|null};Returns:Json};
+      marcar_receita_nao_recebida:{Args:{p_id:string;p_pular:boolean;p_motivo:string|null};Returns:Json};
+      desfazer_receita_prevista:{Args:{p_transacao_id:string};Returns:Json};
+      registrar_receita:{Args:{p_chave:string;p_descricao:string;p_valor:number;p_forma:string;p_data:string;p_observacao:string|null;p_categoria_id:string|null};Returns:Json};
       salvar_preferencias_reserva:{Args:{p_dados:Json};Returns:Json};
       vincular_conta_pluggy:{Args:{p_conta_id:string;p_account_id:string;p_item_id:string};Returns:Json};
       vincular_conta_pluggy_servidor:{Args:{p_user_id:string;p_conta_id:string;p_account_id:string;p_item_id:string};Returns:Json};

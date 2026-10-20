@@ -35,7 +35,7 @@ import {
 //   Vermelho — provado com SQL sintético inline em cada regra.
 
 const ESPERADO = {
-  definersDistintos: 63,
+  definersDistintos: 70,
   /** Uma só: o drift de pg_catalog do rls_auto_enable. */
   excecoes: 1,
 } as const;

@@ -1,4 +1,18 @@
-# Obra atual — Reserva inteligente
+# Obra atual — Receitas recorrentes com confirmação
+Spec: docs/specs/receitas-recorrentes-confirmadas.md. Plano aprovado por Lucas em20/10/2026; implementação e provas locais registradas em LOG. Sem instalação/publicação remota.
+1. Confirmar modo de recebimento com titular; criar testes vermelhos de calendário (inclusive fevereiro), ocorrências e operações repetidas. Alvos previstos: tests/unit/receitas-recorrentes.test.ts e supabase/tests/verificacao_receitas_recorrentes.sql.
+2. Implementar uma migração incremental após20261020120000: reaproveitar recorrencias, adicionar partes/ocorrências privadas e RPCs atômicas para confirmar individual/em conjunto, pular e desfazer. Integrar aplicar_recorrencias sem quebrar despesas/assinaturas. Validar somente com Postgres17 descartável e SQL completo, além de concorrência de confirmação.
+3. Integrar NovaTransacaoForm, Recorrencias e tipos de banco; confirmação humana e estados claros. Consultar docs Next locais e skill design-system antes de TSX; testes de componentes e navegador com conta sintética, duas datas, férias e antecipação.
+4. Gates locais, segurança, screenshots, revisão independente pela skill revisar e LOG/checklist. Sem migração remota/push/publicação nesta etapa. Fases sequenciais pois compartilham contratos/arquivos.
+
+# Histórico local validado, ainda não publicado — Receitas no caixa
+Spec: docs/specs/receitas-no-caixa.md.
+1. Componentes vermelhos: tipo primeiro, receita sem campos de crédito e limpeza de categorias; preservar testes de despesas.
+2. Receita autenticada/atômica, forma TRANSFERENCIA, observação e lista/filtros; SQL apenas em Postgres17 descartável, sem rede.
+3. Testes dependentes, build/lint/segurança e revisão independente. Não publicar nem migrar remoto nesta implementação.
+Vínculo direto à conta bancária aguarda resposta; etapas acima não gravam movimentos_conta.
+
+# Histórico — Reserva inteligente
 Spec: docs/specs/reserva-inteligente.md. Implementação autorizada por Lucas em 19/10/2026, após proposta em três etapas.
 1. Motor e testes: src/lib/reserva-inteligente.ts; node --test tests/unit/reserva-inteligente.test.ts. Vermelho antes do código.
 2. Preferências/RLS/RPC e consulta paginada; testes SQL apenas em Postgres17 descartável, sem rede.

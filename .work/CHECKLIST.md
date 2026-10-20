@@ -1,4 +1,32 @@
-# Obra atual — Reserva inteligente (docs/specs/reserva-inteligente.md)
+# Obra atual — Receitas recorrentes com confirmação
+Spec: docs/specs/receitas-recorrentes-confirmadas.md. Aprovada em20/10/2026; aceite local, ainda não instalado/publicado.
+- [x] CA1: várias partes mensais e formulário orientado por tipo; componentes e navegador.
+- [x] CA2: último dia do mês sem perder dia contratado; unidade, SQL e fevereiro bissexto no navegador.
+- [x] CA3: confirmação do recebimento antes do caixa; SQL e saldo0→30000.
+- [x] CA4: pular só uma ocorrência e desfazer marcação; SQL/componentes/navegador.
+- [x] CA5: receber antecipado/em conjunto sem duplicar; uma transação e duas ocorrências.
+- [x] CA6: desfazer recebimento respeitando bloqueios existentes; grupo, conciliação e período fechado em SQL real.
+- [x] CA7: repetição, concorrência e isolamento por titular; três corridas reais e RLS.
+- [x] CA8: histórico/início preservados e contratos anteriores mantidos; SQL completo22arquivos e regressão de pausa/edição.
+- [x] CA9: estados, falhas e interface responsiva/acessível; componente de rede, axe, teclado, dois temas/seis larguras e Lighthouse82/100.
+- [x] Fase1: decisão aprovada e testes vermelhos por módulo/RPC ausentes.
+- [x] Fase2: persistência e regras SQL apenas locais.
+- [x] Fase3: integração de interface, sem dependências novas.
+- [x] Fase4: verificações e segunda revisão independente aprovada.
+
+# Histórico local validado, ainda não publicado — Receitas no caixa (docs/specs/receitas-no-caixa.md)
+- [x] CA1: formulário orientado por tipo; componentes e navegador real.
+- [x] CA2: receita normal sem crédito/parcelamento; domínio, SQL e navegador.
+- [x] CA3: transferência externa reconhecida em cadastro/lista/filtro/edição/conciliação; SQL de vínculo real.
+- [x] CA4: escrita atômica e repetição segura, inclusive após substituir; SQL.
+- [x] CA5: sinais e regimes de caixa preservados; SQL completo e navegador.
+- [x] CA6: isolamento, limites e erros explícitos; SQL/componentes e nota literal no navegador.
+- [x] CA7: regressões e interface responsiva; gate, quatro larguras/dois temas, axe e teclado.
+- [x] Fase 1: vermelho de domínio/SQL antes da implementação; formulário.
+- [x] Fase 2: banco e integração, somente local.
+- [x] Fase 3: validações e segunda revisão independente aprovada.
+
+# Histórico — Reserva inteligente (docs/specs/reserva-inteligente.md)
 - [x] Instalação autorizada20/10: backup restaurado54tabelas e migração remota conferida, dados anteriores preservados.
 - [x] Publicação autorizada20/10: Preview desktop/celular, CI integral aprovado, produção READY e domínio principal com painel autenticado HTTP200.
 - [x] CA1: preferências privadas, substituição idempotente e sem aportes; SQL + E2E.

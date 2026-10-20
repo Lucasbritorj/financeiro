@@ -14,7 +14,7 @@ function rotuloDoMeio(t: TransacaoLista): string {
     return t.data_vencimento ? `Boleto · vence ${formatarData(t.data_vencimento)}` : "Boleto";
   }
   const parcelas = t.num_parcelas > 1 ? ` · ${t.num_parcelas}x` : "";
-  return `${formatarData(t.data_compra)} · ${t.forma_pagamento}${parcelas}`;
+  return `${formatarData(t.data_compra)} · ${t.forma_pagamento==='TRANSFERENCIA'?'Transferência':t.forma_pagamento}${parcelas}`;
 }
 
 function Selo({ texto, cor, titulo }: { texto: string; cor: string; titulo: string }) {
@@ -77,6 +77,7 @@ export function LinhaTransacao({
       <span className="text-xs" style={{ color: "var(--grafite)" }}>
         {rotuloDoMeio(t)}
       </span>
+      {t.observacao&&<span className="max-w-full break-words text-xs" style={{color:'var(--grafite)'}}>{t.observacao}</span>}
 
       <select
         value={t.categoria_id ?? ""}

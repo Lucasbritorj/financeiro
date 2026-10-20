@@ -54,3 +54,27 @@ test('outro titular não lê tabelas nem chama RPC de conta alheia',()=>{
  assert.equal(total,'0');
  assert.throws(()=>sql(`begin;${claims(outro)}select public.consultar_conta_bancaria('${origem}','2026-01-01','2026-01-31');rollback;`),/Conta não encontrada/);
 });
+
+function ocorrenciasSalario(descricao){
+ consulta(`select public.criar_receitas_previstas('${randomUUID()}','${descricao}','PIX','2026-01-01','[{"dia":15,"valor":1000},{"dia":30,"valor":2000}]',null);select public.consultar_receitas_previstas('2026-01-01')`);
+ return sql(`select array_agg(id order by id)::text from public.ocorrencias_receita where user_id='${uid}' and descricao='${descricao}'`);
+}
+test('receita recorrente: duas abas repetindo mesma confirmação criam uma entrada',async()=>{
+ const ids=ocorrenciasSalario('Salario concorrente mesma chave');const chave=randomUUID();
+ const q=`select public.confirmar_receitas_previstas('${chave}','${ids}','2026-01-10',3000,null)`;
+ await Promise.all([paralelo(q),paralelo(q)]);
+ assert.equal(sql(`select count(*) from public.confirmacoes_receita where user_id='${uid}' and chave='${chave}'`),'1');
+ assert.equal(sql(`select count(distinct transacao_id) from public.ocorrencias_receita where id=any('${ids}'::uuid[])`),'1');
+});
+test('receita recorrente: chaves distintas disputando as mesmas partes não duplicam renda',async()=>{
+ const ids=ocorrenciasSalario('Salario concorrente chaves diferentes');
+ const rs=await Promise.allSettled([paralelo(`select public.confirmar_receitas_previstas('${randomUUID()}','${ids}','2026-01-10',3000,null)`),paralelo(`select public.confirmar_receitas_previstas('${randomUUID()}','${ids}','2026-01-10',3000,null)`)]);
+ assert.equal(rs.filter(r=>r.status==='fulfilled').length,1);assert.equal(rs.filter(r=>r.status==='rejected').length,1);
+ assert.equal(sql(`select count(distinct transacao_id) from public.ocorrencias_receita where id=any('${ids}'::uuid[]) and status='RECEBIDA'`),'1');
+});
+test('receita recorrente: pular e confirmar em paralelo preservam um único estado financeiro',async()=>{
+ const ids=ocorrenciasSalario('Salario concorrente pulo');const id=sql(`select id from public.ocorrencias_receita where id=any('${ids}'::uuid[]) order by id limit 1`);
+ const rs=await Promise.allSettled([paralelo(`select public.confirmar_receitas_previstas('${randomUUID()}',array['${id}'::uuid],'2026-01-10',1000,null)`),paralelo(`select public.marcar_receita_nao_recebida('${id}',true,null)`)]);
+ assert.equal(rs.filter(r=>r.status==='fulfilled').length,1);
+ assert.equal(sql(`select ((status='PULADA' and transacao_id is null) or (status='RECEBIDA' and transacao_id is not null))::text from public.ocorrencias_receita where id='${id}'`),'true');
+});

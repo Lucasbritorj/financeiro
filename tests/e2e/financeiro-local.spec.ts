@@ -38,6 +38,83 @@ const test = base.extend<{ conta: { db: SupabaseClient<Database>; email: string 
   },
 });
 
+test('receitas: tipo primeiro, recebimento à vista e sinais do caixa',async({page,conta},testInfo)=>{
+ await page.goto('/transacoes');
+ const form=page.getByRole('form',{name:'Nova transação',exact:true});
+ await expect(form.locator('input,select,textarea').first()).toHaveAccessibleName('Tipo');
+ await form.getByRole('combobox',{name:'Tipo',exact:true}).selectOption('RECEITA');
+ await expect(form.getByLabel('Data do recebimento')).toBeVisible();
+ await form.getByRole('combobox',{name:'Tipo',exact:true}).focus();await page.keyboard.press('Tab');
+ await expect(form.getByLabel('Descrição',{exact:true})).toBeFocused();
+ await expect(form.getByLabel('Cartão',{exact:true})).toHaveCount(0);await expect(form.getByLabel('Parcelas')).toHaveCount(0);
+ const nota='<img src=x onerror="window.__notaExecutada=1">';
+ for(const [forma,valor] of [['PIX','100,00'],['TRANSFERENCIA','20,00'],['DINHEIRO','10,00']]){
+  await form.getByLabel('Descrição',{exact:true}).fill(`Receita teste ${forma}`);
+  await form.getByLabel('Valor (R$)',{exact:true}).fill(valor);
+  await form.getByLabel('Forma de recebimento').selectOption(forma);
+  await form.getByLabel('Observação (opcional)').fill(nota);
+  await form.getByRole('button',{name:'Registrar receita',exact:true}).click();
+  await expect(form.getByLabel('Valor (R$)',{exact:true})).toHaveValue('');
+ }
+ const tx=await conta.db.from('transacoes_origem').select('tipo,forma_pagamento,cartao_id,num_parcelas,observacao');expect(tx.error).toBeNull();expect(tx.data).toHaveLength(3);
+ for(const t of tx.data!){expect(t.tipo).toBe('RECEITA');expect(t.cartao_id).toBeNull();expect(t.num_parcelas).toBe(1);expect(t.observacao).toBe(nota);}
+ expect((await conta.db.from('vw_carteira').select('saldo_caixa').single()).data?.saldo_caixa).toBe(13000);
+ expect(await page.evaluate(()=>Reflect.get(window,'__notaExecutada'))).toBeUndefined();
+ await expect(page.getByText(nota,{exact:true})).toHaveCount(3);
+ await form.getByRole('combobox',{name:'Tipo',exact:true}).selectOption('DESPESA');
+ await form.getByLabel('Descrição',{exact:true}).fill('Despesa à vista teste');await form.getByLabel('Valor (R$)',{exact:true}).fill('30,00');
+ await form.getByLabel('Forma de pagamento').selectOption('PIX');await form.getByRole('button',{name:'Registrar',exact:true}).click();
+ await expect(form.getByLabel('Valor (R$)',{exact:true})).toHaveValue('');
+ expect((await conta.db.from('vw_carteira').select('saldo_caixa').single()).data?.saldo_caixa).toBe(10000);
+ await form.getByRole('combobox',{name:'Tipo',exact:true}).selectOption('RECEITA');
+ expect((await new AxeBuilder({page}).include('form[aria-label="Nova transação"]').analyze()).violations).toEqual([]);
+ await expect(page.locator('.toast-pilha [role="status"]')).toHaveCount(0);
+ for(const tema of ['claro','escuro']){
+  await page.evaluate(t=>document.documentElement.dataset.tema=t,tema);
+  for(const width of [320,768,1024,1440]){
+   await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+   await page.screenshot({path:testInfo.outputPath(`receita-${tema}-${width}.png`),fullPage:true,animations:'disabled'});
+  }
+ }
+});
+
+test('receitas: recorrência com férias, duas partes e antecipação sem duplicar caixa',async({page,conta},testInfo)=>{
+ await page.goto('/transacoes');const painel=page.getByRole('region',{name:'Receitas recorrentes',exact:true});
+ await painel.getByLabel('Mês de referência').fill('2024-02');
+ await painel.getByRole('button',{name:'Programar receita recorrente',exact:true}).click();
+ await painel.getByLabel('Descrição da receita',{exact:true}).fill('Salário recorrente teste');
+ await painel.getByLabel('Prever a partir de').fill('2024-02-01');
+ await painel.getByLabel('Valor da parte 1 (R$)').fill('100,00');await painel.getByLabel('Valor da parte 2 (R$)').fill('200,00');
+ await painel.getByRole('button',{name:'Salvar programação'}).click();
+ const dia15=painel.getByRole('listitem').filter({hasText:'15/02/2024'});const dia30=painel.getByRole('listitem').filter({hasText:'29/02/2024'});
+ await expect(dia15).toContainText('Prevista');await expect(dia30).toContainText('Prevista');
+ expect((await conta.db.from('vw_carteira').select('saldo_caixa').single()).data?.saldo_caixa).toBe(0);
+ await painel.getByLabel('Motivo para não receber (opcional)').fill('Férias');await dia15.getByRole('button',{name:'Não recebi nesta data'}).click();
+ await expect(dia15).toContainText('Não recebida');await expect(dia30).toContainText('Prevista');
+ await dia15.getByRole('button',{name:'Desfazer marcação'}).click();await expect(dia15).toContainText('Prevista');
+ await dia15.getByRole('checkbox').check();await dia30.getByRole('checkbox').check();
+ await painel.getByRole('button',{name:'Recebi juntas/antecipado'}).click();
+ await painel.getByLabel('Data efetivamente recebida').fill('2024-01-25');
+ await expect(painel.getByLabel('Total recebido (R$)')).toHaveValue('300,00');
+ await painel.getByRole('button',{name:'Confirmar recebimento',exact:true}).click();
+ await expect(dia15).toContainText('Recebida');await expect(dia30).toContainText('Recebida');
+ expect((await conta.db.from('vw_carteira').select('saldo_caixa').single()).data?.saldo_caixa).toBe(30000);
+ const tx=await conta.db.from('transacoes_origem').select('id,data_compra').is('deleted_at',null);expect(tx.data).toHaveLength(1);expect(tx.data![0].data_compra).toBe('2024-01-25');
+ await page.reload();await painel.getByLabel('Mês de referência').fill('2024-02');await expect(dia15).toContainText('Recebida');
+ await dia15.getByRole('button',{name:'Desfazer recebimento'}).click();await page.getByRole('dialog').getByRole('button',{name:'Desfazer recebimento',exact:true}).click();
+ await expect(dia15).toContainText('Prevista');await expect(dia30).toContainText('Prevista');
+ expect((await conta.db.from('vw_carteira').select('saldo_caixa').single()).data?.saldo_caixa).toBe(0);
+ await painel.getByLabel('Mês de referência').fill('2024-03');await expect(painel).toContainText('30/03/2024');
+ await painel.getByRole('button',{name:'Programar receita recorrente',exact:true}).focus();await page.keyboard.press('Tab');await expect(painel.getByLabel('Selecionar Salário recorrente teste em 15/03/2024')).toBeFocused();
+ expect((await new AxeBuilder({page}).include('#receitas-recorrentes').analyze()).violations).toEqual([]);
+ await page.emulateMedia({reducedMotion:'reduce'});
+ for(const tema of ['claro','escuro']){await page.evaluate(t=>document.documentElement.dataset.tema=t,tema);
+  for(const width of [320,375,768,1024,1440,1920]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+   if([320,768,1024,1440].includes(width)){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:testInfo.outputPath(`recorrencia-${tema}-${width}.png`),fullPage:true,animations:'disabled'});}
+  }
+ }
+});
+
 test('reserva inteligente: simula, salva preferências e mantém aportes explícitos',async({page,conta},testInfo)=>{
  const cofre=await conta.db.rpc('criar_cofrinho',{p_nome:'Reserva planejada',p_valor_alvo:1000000,p_horizonte:'CURTO'});expect(cofre.error).toBeNull();
  await page.goto('/cofrinhos');
