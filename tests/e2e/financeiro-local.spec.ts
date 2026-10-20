@@ -568,7 +568,12 @@ test("edita cadastros nas quatro telas e mantém o saldo da meta", async ({ page
     if (rota === "cartoes") await page.screenshot({ path: test.info().outputPath("editar-cartao.png"), fullPage: true });
     await formulario.getByLabel(campo, { exact: true }).fill(valor);
     await formulario.getByRole("button", { name: "Salvar alterações" }).click();
-    await expect(page.getByText(valor, { exact: true })).toBeVisible();
+    // O painel de reserva também mostra o nome da meta: conferir o cartão
+    // que contém os controles de aporte, sem escolher arbitrariamente uma cópia.
+    const resultado = rota === "cofrinhos"
+      ? page.locator("div.vidro-soberano").filter({ has: page.getByLabel("Tipo de movimentação", { exact: true }) })
+      : page;
+    await expect(resultado.getByText(valor, { exact: true })).toBeVisible();
   }
   expect((await conta.db.from("cofrinhos").select("saldo_atual").eq("id", cofreId).single()).data?.saldo_atual).toBe(500);
 });
