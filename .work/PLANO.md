@@ -1,4 +1,13 @@
-# Obra atual — Previsão, reservas e regras pessoais
+# Obra atual — Correções da auditoria de segurança
+Spec: docs/specs/correcoes-auditoria-seguranca.md. Plano aprovado em21/10/2026.
+Estado: implementação local validada; backup automático local instalado e executado. CA2 (3 dependências dev sem versão corrigida), CA9/Fase4 (Hostinger e alertas) e instalação/publicação remotas permanecem pendentes. Procedimento e limites em docs/seguranca-operacao.md.
+1. Inventário/compatibilidade: preservar worktree antigo, confirmar docs Next e testes, atualizar dependências vulneráveis com consulta atual.
+2. Fronteira de sessão: cookies/rotas de autenticação e dados, origem/inputs, logout e recuperação; testes vermelhos antes do código.
+3. Limites persistentes e diagnóstico seguro: migração incremental, Pluggy/exportação, mensagens e eventos; SQL somente Postgres17 descartável.
+4. Backup criptografado/rotina e integração externa privada disponível; teste de adulteração/restauração e agendamento sem sobreposição.
+5. Regressões, segurança e revisão independente, provas e limites de operação/publicação. Fases sequenciais por contratos compartilhados.
+
+# Histórico — Previsão, reservas e regras pessoais
 Spec: docs/specs/previsao-reservas-e-regras-pessoais.md. Fases1–4 validadas e entrega autorizada em20/10/2026: uma migração instalada após backup restaurado,GitHub/CI aprovados e fonte2b8994b publicada. Entregas anteriores preservadas. Provas no LOG; sem merge em master.
 1. Motor de projeção90dias: testar antes receita prevista/recebida/pulada, menor saldo antes do salário, vencimentos, própria transferência e compra/fatura sem duplicação. Reusar src/lib/planejamento-consulta.ts e fontes de receitas/contas existentes; adicionar domínio e testes dirigidos, sem escrita financeira. Verificação: node --test tests/unit/<novos-testes>.test.ts e invariantes dependentes.
 2. Planejamento/Cofrinhos: reusar reserva-inteligente/reserva-consulta e coberturaMes. Carregar base/compromissos conhecidos para revisão, mostrar incompletude e motivo de distribuição por meta; conservar controles de simulação. Ler docs Next e skill design-system antes de TSX; componentes e browser local com conta sintética, sem banco remoto.

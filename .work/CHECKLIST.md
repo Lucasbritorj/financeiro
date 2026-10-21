@@ -1,4 +1,23 @@
-# Obra atual — Previsão, reservas e regras pessoais
+# Obra atual — Correções da auditoria de segurança
+Spec: docs/specs/correcoes-auditoria-seguranca.md.
+- [x] CA1: checkout atual e trabalho antigo preservados; CSP/XLSX mantidos.
+- [ ] CA2: dependências sem avisos correspondentes e verificações preservadas.
+- [x] CA3: sessão HttpOnly/Secure/SameSite e cliente compatível sem tokens.
+- [x] CA4: logout/alteração de senha com falhas explícitas e política documentada.
+- [x] CA5: limite persistente atômico antes das operações custosas.
+- [x] CA6: origem/caminho/método/tamanho na ponte de servidor.
+- [x] CA7: erros de infraestrutura ocultos e negócio preservado.
+- [x] CA8: backup criptografado/restaurado, rotina exclusiva e diagnóstico.
+- [ ] CA9: eventos sem segredos e destinos externos conferidos.
+- [x] CA10: infraestrutura remota verificada ou impedimentos documentados em docs/seguranca-operacao.md; não publicada.
+- [x] CA11: regressões e revisão independente; ressalvas operacionais e dependências sem patch registradas.
+- [x] Fase1: inventário/dependências disponíveis; CA2 pendente dos mantenedores (3 pacotes dev).
+- [x] Fase2: sessão e autenticação.
+- [x] Fase3: limites/erros/eventos; alerta externo pendente em CA9.
+- [ ] Fase4: backup/rotina.
+- [x] Fase5: verificações/entrega local; instalação/publicação remotas pendentes.
+
+# Histórico — Previsão, reservas e regras pessoais
 Spec: docs/specs/previsao-reservas-e-regras-pessoais.md. Instalada e publicada com autorização em20/10/2026; fonte2b8994b. Provas no LOG.
 - [x] Instalação autorizada: backup restaurado57tabelas, uma migração instalada e dados públicos anteriores preservados; permissões conferidas.
 - [x] Publicação autorizada: GitHub atualizado,CI integral aprovado,Preview desktop/celular e produção READY no domínio principal; três painéis autenticados HTTP200 e fixtures removidas.
