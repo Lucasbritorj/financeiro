@@ -89,6 +89,7 @@ export function CamposCompletos({
             <option value="CREDITO">Crédito</option>
             <option value="DEBITO">Débito</option>
             <option value="PIX">Pix</option>
+            <option value="TRANSFERENCIA">Transferência</option>
             <option value="DINHEIRO">Dinheiro</option>
           </select>
         </label>

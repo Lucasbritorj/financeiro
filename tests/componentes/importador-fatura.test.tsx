@@ -102,7 +102,7 @@ test('falha de confirmação preserva revisão/chave e libera nova tentativa',as
  await act(()=>result.current.processar(new File(['pdf'],'fatura.pdf')));
  rpc.mockRejectedValueOnce(new Error('rede indisponível'));
  await act(()=>result.current.confirmar());
- expect(result.current.erro).toMatch(/rede/);expect(result.current.pendente).toBe(false);expect(result.current.revisao).not.toBeNull();
+ expect(result.current.erro).toBe('Erro inesperado. Tente de novo.');expect(result.current.pendente).toBe(false);expect(result.current.revisao).not.toBeNull();
  const chave=rpc.mock.calls.at(-1)?.[1].p_chave;
  rpc.mockResolvedValueOnce({data:{criadas:1,duplicadas:0},error:null});
  await act(()=>result.current.confirmar());

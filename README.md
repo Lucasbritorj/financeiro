@@ -81,7 +81,7 @@ Licença [MIT](LICENSE).
 
 1. Crie um projeto em [supabase.com](https://supabase.com).
 2. No **SQL Editor**, execute **todas** as migrações de `supabase/migrations/`
-   em ordem alfabética — são **34**: `0001` a `0027` e sete migrações com
+   em ordem alfabética — são **39**: `0001` a `0027` e doze migrações com
    timestamp. Aplicar só o núcleo
    (`0001`–`0006`) sobe um banco sem categorias, importação, cofrinhos,
    análise, carteira, boletos nem recorrências: telas que o app oferece falham
@@ -130,6 +130,20 @@ Licença [MIT](LICENSE).
    - `20261017130000_importar_faturas_cartao.sql` (faturas importadas, vínculo de assinaturas e previsões sem despesas duplicadas)
    - `20261017150000_corrigir_fatura_itau.sql` (conferência estrita de PDF, datas revisadas, valor de previsão e movimentos por competência; aplicar antes de publicar esta correção)
    - `20261017180000_planejamento_reversao_importacao.sql` (histórico e reversão segura de importações, procedência de novos extratos e leituras de Planejamento; aplicar antes desta versão da interface)
+   - `20261017200000_orcamentos_mensais.sql` (limites por categoria e mês)
+   - `20261017210000_contas_conciliacao.sql` (contas, transferências e conferência do extrato)
+   - `20261017220000_conexao_pluggy_pessoal.sql` (vínculo de conta com Meu Pluggy)
+   - `20261019100000_pluggy_vinculo_servidor.sql` (revoga vínculo direto do navegador e restringe a operação ao servidor)
+   - `20261019200000_preferencias_reserva.sql` (preferências privadas para simulação de reservas por cofrinho; não movimenta saldos)
+   - `20261020120000_receitas_no_caixa.sql` (receitas à vista, transferência externa, observação e repetição segura)
+   - `20261020150000_receitas_recorrentes_confirmadas.sql` (previsões de receita, partes mensais, confirmação, férias e antecipação)
+   - `20261020200000_previsao_regras_pessoais.sql` (previsão de caixa sem escrita e confirmação de regras pessoais)
+   - `20261021200000_limites_servidor.sql` (cotas privadas e atômicas de autenticação, dados, exportação e Pluggy)
+   - `20261021203000_limites_rpcs.sql` (mesma cota nas RPCs de importação e confirmação, inclusive chamadas diretas)
+
+   O vínculo Pluggy exige `SUPABASE_SERVICE_ROLE_KEY` somente no ambiente privado do servidor, além da configuração pessoal Pluggy. Nunca use prefixo `NEXT_PUBLIC_` nessa credencial nem a envie ao repositório. A rota valida o titular configurado, a propriedade da conta local e a conta retornada pelo provedor antes da chamada privilegiada. Sem a configuração privada, o vínculo retorna indisponibilidade; não existe fallback com a sessão do navegador.
+
+   A leitura de XLSX limita a expansão real a 8 MiB por entrada, 24 MiB no total e 256 entradas. ZIP64, criptografia, arquivos ambíguos e dimensões excessivas são recusados. Navegadores sem `DecompressionStream('deflate-raw')` precisam ser atualizados ou usar CSV. Limites de planilha: 10 mil linhas, 256 colunas, 100 mil elementos XML no total e 100 mil posições em intervalos nomeados canônicos; nomes com fórmulas/formatos não suportados são recusados. Layout de células mescladas não é importado.
 
    > Os bundles de `supabase/APLICAR.md` cobrem apenas até `0019`. De `0020`
    > em diante, aplique os arquivos de `supabase/migrations/` direto.

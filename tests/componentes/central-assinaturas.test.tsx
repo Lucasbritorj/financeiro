@@ -262,7 +262,7 @@ test("falha de rede ao salvar libera o formulário para tentar novamente", async
   await user.click(await screen.findByRole("button", { name: "Editar Streaming" }));
   rpc.mockRejectedValueOnce(new Error("Conexão interrompida"));
   await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("Conexão interrompida");
+  expect(await screen.findByRole("alert")).toHaveTextContent("Erro inesperado. Tente de novo.");
   expect(screen.getByRole("button", { name: "Salvar alterações" })).toBeEnabled();
 });
 
@@ -279,7 +279,7 @@ test("lista busca as páginas restantes antes de apresentar totais", async () =>
 test("erro numa página não apresenta totais parciais nem afirma migração ausente", async () => {
   nextPage.mockResolvedValueOnce({ data: null, error: { message: "Falha na consulta" } });
   montar();
-  expect(await screen.findByRole("alert")).toHaveTextContent("Falha na consulta");
+  expect(await screen.findByRole("alert")).toHaveTextContent("Erro inesperado. Tente de novo.");
   expect(screen.queryByLabelText("Resumo das assinaturas")).not.toBeInTheDocument();
   expect(screen.queryByText(/indisponível nesta instalação/)).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Tentar novamente" })).toBeEnabled();

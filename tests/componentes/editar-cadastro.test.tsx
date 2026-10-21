@@ -22,7 +22,7 @@ test.each<{ tipo: "cartao" | "cofrinho" | "categoria" | "recorrencia"; valores: 
   expect(mocks.refresh).toHaveBeenCalledOnce();
 });
 test("recusa do banco preserva formulário e dados para corrigir", async () => {
-  mocks.rpc.mockResolvedValue({ error: { message: "Limite comprometido", hint: "Quite as parcelas." } });
+  mocks.rpc.mockResolvedValue({ error: { code:'FW409', message: "Limite comprometido", hint: "Quite as parcelas." } });
   const user = userEvent.setup();
   render(<EditarCadastro tipo="cartao" id="id" valores={{ nome: "Banco", limite_total: "1000,00", dia_fechamento: "20", dia_vencimento: "10" }} />);
   await user.click(screen.getByRole("button", { name: "Editar" }));

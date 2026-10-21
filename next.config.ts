@@ -11,13 +11,12 @@ const supabaseOrigin = (() => {
   }
 })();
 
-// 'unsafe-inline'/'unsafe-eval' em script-src: exigência do runtime do
-// Next sem infraestrutura de nonce — a CSP ainda bloqueia QUALQUER origem
-// externa de script/estilo/frame. Endurecer com nonces = mudança
-// arquitetural (escalada no relatório de auditoria).
+// Política restritiva para arquivos fora do proxy. HTML recebe nonce por
+// requisição em src/proxy.ts; não há autorização genérica de scripts inline.
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "script-src 'self' 'wasm-unsafe-eval'",
+  "script-src-attr 'none'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self' data:",
@@ -26,9 +25,12 @@ const csp = [
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
+  "worker-src 'self' blob:",
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // Isola esta verificação do build de funcionalidades em outra execução.
+  distDir: process.env.E2E_CSP_BUILD === '1' ? '.next-csp' : '.next',
   async headers() {
     return [
       {

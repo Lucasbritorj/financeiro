@@ -167,7 +167,7 @@ test("rejeição da Promise de staging não deixa o upload pendente", async () =
   });
 
   expect(result.current.etapa.fase).toBe("upload");
-  expect(result.current.erro).toBe("rede indisponível");
+  expect(result.current.erro).toBe("Erro inesperado. Tente de novo.");
   expect(result.current.pendente).toBe(false);
 });
 
@@ -363,7 +363,7 @@ test("erro ao descartar mantém a revisão aberta, mostra erro e não refaz a ro
   });
 
   expect(result.current.etapa.fase).toBe("revisao");
-  expect(result.current.erro).toBe("descartar falhou");
+  expect(result.current.erro).toBe("Erro inesperado. Tente de novo.");
   expect(result.current.pendente).toBe(false);
   expect(refresh).not.toHaveBeenCalled();
 });
@@ -377,7 +377,7 @@ test("rejeição da Promise ao descartar mantém a revisão aberta", async () =>
   });
 
   expect(result.current.etapa).toMatchObject({ fase: "revisao", importacaoId: "imp-1" });
-  expect(result.current.erro).toBe("rede indisponível");
+  expect(result.current.erro).toBe("Erro inesperado. Tente de novo.");
   expect(result.current.pendente).toBe(false);
   expect(refresh).not.toHaveBeenCalled();
 });

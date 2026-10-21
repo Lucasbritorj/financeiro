@@ -120,7 +120,7 @@ function detEnvelopes(t: TransacaoInsight[], c: Ctx): Observacao[] {
   const saida: Observacao[] = [];
   for (const cat of cats) {
     if (cat.orcamento == null) continue;
-    const ratio = cat.gasto / cat.orcamento;
+    const ratio = cat.orcamento===0?(cat.gasto>0?2:0):cat.gasto / cat.orcamento;
     if (ratio > 1) {
       const excesso = cat.gasto - cat.orcamento;
       saida.push(
@@ -136,7 +136,7 @@ function detEnvelopes(t: TransacaoInsight[], c: Ctx): Observacao[] {
             { texto: `.` },
           ],
           magnitude: (ratio - 1) * 200,
-          metrica: fmtPct(variacaoPercentual(cat.gasto, cat.orcamento) ?? 0),
+          metrica: cat.orcamento===0?'Limite zero':fmtPct(variacaoPercentual(cat.gasto, cat.orcamento) ?? 0),
         }),
       );
     } else if (ratio >= 0.8) {

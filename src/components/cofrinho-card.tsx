@@ -92,8 +92,8 @@ export default function CofrinhoCard({
   }
 
   return (
-    <div className="vidro-soberano grid gap-4 p-5">
-      <div className="flex items-center gap-4">
+    <div className="vidro-soberano grid min-w-0 grid-cols-1 gap-4 p-5">
+      <div className="flex flex-wrap items-center gap-4">
         <div className="relative h-[74px] w-[74px] flex-none">
           <svg viewBox="0 0 74 74" width="74" height="74" aria-label={`Progresso ${pct}%`}>
             <g transform="rotate(-90 37 37)" fill="none" strokeWidth="7">

@@ -6,6 +6,7 @@
 
 import { formatarCentavos, formatarCentavosAcessivel, formatarData } from "@/lib/money";
 import { BotaoExcluir } from "@/components/lista-transacoes/botao-excluir";
+import RegraPessoal from '@/components/regra-pessoal';
 import type { TransacaoLista, CategoriaOpcao } from "@/components/lista-transacoes/tipos";
 
 /** Boleto se identifica pelo vencimento; o resto, por data · forma · parcelas. */
@@ -14,7 +15,7 @@ function rotuloDoMeio(t: TransacaoLista): string {
     return t.data_vencimento ? `Boleto · vence ${formatarData(t.data_vencimento)}` : "Boleto";
   }
   const parcelas = t.num_parcelas > 1 ? ` · ${t.num_parcelas}x` : "";
-  return `${formatarData(t.data_compra)} · ${t.forma_pagamento}${parcelas}`;
+  return `${formatarData(t.data_compra)} · ${t.forma_pagamento==='TRANSFERENCIA'?'Transferência':t.forma_pagamento}${parcelas}`;
 }
 
 function Selo({ texto, cor, titulo }: { texto: string; cor: string; titulo: string }) {
@@ -77,6 +78,7 @@ export function LinhaTransacao({
       <span className="text-xs" style={{ color: "var(--grafite)" }}>
         {rotuloDoMeio(t)}
       </span>
+      {t.observacao&&<span className="max-w-full break-words text-xs" style={{color:'var(--grafite)'}}>{t.observacao}</span>}
 
       <select
         value={t.categoria_id ?? ""}
@@ -94,16 +96,7 @@ export function LinhaTransacao({
             </option>
           ))}
       </select>
-      {t.categoria_id && (
-        <button
-          type="button"
-          className="botao-fantasma text-xs"
-          title="Sempre classificar descrições parecidas nesta categoria"
-          onClick={() => onRecategorizar(t, t.categoria_id!, true)}
-        >
-          criar regra
-        </button>
-      )}
+      {t.categoria_id && t.natureza!=='LIQUIDACAO_FATURA' && <RegraPessoal key={t.categoria_id} transacaoId={t.id} categoriaId={t.categoria_id} descricao={t.descricao}/>}
 
       <span
         className="numero-soberano ml-auto font-medium"

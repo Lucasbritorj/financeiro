@@ -65,6 +65,6 @@ test("erro de rede libera nova tentativa", async () => {
   render(<RecuperacaoSenha modo="solicitar" />);
   await user.type(screen.getByLabelText("E-mail"), "teste@example.com");
   await user.click(screen.getByRole("button", { name: "Enviar link" }));
-  expect(screen.getByRole("alert")).toHaveTextContent("Falha de rede");
+  expect(screen.getByRole("alert")).toHaveTextContent("Erro inesperado");
   expect(screen.getByRole("button", { name: "Enviar link" })).toBeEnabled();
 });

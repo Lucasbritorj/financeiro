@@ -7,14 +7,14 @@ export type FiltrosTransacoes = {
   /** uuid de categoria, ou "sem" para transações sem categoria. */
   categoria?: string;
   tipo?: "DESPESA" | "RECEITA";
-  forma?: "CREDITO" | "DEBITO" | "PIX" | "DINHEIRO" | "BOLETO";
+  forma?: "CREDITO" | "DEBITO" | "PIX" | "DINHEIRO" | "BOLETO" | "TRANSFERENCIA";
   /** ISO yyyy-mm-dd, inclusivo. */
   de?: string;
   ate?: string;
 };
 
 const TIPOS = new Set(["DESPESA", "RECEITA"]);
-const FORMAS = new Set(["CREDITO", "DEBITO", "PIX", "DINHEIRO", "BOLETO"]);
+const FORMAS = new Set(["CREDITO", "DEBITO", "PIX", "DINHEIRO", "BOLETO", "TRANSFERENCIA"]);
 const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

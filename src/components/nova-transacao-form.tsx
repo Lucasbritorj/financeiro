@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { paraCentavos } from "@/lib/money";
@@ -9,6 +9,7 @@ import { MAX_PARCELAS_UI } from "@/lib/constantes";
 import { mensagemPosTransacao } from "@/lib/nova-transacao";
 import { hojeSaoPaulo } from "@/lib/data";
 import { useToast } from "@/components/feedback";
+import { validarReceita } from '@/lib/receita-caixa';
 
 type CartaoOpcao = { id: string; nome: string };
 type CategoriaOpcao = { id: string; nome: string; tipo: string };
@@ -32,9 +33,12 @@ export default function NovaTransacaoForm({
   const [vencimento, setVencimento] = useState("");
   const [numParcelas, setNumParcelas] = useState("1");
   const [pendente, setPendente] = useState(false);
+  const [observacao, setObservacao] = useState('');
+  const chaveReceita = useRef<string|null>(null);
 
-  const ehCredito = forma === "CREDITO";
-  const ehBoleto = forma === "BOLETO";
+  const ehReceita = tipo === 'RECEITA';
+  const ehCredito = !ehReceita && forma === "CREDITO";
+  const ehBoleto = !ehReceita && forma === "BOLETO";
   // Boleto é sempre DESPESA (conta a pagar). Categoria vazia => trigger de
   // autocategorização (0008) decide pela regra.
   const tipoEfetivo = ehBoleto ? "DESPESA" : tipo;
@@ -44,6 +48,26 @@ export default function NovaTransacaoForm({
   function trocarForma(nova: string) {
     setForma(nova);
     if (nova === "BOLETO") setTipo("DESPESA");
+  }
+
+  function trocarTipo(novo:string) {
+    setTipo(novo);setCategoriaId('');setNumParcelas('1');setVencimento('');
+    if(novo==='RECEITA'&&!['PIX','TRANSFERENCIA','DINHEIRO'].includes(forma))setForma('PIX');
+    if(novo==='DESPESA'&&forma==='TRANSFERENCIA')setForma('PIX');
+  }
+
+  async function receber(centavos:number) {
+    chaveReceita.current??=crypto.randomUUID();
+    try {
+      validarReceita(forma,centavos,dataCompra,observacao);
+      const {error}=await createClient().rpc('registrar_receita',{
+        p_chave:chaveReceita.current,p_descricao:descricao.trim(),p_valor:centavos,
+        p_forma:forma,p_data:dataCompra,p_observacao:observacao.trim()||null,p_categoria_id:categoriaId||null,
+      }).abortSignal(AbortSignal.timeout(15000));
+      if(error)throw error;
+      notificar('Receita registrada como entrada no caixa.','sucesso');
+      chaveReceita.current=null;setDescricao('');setValor('');setObservacao('');setCategoriaId('');router.refresh();
+    }catch(error){notificar(mensagemDeErro(error),'erro');}finally{setPendente(false);}
   }
 
   async function enviar(e: React.FormEvent) {
@@ -64,6 +88,7 @@ export default function NovaTransacaoForm({
     }
 
     setPendente(true);
+    if(ehReceita){await receber(centavos);return;}
     const supabase = createClient();
 
     // ===== Boleto: conta a pagar com vencimento (RPC dedicada) =====
@@ -133,17 +158,23 @@ export default function NovaTransacaoForm({
   }
 
   return (
-    <form onSubmit={enviar} className="vidro-soberano p-4">
+    <form aria-label="Nova transação" onSubmit={enviar} className="vidro-soberano min-w-0 p-4" style={{borderTop:`3px solid var(${ehReceita?'--verde':'--telha'})`}}>
       <h2 className="mb-3 font-medium">Nova transação</h2>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <fieldset disabled={pendente} className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="text-sm sm:col-span-2">Tipo
+          <select value={tipo} onChange={e=>trocarTipo(e.target.value)} className="campo-soberano" disabled={pendente}>
+            <option value="DESPESA">Despesa</option><option value="RECEITA">Receita</option>
+          </select>
+        </label>
         <label className="text-sm sm:col-span-2">
           Descrição
           <input
             value={descricao}
             onChange={(e) => setDescricao(e.target.value)}
             required
+            maxLength={500}
             className="campo-soberano"
-            placeholder={ehBoleto ? "Ex.: Conta de luz" : "Ex.: Mercado"}
+            placeholder={ehReceita?'Ex.: Salário, serviço recebido':ehBoleto ? "Ex.: Conta de luz" : "Ex.: Mercado"}
           />
         </label>
         <label className="text-sm">
@@ -158,7 +189,7 @@ export default function NovaTransacaoForm({
           />
         </label>
         <label className="text-sm">
-          {ehBoleto ? "Competência (mês de referência)" : "Data da compra"}
+          {ehReceita?'Data do recebimento':ehBoleto ? "Competência (mês de referência)" : "Data da compra"}
           <input
             type="date"
             value={dataCompra}
@@ -168,17 +199,18 @@ export default function NovaTransacaoForm({
           />
         </label>
         <label className="text-sm">
-          Forma de pagamento
+          {ehReceita?'Forma de recebimento':'Forma de pagamento'}
           <select
             value={forma}
             onChange={(e) => trocarForma(e.target.value)}
             className="campo-soberano"
           >
-            <option value="CREDITO">Crédito</option>
-            <option value="DEBITO">Débito</option>
+            {!ehReceita&&<option value="CREDITO">Crédito</option>}
+            {!ehReceita&&<option value="DEBITO">Débito</option>}
             <option value="PIX">Pix</option>
+            {ehReceita&&<option value="TRANSFERENCIA">Transferência</option>}
             <option value="DINHEIRO">Dinheiro</option>
-            <option value="BOLETO">Boleto / conta a pagar</option>
+            {!ehReceita&&<option value="BOLETO">Boleto / conta a pagar</option>}
           </select>
         </label>
         {ehBoleto ? (
@@ -192,19 +224,10 @@ export default function NovaTransacaoForm({
               className="campo-soberano"
             />
           </label>
-        ) : (
-          <label className="text-sm">
-            Tipo
-            <select
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value)}
-              className="campo-soberano"
-            >
-              <option value="DESPESA">Despesa</option>
-              <option value="RECEITA">Receita</option>
-            </select>
-          </label>
-        )}
+        ) : null}
+        {ehReceita&&<label className="text-sm sm:col-span-2">Observação (opcional)
+          <textarea className="campo-soberano" value={observacao} onChange={e=>setObservacao(e.target.value)} maxLength={2000} rows={2}/>
+        </label>}
         {categorias.length > 0 && (
           <label className="text-sm">
             Categoria
@@ -253,7 +276,9 @@ export default function NovaTransacaoForm({
             </label>
           </>
         )}
-      </div>
+      </fieldset>
+      {ehReceita&&<p className="mt-3 text-sm">Receita aumenta o caixa geral. Transferências entre suas próprias contas devem ser registradas em Contas bancárias, pois não são renda nova.</p>}
+      {ehReceita&&<a className="mt-3 inline-block text-sm underline" href="#receitas-recorrentes">Programar receita recorrente, como salário</a>}
       {ehBoleto && (
         <p className="mt-2 text-xs" style={{ color: "var(--grafite)" }}>
           Boleto é uma conta a pagar (luz, água, gás…): entra como despesa da
@@ -267,8 +292,9 @@ export default function NovaTransacaoForm({
         type="submit"
         disabled={pendente}
         className="botao-soberano mt-3 text-sm"
+        style={ehReceita?{background:'var(--verde)'}:undefined}
       >
-        {pendente ? "Processando..." : ehBoleto ? "Registrar boleto" : "Registrar"}
+        {pendente ? "Processando..." : ehReceita?'Registrar receita':ehBoleto ? "Registrar boleto" : "Registrar"}
       </button>
     </form>
   );

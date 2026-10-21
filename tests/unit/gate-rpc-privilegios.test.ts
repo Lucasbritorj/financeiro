@@ -35,7 +35,7 @@ import {
 //   Vermelho — provado com SQL sintético inline em cada regra.
 
 const ESPERADO = {
-  definersDistintos: 48,
+  definersDistintos: 75,
   /** Uma só: o drift de pg_catalog do rls_auto_enable. */
   excecoes: 1,
 } as const;
@@ -113,6 +113,12 @@ test("suíte real: todo grant aponta só para os papéis pretendidos", () => {
 
   assert.deepEqual(queixasDeGrant(extrairPrivilegios(migracoes)), []);
   assert.deepEqual(PAPEIS_PRETENDIDOS, ["authenticated"]);
+});
+
+test('RPC Pluggy de servidor só pode ser concedida a service_role, sem ampliar outras RPCs',()=>{
+ assert.deepEqual(queixasDeGrant(de('grant execute on function public.vincular_conta_pluggy_servidor(uuid,uuid,text,text) to service_role;').privilegios),[]);
+ assert.equal(queixasDeGrant(de('grant execute on function public.vincular_conta_pluggy_servidor(uuid,uuid,text,text) to authenticated;').privilegios).length,1);
+ assert.equal(queixasDeGrant(de('grant execute on function public.outra_rpc() to service_role;').privilegios).length,1);
 });
 
 test("suíte real: o revoke dinâmico da 0022 é lido, e a lista de papéis sai limpa", () => {

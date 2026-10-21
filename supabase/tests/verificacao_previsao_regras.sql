@@ -1,0 +1,76 @@
+begin;
+do $$
+declare u uuid:='00000000-0000-0000-0000-0000000000c7'; outro uuid:='00000000-0000-0000-0000-0000000000c8'; cat uuid; catr uuid; tx uuid; nova uuid; previa jsonb;res jsonb;chave uuid:=gen_random_uuid(); cartao uuid;ass uuid;fatura uuid;boleto uuid;ids uuid[];
+begin
+ insert into auth.users(id) values(u),(outro);perform set_config('request.jwt.claims',jsonb_build_object('sub',u)::text,true);
+ insert into public.categorias(user_id,nome,tipo) values(u,'Mercado teste','DESPESA') returning id into cat;
+ insert into public.categorias(user_id,nome,tipo) values(u,'Entrada teste','RECEITA') returning id into catr;
+ tx:=(public.processar_transacao_completa('SUPERMERCADO TESTE 03/06',1000,'DESPESA','PIX',null,'2026-01-10',1)->>'transacao_id')::uuid;
+ previa:=public.consultar_previa_regra(tx,cat,'SUPERMERCADO TESTE',100);
+ if (previa->>'total')::integer<>1 then raise exception 'prévia não encontrou exemplo';end if;
+ if exists(select 1 from public.regras_categorizacao where user_id=u) then raise exception 'prévia criou regra';end if;
+ res:=public.salvar_regra_pessoal(chave,tx,cat,'SUPERMERCADO TESTE',100,previa->>'versao');
+ perform public.salvar_regra_pessoal(chave,tx,cat,'SUPERMERCADO TESTE',100,previa->>'versao');
+ if (select count(*) from public.regras_categorizacao where user_id=u)<>1 then raise exception 'repetição duplicou regra';end if;
+ nova:=(public.processar_transacao_completa('SUPERMERCADO TESTE 04/06',1000,'DESPESA','PIX',null,'2026-01-10',1)->>'transacao_id')::uuid;
+ if (select categoria_id from public.transacoes_origem where id=nova) is distinct from cat then raise exception 'não classificou próxima';end if;
+ nova:=(public.registrar_receita(gen_random_uuid(),'SUPERMERCADO TESTE reembolso',1000,'PIX','2026-01-10',null,null)->>'transacao_id')::uuid;
+ if (select categoria_id from public.transacoes_origem where id=nova) is not null then raise exception 'regra de despesa classificou receita';end if;
+ begin perform public.salvar_regra_pessoal(chave,tx,cat,'OUTRO PADRÃO',100,previa->>'versao');raise exception 'conflito de chave aceito';exception when sqlstate 'FW409' then null;end;
+ previa:=public.consultar_previa_regra(tx,cat,'SUPERMERCADO',100);
+ update public.transacoes_origem set descricao='SUPERMERCADO TESTE atualizado' where id=tx;
+ begin perform public.salvar_regra_pessoal(gen_random_uuid(),tx,cat,'SUPERMERCADO',100,previa->>'versao');raise exception 'prévia antiga aceita';exception when sqlstate 'FW409' then null;end;
+ perform public.criar_receitas_previstas(gen_random_uuid(),'Receita futura teste','PIX','2026-01-01','[{"dia":15,"valor":2000}]',null);
+ res:=public.consultar_eventos_caixa('2026-01-01')->'eventos';
+ if not exists(select 1 from jsonb_array_elements(res) x where x->>'tipo'='ENTRADA' and x->>'data'='2026-01-15') then raise exception 'receita prevista ausente';end if;
+ if exists(select 1 from public.ocorrencias_receita where user_id=u) then raise exception 'consulta materializou agenda';end if;
+ -- Pular/antecipar receita resolve a previsão, sem somar de novo no futuro.
+ perform public.consultar_receitas_previstas('2026-01-01');
+ select array_agg(id) into ids from public.ocorrencias_receita where user_id=u and competencia='2026-01-01';
+ perform public.marcar_receita_nao_recebida(ids[1],true,'Antecipada em outro recebimento');
+ if exists(select 1 from jsonb_array_elements(public.consultar_eventos_caixa('2026-01-01')->'eventos') x where x->>'tipo'='ENTRADA' and x->>'data'='2026-01-15') then raise exception 'receita pulada na projeção';end if;
+ perform public.marcar_receita_nao_recebida(ids[1],false,null);
+ perform public.confirmar_receitas_previstas(gen_random_uuid(),ids,'2025-12-30',2000,'Antecipação sintética');
+ if exists(select 1 from jsonb_array_elements(public.consultar_eventos_caixa('2026-01-01')->'eventos') x where x->>'tipo'='ENTRADA' and x->>'data'='2026-01-15') then raise exception 'receita recebida na projeção';end if;
+ -- Compra e assinatura cobrada saem uma vez, no vencimento da fatura.
+ cartao:=(public.criar_cartao('Cartão previsão',100000,10,20)->>'cartao_id')::uuid;
+ insert into public.recorrencias(user_id,descricao,valor,tipo,forma_pagamento,finalidade,periodicidade,proxima_data,dia_do_mes,categoria_id,cartao_id) values(u,'Streaming previsão',500,'DESPESA',null,'ASSINATURA','MENSAL','2026-01-05',5,cat,cartao) returning id into ass;
+ perform public.confirmar_fatura_importada(gen_random_uuid(),null,cartao,'2026-01-01','PDF',jsonb_build_array(jsonb_build_object('data','2026-01-05','descricao','Streaming previsão','valor',500,'tipo','ASSINATURA','decisao_assinatura','VINCULAR','assinatura_id',ass,'data_confirmada',true)),500,false);
+ select id into fatura from public.faturas where cartao_id=cartao and competencia='2026-01-01';
+ res:=public.consultar_eventos_caixa('2026-01-01')->'eventos';
+ if (select sum((x->>'valor')::bigint) from jsonb_array_elements(res) x where x->>'data'='2026-01-20' and x->>'tipo'='SAIDA')<>500 then raise exception 'assinatura e fatura duplicadas';end if;
+ perform public.processar_pagamento_fatura(fatura,'2026-01-20');
+ if exists(select 1 from jsonb_array_elements(public.consultar_eventos_caixa('2026-01-21')->'eventos') x where x->>'id'='FATURA:'||fatura or x->>'id'='cartao-previsto:'||cartao||':2026-01-01') then raise exception 'fatura paga continua prevista';end if;
+ -- Sem vínculo, estimativa começa hoje; não fabrica dívida de assinatura passada.
+ insert into public.recorrencias(user_id,descricao,valor,tipo,forma_pagamento,finalidade,periodicidade,proxima_data,dia_do_mes,categoria_id) values(u,'Assinatura sem cartão',100,'DESPESA',null,'ASSINATURA','MENSAL','2026-01-05',5,cat);
+ if exists(select 1 from jsonb_array_elements(public.consultar_eventos_caixa('2026-01-21')->'eventos') x where x->>'descricao'='Assinatura sem cartão' and x->>'data'<'2026-01-21') then raise exception 'estimativa passada virou dívida';end if;
+ boleto:=(public.criar_boleto('Boleto vencido previsão',300,'2026-01-10','2026-01-01',cat)->>'transacao_id')::uuid;
+ if not exists(select 1 from jsonb_array_elements(public.consultar_eventos_caixa('2026-01-21')->'eventos') x where x->>'id'='BOLETO:'||boleto and x->>'data'='2026-01-10') then raise exception 'boleto vencido desapareceu';end if;
+ perform public.pagar_boleto(boleto,'2026-01-21');
+ if exists(select 1 from jsonb_array_elements(public.consultar_eventos_caixa('2026-01-21')->'eventos') x where x->>'id'='BOLETO:'||boleto) then raise exception 'boleto pago duplicou';end if;
+ -- Mesma regra com nova chave reutiliza identidade; conflito não muda a categoria.
+ previa:=public.consultar_previa_regra(tx,cat,'SUPERMERCADO TESTE',100);
+ perform public.salvar_regra_pessoal(gen_random_uuid(),tx,cat,'SUPERMERCADO TESTE',100,previa->>'versao');
+ if (select count(*) from public.regras_categorizacao where user_id=u)<>1 then raise exception 'nova chave duplicou regra idêntica';end if;
+ nova:=(public.criar_categoria('Outra categoria teste',null,null,'DESPESA')->>'categoria_id')::uuid;
+ previa:=public.consultar_previa_regra(tx,nova,'SUPERMERCADO TESTE',100);
+ if previa->>'conflito' is null then raise exception 'conflito não visível';end if;
+ begin perform public.salvar_regra_pessoal(gen_random_uuid(),tx,nova,'SUPERMERCADO TESTE',100,previa->>'versao');raise exception 'conflito aceito';exception when sqlstate 'FW409' then null;end;
+ if (select categoria_id from public.transacoes_origem where id=tx)<>cat then raise exception 'conflito alterou categoria';end if;
+ previa:=public.consultar_previa_regra(tx,cat,'SUPERMERCADO TESTE',200);
+ if previa->>'conflito' is null then raise exception 'prioridade divergente não avisou';end if;
+ begin perform public.salvar_regra_pessoal(gen_random_uuid(),tx,cat,'SUPERMERCADO TESTE',200,previa->>'versao');raise exception 'prioridade divergente duplicou regra';exception when sqlstate 'FW409' then null;end;
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',outro)::text,true);
+ begin perform public.consultar_previa_regra(tx,cat,'SUPERMERCADO',100);raise exception 'prévia cruzada';exception when sqlstate 'FW404' then null;end;
+ if has_function_privilege('anon','public.salvar_regra_pessoal(uuid,uuid,uuid,text,integer,text)','execute') then raise exception 'anon autorizado';end if;
+ raise notice 'OK: todos os asserts de prévia, confirmação, conflito, isolamento e previsão sem escrita';
+end $$;
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000c8"}',true);
+do $$ begin if exists(select 1 from public.tentativas_regra_pessoal) then raise exception 'RLS de tentativas';end if;
+ if public.consultar_eventos_caixa('2026-01-01')->'eventos'<>'[]'::jsonb or (public.consultar_eventos_caixa('2026-01-01')->>'caixa')::bigint<>0 or (public.consultar_eventos_caixa('2026-01-01')->>'reservado')::bigint<>0 then raise exception 'previsão cruzou titulares';end if;
+ perform set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000c7"}',true);
+ if jsonb_array_length(public.consultar_eventos_caixa('2026-01-01')->'eventos')=0 then raise exception 'previsão autenticada vazia';end if;
+ if (public.consultar_eventos_caixa('2026-01-01')->>'caixa')::bigint<>(select saldo_caixa from public.vw_carteira) then raise exception 'snapshot não leu caixa do titular';end if;
+end $$;
+rollback;

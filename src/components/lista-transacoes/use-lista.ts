@@ -81,23 +81,20 @@ export function useLista(args: {
   }
 
   async function recategorizar(t: TransacaoLista, categoriaId: string, criarRegra: boolean) {
+    if(criarRegra){notificar('Revise e confirme a regra no botão Criar regra.', 'erro');return;}
     const { error } = await createClient().rpc("definir_categoria_transacao", {
       p_transacao_id: t.id,
       p_categoria_id: categoriaId || null,
-      p_criar_regra: criarRegra,
-      p_padrao: criarRegra ? t.descricao.trim().slice(0, 40) : null,
+      p_criar_regra: false,
+      p_padrao: null,
     });
     if (error) {
       notificar(mensagemDeErro(error), "erro");
       return;
     }
-    if (criarRegra) {
-      notificar("Regra criada: descrições parecidas serão classificadas assim.", "sucesso");
-    }
     setItens((atual) =>
       atual.map((x) => (x.id === t.id ? { ...x, categoria_id: categoriaId || null } : x)),
     );
-    if (criarRegra) router.refresh();
   }
 
   // Exclusão em massa: cada excluir_transacao é atômico no banco; aqui as

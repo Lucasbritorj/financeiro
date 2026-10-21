@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import NovaTransacaoForm from "@/components/nova-transacao-form";
 import ListaTransacoes, { type TransacaoLista } from "@/components/lista-transacoes";
 import Recorrencias from "@/components/recorrencias";
+import ReceitasRecorrentes from '@/components/receitas-recorrentes';
 import { TAMANHO_PAGINA_TRANSACOES } from "@/lib/constantes";
 import {
   aplicarFiltrosTransacoes,
@@ -16,7 +17,7 @@ import { hojeSaoPaulo } from "@/lib/data";
 // (o "carregar mais" do cliente). As duas precisam andar juntas — omitir uma
 // coluna aqui faz a primeira página vir sem o campo e a segunda com ele.
 const COLUNAS =
-  "id, descricao, valor_total, tipo, forma_pagamento, data_compra, data_vencimento, num_parcelas, created_at, categoria_id, source, natureza";
+  "id, descricao, valor_total, tipo, forma_pagamento, data_compra, data_vencimento, num_parcelas, created_at, categoria_id, source, natureza, observacao";
 
 function diasAtras(hoje: string, dias: number): string {
   const d = new Date(`${hoje}T00:00:00Z`);
@@ -81,6 +82,7 @@ export default async function TransacoesPage({
         Exportar CSV com os filtros atuais
       </a>
       <NovaTransacaoForm cartoes={cartoesRes.data} categorias={categoriasRes.data} />
+      <ReceitasRecorrentes categorias={categoriasRes.data}/>
 
       <Recorrencias categorias={categoriasRes.data} />
 
@@ -117,6 +119,7 @@ export default async function TransacoesPage({
             <option value="CREDITO">Crédito</option>
             <option value="DEBITO">Débito</option>
             <option value="PIX">Pix</option>
+            <option value="TRANSFERENCIA">Transferência</option>
             <option value="DINHEIRO">Dinheiro</option>
             <option value="BOLETO">Boleto</option>
           </select>

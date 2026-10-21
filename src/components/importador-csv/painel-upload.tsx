@@ -3,6 +3,7 @@
 import { PRESETS, type PresetBanco } from "@/lib/csv";
 
 type Props = {
+  ocr?:boolean;onOcr?:(valor:boolean)=>void;progresso?:string;
   preset: PresetBanco;
   onPreset: (preset: PresetBanco) => void;
   onArquivo: (arquivo: File) => void;
@@ -11,7 +12,7 @@ type Props = {
   aviso: string | null;
 };
 
-export function PainelUpload({ preset, onPreset, onArquivo, pendente, erro, aviso }: Props) {
+export function PainelUpload({ preset, onPreset, onArquivo, pendente, erro, aviso,ocr=false,onOcr,progresso }: Props) {
   function aoEscolherArquivo(e: React.ChangeEvent<HTMLInputElement>) {
     const arquivo = e.target.files?.[0];
     if (arquivo) onArquivo(arquivo);
@@ -46,6 +47,7 @@ export function PainelUpload({ preset, onPreset, onArquivo, pendente, erro, avis
             className="campo-soberano"
           />
         </label>
+        {onOcr&&<label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={ocr} onChange={e=>onOcr(e.target.checked)} disabled={pendente}/>Ler PDF digitalizado com OCR (até 20 páginas; confira os valores)</label>}
         <p className="text-xs" style={{ color: "var(--grafite)" }}>
           O arquivo é lido no seu navegador; só as linhas (data, valor,
           descrição) vão para o servidor, em uma área de revisão — nada entra
@@ -66,7 +68,7 @@ export function PainelUpload({ preset, onPreset, onArquivo, pendente, erro, avis
         )}
         {pendente && (
           <p className="text-sm" style={{ color: "var(--grafite)" }}>
-            Processando...
+            {progresso||'Processando…'}
           </p>
         )}
       </div>

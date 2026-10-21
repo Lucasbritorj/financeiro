@@ -26,7 +26,7 @@ const CAMPOS: Record<Tipo, Campo[]> = {
   recorrencia: [
     { chave: "descricao", rotulo: "Descrição" }, { chave: "valor", rotulo: "Valor (R$)", tipo: "dinheiro" },
     { chave: "tipo", rotulo: "Tipo", opcoes: [["DESPESA", "Despesa"], ["RECEITA", "Receita"]] },
-    { chave: "forma_pagamento", rotulo: "Forma", opcoes: [["PIX", "Pix"], ["DEBITO", "Débito"], ["DINHEIRO", "Dinheiro"]] },
+    { chave: "forma_pagamento", rotulo: "Forma", opcoes: [["PIX", "Pix"], ["DEBITO", "Débito"], ["DINHEIRO", "Dinheiro"], ["TRANSFERENCIA", "Transferência"]] },
     { chave: "dia_do_mes", rotulo: "Todo dia", tipo: "number", min: 1, max: 28 },
   ],
 };
@@ -99,10 +99,10 @@ export default function EditarCadastro({ tipo, id, valores, categorias = [], aoS
       {CAMPOS[tipo].map((campo) => <label className="text-sm" key={campo.chave}>
         {campo.rotulo}
         {campo.opcoes ? <select className="campo-soberano" value={dados[campo.chave]} onChange={(e) => definir(campo.chave, e.target.value)}>
-          {campo.opcoes.map(([valor, rotulo]) => <option key={valor} value={valor}>{rotulo}</option>)}
+          {campo.opcoes.filter(([valor])=>!(tipo==='recorrencia'&&campo.chave==='forma_pagamento'&&dados.tipo==='RECEITA'&&valor==='DEBITO')).map(([valor, rotulo]) => <option key={valor} value={valor}>{rotulo}</option>)}
         </select> : <input className="campo-soberano" value={dados[campo.chave] ?? ""} onChange={(e) => definir(campo.chave, e.target.value)}
           type={campo.tipo === "dinheiro" ? "text" : campo.tipo ?? "text"} inputMode={campo.tipo === "dinheiro" ? "decimal" : undefined}
-          min={campo.min} max={campo.max} maxLength={campo.chave === "descricao" ? 200 : campo.chave === "icone" ? 80 : 120} required={!campo.opcional} />}
+          min={campo.min} max={campo.chave==='dia_do_mes'&&dados.tipo==='RECEITA'?31:campo.max} maxLength={campo.chave === "descricao" ? 200 : campo.chave === "icone" ? 80 : 120} required={!campo.opcional} />}
       </label>)}
       {tipo === "recorrencia" && <label className="text-sm">Categoria
         <select className="campo-soberano" value={dados.categoria_id} onChange={(e) => definir("categoria_id", e.target.value)}>

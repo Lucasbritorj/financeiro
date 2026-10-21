@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
 import type { Database } from "@/lib/database.types";
 import { fetchComTimeout } from "./fetch";
+import { opcoesCookieSessao } from '../seguranca-http';
 
 export async function createClient(response?: NextResponse) {
   const cookieStore = await cookies();
@@ -11,6 +12,7 @@ export async function createClient(response?: NextResponse) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: opcoesCookieSessao(),
       global: { fetch: fetchComTimeout },
       cookies: {
         getAll() {
@@ -18,12 +20,12 @@ export async function createClient(response?: NextResponse) {
         },
         setAll(cookiesToSet) {
           if (response) {
-            cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+            cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, {...options,...opcoesCookieSessao()}));
             return;
           }
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, {...options,...opcoesCookieSessao()})
             );
           } catch {
             // Chamado de um Server Component: o proxy renova a sessão.

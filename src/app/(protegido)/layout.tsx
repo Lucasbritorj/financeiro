@@ -20,7 +20,7 @@ const NAV_PRINCIPAL = [
   { href: "/importar", rotulo: "Importar" },
   { href: "/cofrinhos", rotulo: "Cofrinhos" },
 ];
-const NAV_SECUNDARIA = [{ href: "/cartoes", rotulo: "Cartões" }];
+const NAV_SECUNDARIA = [{ href: "/cartoes", rotulo: "Cartões" }, { href: "/orcamentos", rotulo: "Orçamentos" }, { href: "/contas", rotulo: "Contas bancárias" }];
 
 export default async function ProtegidoLayout({
   children,

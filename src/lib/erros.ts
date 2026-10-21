@@ -8,7 +8,7 @@
 // conserta os dois e qualquer `catch` futuro; castar no call site só espalharia
 // o problema.
 
-type ErroComHint = { message: string; hint?: string | null };
+export type ErroComHint = { message: string; hint?: string | null; code?: string };
 
 function temMensagem(e: unknown): e is ErroComHint {
   return (
@@ -25,8 +25,18 @@ export function mensagemDeErro(error: unknown): string {
     // rejeição sem Error). Mensagem genérica em vez de "undefined" na tela.
     return "Erro inesperado. Tente de novo.";
   }
-  if (/\bSELECT\b/i.test(error.message)) {
-    return "Erro inesperado. Tente de novo.";
-  }
+  const auth: Record<string,string> = {
+    invalid_credentials: 'E-mail ou senha inválidos.',
+    email_not_confirmed: 'Confirme seu e-mail antes de entrar.',
+    over_request_rate_limit: 'Muitas tentativas. Aguarde antes de tentar novamente.',
+    over_email_send_rate_limit: 'Aguarde antes de solicitar outro e-mail.',
+    weak_password: 'Escolha uma senha mais forte.',
+    same_password: 'Escolha uma senha diferente da atual.',
+    otp_expired: 'O link expirou. Solicite outro link.',
+    user_already_exists: 'Confira seu e-mail ou recupere o acesso à sua conta.',
+  };
+  if(error.code && Object.hasOwn(auth,error.code))return auth[error.code];
+  // Somente erros de negócio controlados pelas RPCs podem chegar à interface.
+  if(!/^FW4\d{2}$/.test(error.code??'')||/\bSELECT\b/i.test(error.message))return 'Erro inesperado. Tente de novo.';
   return error.hint ? `${error.message} ${error.hint}` : error.message;
 }

@@ -9,9 +9,7 @@
 // silenciosa: o usuário vê "sucesso" e a categoria não foi aplicada,
 // distorcendo orçamento por categoria (T-05).
 
-import { mensagemDeErro } from "./erros.ts";
-
-type ErroComHint = { message: string; hint?: string | null };
+import { mensagemDeErro, type ErroComHint } from "./erros.ts";
 
 export function mensagemPosTransacao(
   parcelasCriadas: number | undefined,

@@ -46,6 +46,7 @@ export function useImportacao() {
   const [erro, setErro] = useState<string | null>(null);
   // Arquivo já importado não é erro: é um resultado esperado e informativo.
   const [aviso, setAviso] = useState<string | null>(null);
+  const [ocr,setOcr]=useState(false);const [progresso,setProgresso]=useState('');
 
   function atualizarLinhaLocal(id: string, patch: Partial<LinhaRevisao>) {
     setEtapa((e) =>
@@ -123,7 +124,7 @@ export function useImportacao() {
     setPendente(true);
     let resultado;
     try {
-      resultado = await lerArquivoImportacao(arquivo, origem, preset);
+      resultado = await lerArquivoImportacao(arquivo, origem, preset,{ocr,progresso:setProgresso});
     } catch (err) {
       setPendente(false);
       const detalhe = err instanceof Error ? err.message : String(err);
@@ -211,6 +212,7 @@ export function useImportacao() {
   }
 
   return {
+    ocr,setOcr,progresso,
     preset,
     setPreset,
     etapa,

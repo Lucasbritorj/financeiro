@@ -14,6 +14,7 @@ test("mensagemPosTransacao: sem erro de categoria, mensagem de sucesso pleno (T-
 
 test("mensagemPosTransacao: erro ao definir categoria vira sucesso parcial com a mensagem real (T-05)", () => {
   const r = mensagemPosTransacao(1, {
+    code: 'FW404',
     message: "Categoria não pertence ao usuário.",
     hint: "Escolha outra categoria.",
   });
