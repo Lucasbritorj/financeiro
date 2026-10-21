@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { aplicarFiltrosTransacoes, filtrosDaQuery } from "@/lib/filtros-transacoes";
 import { lerTodasPaginas } from "@/lib/leitura-paginada";
 import { exportarCsv } from "@/lib/exportacao-csv";
+import {verificarLimite} from '@/lib/limite-servidor';
 
 const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
 export async function GET(request: Request) {
@@ -9,6 +10,7 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user) return Response.json({ erro: "Entre para exportar." }, { status: 401, headers });
+    const limitado=await verificarLimite('exportar',user.id);if(limitado)return limitado;
     const filtros = filtrosDaQuery(Object.fromEntries(new URL(request.url).searchParams));
     const linhas = await lerTodasPaginas((cursor, tamanho) => {
       let consulta = aplicarFiltrosTransacoes(supabase

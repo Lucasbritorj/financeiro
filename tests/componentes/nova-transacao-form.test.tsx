@@ -61,7 +61,7 @@ test('falha de rede libera botão e mantém a chave ao repetir o recebimento',as
  const falha=Promise.resolve({data:null,error:{message:'Conexão indisponível'}});
  rpc.mockReturnValueOnce(Object.assign(falha,{abortSignal:()=>falha}));
  const user=montar();await user.selectOptions(screen.getByLabelText('Tipo',{exact:true}),'RECEITA');await preencher(user,'100,00');
- await user.click(registrar());expect(await screen.findByRole('alert')).toHaveTextContent('Conexão indisponível');expect(registrar()).toBeEnabled();
+ await user.click(registrar());expect(await screen.findByRole('alert')).toHaveTextContent('Erro inesperado. Tente de novo.');expect(registrar()).toBeEnabled();
  const chave=(rpc.mock.calls[0][1] as {p_chave:string}).p_chave;
  await user.click(registrar());expect((rpc.mock.calls[1][1] as {p_chave:string}).p_chave).toBe(chave);
 });

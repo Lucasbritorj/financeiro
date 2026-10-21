@@ -196,7 +196,7 @@ test("criar regra abre revisão sem gravar automaticamente", async () => {
 
 test("erro ao recategorizar avisa e não muda a linha", async () => {
   const user = userEvent.setup();
-  rpc.mockResolvedValue({ data: null, error: { message: "categoria inexistente" } });
+  rpc.mockResolvedValue({ data: null, error: { code:'FW404', message: "categoria inexistente" } });
   montar([transacao({ descricao: "GASTO" })]);
 
   const select = screen.getByLabelText("Categoria de GASTO") as HTMLSelectElement;

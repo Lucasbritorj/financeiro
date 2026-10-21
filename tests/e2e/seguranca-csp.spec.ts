@@ -15,7 +15,7 @@ test.skip(process.env.E2E_LOCAL!=='1','Somente Supabase local, com contas fictí
 test('CSP bloqueia injeção e eval e preserva tema, login e navegação autenticada',async({page,request})=>{
  test.setTimeout(180_000);
  const url=process.env.NEXT_PUBLIC_SUPABASE_URL!;
- if(new URL(url).origin!=='http://127.0.0.1:54321')throw new Error('Este teste aceita somente o banco local.');
+ if(!['http://127.0.0.1:54321','http://127.0.0.1:25321'].includes(new URL(url).origin))throw new Error('Este teste aceita somente o banco local.');
  const admin=createClient(url,process.env.E2E_LOCAL_SERVICE_ROLE!,{auth:{persistSession:false,autoRefreshToken:false}});
  const email=`csp-${randomUUID()}@example.test`;const password=`Teste-${randomUUID()}`;
  const criado=await admin.auth.admin.createUser({email,password,email_confirm:true});

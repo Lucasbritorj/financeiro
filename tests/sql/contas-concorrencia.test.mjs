@@ -54,6 +54,17 @@ test('outro titular não lê tabelas nem chama RPC de conta alheia',()=>{
  assert.equal(total,'0');
  assert.throws(()=>sql(`begin;${claims(outro)}select public.consultar_conta_bancaria('${origem}','2026-01-01','2026-01-31');rollback;`),/Conta não encontrada/);
 });
+test('cota de servidor é atômica entre chamadas concorrentes',async()=>{
+ const chave=randomUUID().replaceAll('-','').repeat(2);
+ const janela=sql("select floor(extract(epoch from clock_timestamp())/3600)");
+ const respostas=await Promise.all(Array.from({length:12},()=>paralelo(`select public.consumir_limite_servidor('${chave}','cadastrar')`)));
+ const mesmaJanela=janela===sql("select floor(extract(epoch from clock_timestamp())/3600)");
+ if(mesmaJanela){
+  assert.equal(respostas.filter(r=>JSON.parse(r).permitido).length,3);
+  assert.equal(sql(`select total from public.limites_servidor where chave='${chave}' and acao='cadastrar'`),'4');
+ }
+ assert.ok(respostas.every(r=>typeof JSON.parse(r).permitido==='boolean'));
+});
 
 function ocorrenciasSalario(descricao){
  consulta(`select public.criar_receitas_previstas('${randomUUID()}','${descricao}','PIX','2026-01-01','[{"dia":15,"valor":1000},{"dia":30,"valor":2000}]',null);select public.consultar_receitas_previstas('2026-01-01')`);

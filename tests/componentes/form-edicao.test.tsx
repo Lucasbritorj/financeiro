@@ -224,7 +224,7 @@ test("erro da RPC é exibido e o pai não é notificado", async () => {
   // Notificar aoSalvar com erro deixaria a lista mostrando um dado que o banco
   // recusou.
   const user = userEvent.setup();
-  rpc.mockResolvedValue({ data: null, error: { message: "fatura já paga" } });
+  rpc.mockResolvedValue({ data: null, error: { code:'FW409', message: "fatura já paga" } });
   const { aoSalvar } = montar();
 
   const campo = screen.getByLabelText(/Descrição/);
@@ -238,7 +238,7 @@ test("erro da RPC é exibido e o pai não é notificado", async () => {
 
 test("erro no caminho do boleto também não notifica o pai", async () => {
   const user = userEvent.setup();
-  rpc.mockResolvedValue({ data: null, error: { message: "boleto travado" } });
+  rpc.mockResolvedValue({ data: null, error: { code:'FW409', message: "boleto travado" } });
   const { aoSalvar } = montar({ forma_pagamento: "BOLETO", data_vencimento: "2026-08-10" });
 
   await user.click(botaoSalvar());

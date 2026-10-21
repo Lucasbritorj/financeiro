@@ -1,12 +1,21 @@
 import {beforeEach,afterEach,describe,it,expect,vi} from 'vitest';
-const mocks=vi.hoisted(()=>({getUser:vi.fn(),autenticar:vi.fn(),listar:vi.fn(),conta:vi.fn(),rpc:vi.fn(),privado:vi.fn()}));
-vi.mock('@/lib/supabase/server',()=>({createClient:async()=>({auth:{getUser:mocks.getUser},from:()=>({select:()=>({eq:()=>({single:mocks.conta})})})})}));
+const mocks=vi.hoisted(()=>({getUser:vi.fn(),autenticar:vi.fn(),listar:vi.fn(),conta:vi.fn(),rpc:vi.fn(),rpcUsuario:vi.fn(),header:vi.fn(),linhas:vi.fn(),privado:vi.fn()}));
+vi.mock('@/lib/supabase/server',()=>({createClient:async()=>({auth:{getUser:mocks.getUser},rpc:mocks.rpcUsuario,from:()=>({select:()=>({eq:()=>({single:mocks.conta})})})})}));
 vi.mock('@/lib/supabase/privilegiado',()=>({clientePrivilegiado:mocks.privado}));
-vi.mock('@/lib/pluggy',()=>({autenticarPluggy:mocks.autenticar,listarContasPluggy:mocks.listar,lerTransacoesPluggy:vi.fn()}));
+vi.mock('@/lib/limite-servidor',()=>({verificarLimite:vi.fn(async()=>null)}));
+vi.mock('@/lib/pluggy',()=>({autenticarPluggy:mocks.autenticar,listarContasPluggy:mocks.listar,lerTransacoesPluggy:mocks.linhas}));
 import {GET,POST} from '@/app/api/pluggy/route';
 beforeEach(()=>{vi.clearAllMocks();mocks.getUser.mockResolvedValue({data:{user:{id:'titular-teste'}},error:null});mocks.conta.mockResolvedValue({data:{user_id:'titular-teste'},error:null});mocks.listar.mockResolvedValue([{id:'account-ficticio',itemId:'item-ficticio'}]);mocks.rpc.mockResolvedValue({error:null});mocks.privado.mockReturnValue({rpc:mocks.rpc});vi.stubEnv('PLUGGY_OWNER_USER_ID','titular-teste');vi.stubEnv('PLUGGY_CLIENT_ID','id-ficticio');vi.stubEnv('PLUGGY_CLIENT_SECRET','segredo-ficticio');vi.stubEnv('PLUGGY_ITEM_IDS','item-ficticio');});
 afterEach(()=>vi.unstubAllEnvs());
 describe('fronteira pessoal Pluggy',()=>{
+ it('sincronização assina a RPC do titular após validar conta e cota',async()=>{
+  vi.stubEnv('FINANCEIRO_RPC_SIGNING_KEY','a'.repeat(64));
+  mocks.conta.mockResolvedValue({data:{user_id:'titular-teste',pluggy_account_id:'account-ficticio',pluggy_item_id:'item-ficticio'},error:null});
+  mocks.linhas.mockResolvedValue({linhas:[{descricao:'fixture',valor:100}],pendentes:0});
+  const pedido=Object.assign(Promise.resolve({data:{novas:1},error:null}),{setHeader:mocks.header});mocks.rpcUsuario.mockReturnValue(pedido);
+  const req=new Request('https://app.example.test/api/pluggy',{method:'POST',headers:{origin:'https://app.example.test','content-type':'application/json'},body:JSON.stringify({acao:'SINCRONIZAR',contaId:'00000000-0000-0000-0000-000000000001',mes:'2026-10'})});
+  expect((await POST(req)).status).toBe(200);expect(mocks.header).toHaveBeenCalledWith('x-financeiro-assinatura',expect.stringMatching(/^[a-f0-9]{64}$/));expect(mocks.privado).not.toHaveBeenCalled();
+ });
  const vincular=(accountId='account-ficticio')=>new Request('https://app.example.test/api/pluggy',{method:'POST',headers:{origin:'https://app.example.test','Content-Type':'application/json'},body:JSON.stringify({acao:'VINCULAR',contaId:'00000000-0000-0000-0000-000000000001',accountId})});
  it('vínculo usa somente RPC privilegiada com titular autenticado e ID verificado no provedor',async()=>{
   expect((await POST(vincular())).status).toBe(200);

@@ -1,6 +1,7 @@
 import { beforeEach, expect, test, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ user: vi.fn(), exchange: vi.fn(), from: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: { getUser: mocks.user, exchangeCodeForSession: mocks.exchange }, from: mocks.from }) }));
+vi.mock('@/lib/limite-servidor',()=>({verificarLimite:vi.fn(async()=>null)}));
 import { GET as exportar } from "@/app/(protegido)/transacoes/exportar/route";
 import { GET as confirmar } from "@/app/login/confirmar/route";
 beforeEach(() => {

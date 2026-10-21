@@ -24,7 +24,7 @@ test('salva apenas preferências e relata erro de rede',async()=>{
  expect(rpc).toHaveBeenCalledExactlyOnceWith('salvar_preferencias_reserva',{p_dados:{...dados.preferencias,prioridades:{[id]:2}}});
  rpc.mockReturnValueOnce({abortSignal:()=>Promise.reject(new Error('Rede indisponível'))});
  await u.click(screen.getByRole('button',{name:'Salvar preferências'}));
- await waitFor(()=>expect(screen.getByRole('alert')).toHaveTextContent('Rede indisponível'));
+ await waitFor(()=>expect(screen.getByRole('alert')).toHaveTextContent('Erro inesperado. Tente de novo.'));
 });
 
 test('valores conhecidos preenchem a simulação sem aporte nem receita futura',async()=>{

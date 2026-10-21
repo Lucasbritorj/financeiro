@@ -8,20 +8,25 @@ import { hojeSaoPaulo } from "../../src/lib/data";
 import AxeBuilder from "@axe-core/playwright";
 import { pdfFicticio, pdfFicticioColunas } from './pdf-ficticio';
 import {pdfDigitalizado} from './pdf-digitalizado';
+import {RPCS_PROTEGIDAS,gerarAssinaturaRpc} from '../../src/lib/assinatura-rpc';
 
 // Serviço de autenticação, API e Postgres reais. Não usa banco nem usuário remoto.
 base.skip(process.env.E2E_LOCAL !== "1", "Execute npm run test:e2e:local com Supabase local.");
 const test = base.extend<{ conta: { db: SupabaseClient<Database>; email: string } }>({
   conta: async ({ page }, executarTeste) => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    if (new URL(url).origin !== "http://127.0.0.1:54321") throw new Error("E2E só aceita Supabase local na porta 54321.");
+    if (!['http://127.0.0.1:54321','http://127.0.0.1:25321'].includes(new URL(url).origin)) throw new Error("E2E só aceita a instância local exclusiva.");
     const admin = createClient(url, process.env.E2E_LOCAL_SERVICE_ROLE!, { auth: { persistSession: false, autoRefreshToken: false } });
     const email = `jornada-${randomUUID()}@example.test`;
     const senha = `Teste-${randomUUID()}`;
     const { data, error } = await admin.auth.admin.createUser({ email, password: senha, email_confirm: true });
     if (error || !data.user) throw error ?? new Error("Falha criando usuário local.");
     try {
-      const db = createClient<Database>(url, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+      const db = createClient<Database>(url, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false, autoRefreshToken: false },global:{fetch:async(input,init)=>{
+        const rpc=new URL(String(input)).pathname.split('/rpc/')[1];
+        if(RPCS_PROTEGIDAS.has(rpc)){const headers=new Headers(init?.headers);for(const [k,v] of Object.entries(gerarAssinaturaRpc(process.env.FINANCEIRO_RPC_SIGNING_KEY,data.user!.id,rpc)))headers.set(k,v);return fetch(input,{...init,headers});}
+        return fetch(input,init);
+      }} });
       const login = await db.auth.signInWithPassword({ email, password: senha });
       if (login.error) throw login.error;
       await page.goto("/login");
@@ -36,6 +41,26 @@ const test = base.extend<{ conta: { db: SupabaseClient<Database>; email: string 
       if (removido.error) throw removido.error;
     }
   },
+});
+
+test('segurança: sessão HttpOnly, API própria, CSRF e saída confirmada',async({page,conta})=>{
+ const cookies=(await page.context().cookies()).filter(c=>c.name.startsWith('sb-')&&c.name.includes('-auth-token'));
+ expect(cookies.length).toBeGreaterThan(0);
+ for(const c of cookies){expect(c.httpOnly).toBe(true);expect(c.secure).toBe(true);expect(c.sameSite).toBe('Lax');}
+ expect(await page.evaluate(()=>document.cookie)).not.toMatch(/sb-.*auth-token/);
+ // Chromium aceita Secure no loopback; APIRequestContext segue HTTP estrito e omite esses cookies.
+ const usuario=await page.evaluate(async()=>{const r=await fetch('/api/auth');return {status:r.status,body:await r.text()};});expect(usuario.status).toBe(200);expect(usuario.body).not.toMatch(/access_token|refresh_token/);
+ const csrf=await page.request.post('/api/dados/rpc/registrar_receita',{headers:{origin:'https://externo.example.test',cookie:cookies.map(c=>c.name+'='+c.value).join('; ')},data:{}});expect(csrf.status()).toBe(403);
+ const permitida=await page.evaluate(async()=>{const r=await fetch('/api/dados/transacoes_origem?select=id');return r.status;});expect(permitida).toBe(200);
+ const reservado=await conta.db.rpc('consumir_limite_servidor',{p_chave:'a'.repeat(64),p_acao:'pluggy'});expect(reservado.error).not.toBeNull();
+ const token=(await conta.db.auth.getSession()).data.session!.access_token;
+ const direta=await fetch(process.env.NEXT_PUBLIC_SUPABASE_URL+'/rest/v1/rpc/criar_importacao',{method:'POST',headers:{apikey:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({p_origem:'CSV',p_linhas:[]})});
+ expect((await direta.json()).code).toBe('FW403');
+ const menu=page.getByText('Menu',{exact:true});if(await menu.isVisible())await menu.click();
+ await page.getByRole('button',{name:'Sair',exact:true}).click();await expect(page).toHaveURL(/\/login$/);
+ expect(await page.evaluate(async()=>(await fetch('/api/auth')).status)).toBe(401);
+ const repeticao=await page.request.get('/api/auth',{headers:{cookie:cookies.map(c=>c.name+'='+c.value).join('; ')}});
+ expect(repeticao.status()).toBe(401);
 });
 
 test('previsão: saldo por data, reserva assistida e regra revisada',async({page,conta},testInfo)=>{
@@ -618,16 +643,18 @@ test("recupera senha com e-mail capturado localmente e recusa link reutilizado",
   await expect(page.getByRole("status")).toContainText("Se houver uma conta");
   let html = "";
   await expect.poll(async () => {
-    const resposta = await request.get("http://127.0.0.1:54324/api/v1/messages");
+    const mail=process.env.E2E_LOCAL_MAIL_URL??'http://127.0.0.1:54324';
+    if(!['http://127.0.0.1:54324','http://127.0.0.1:25324'].includes(new URL(mail).origin))throw new Error('Caixa de e-mail deve ser local.');
+    const resposta = await request.get(mail+"/api/v1/messages");
     const caixa = await resposta.json() as { messages: { ID: string; To: { Address: string }[] }[] };
     const mensagem = caixa.messages.find((m) => m.To.some((destino) => destino.Address === conta.email));
     if (!mensagem) return false;
-    const detalhe = await request.get(`http://127.0.0.1:54324/api/v1/message/${mensagem.ID}`);
+    const detalhe = await request.get(`${mail}/api/v1/message/${mensagem.ID}`);
     html = (await detalhe.json()).HTML;
     return html.includes("/auth/v1/verify");
   }).toBe(true);
   const link = [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1].replaceAll("&amp;", "&")).find((href) => href.includes("/auth/v1/verify"))!;
-  if (new URL(link).origin !== "http://127.0.0.1:54321") throw new Error("Recuperação deve usar apenas serviço local.");
+  if (new URL(link).origin !== new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).origin) throw new Error("Recuperação deve usar apenas serviço local.");
   await page.goto(link);
   await expect(page).toHaveURL("http://127.0.0.1:3100/login/nova-senha");
   const novaSenha = `Nova-${randomUUID()}`;

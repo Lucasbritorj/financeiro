@@ -50,7 +50,7 @@ export default function RecuperacaoSenha({ modo, erroInicial = null }: {
       if (error) throw error;
       setAviso(modo === "solicitar"
         ? "Se houver uma conta com esse e-mail, você receberá um link. Abra-o neste navegador."
-        : "Senha atualizada. Você já pode continuar usando sua conta.");
+        : "Senha atualizada. Entre novamente com sua nova senha.");
       setSenha("");
       setConfirmacao("");
     } catch (error) {
@@ -76,7 +76,7 @@ export default function RecuperacaoSenha({ modo, erroInicial = null }: {
           <button disabled={pendente} className="botao-soberano">{pendente ? "Aguarde..." : modo === "solicitar" ? "Enviar link" : "Salvar senha"}</button>
         </form>}
         {modo === "definir" && !autorizado && <Link href="/login/recuperar">Solicitar outro link</Link>}
-        <Link href={aviso && modo === "definir" ? "/dashboard" : "/login"}>{aviso && modo === "definir" ? "Continuar" : "Voltar para entrar"}</Link>
+        <Link href="/login">Voltar para entrar</Link>
       </section>
     </main>
   );

@@ -138,6 +138,8 @@ Licença [MIT](LICENSE).
    - `20261020120000_receitas_no_caixa.sql` (receitas à vista, transferência externa, observação e repetição segura)
    - `20261020150000_receitas_recorrentes_confirmadas.sql` (previsões de receita, partes mensais, confirmação, férias e antecipação)
    - `20261020200000_previsao_regras_pessoais.sql` (previsão de caixa sem escrita e confirmação de regras pessoais)
+   - `20261021200000_limites_servidor.sql` (cotas privadas e atômicas de autenticação, dados, exportação e Pluggy)
+   - `20261021203000_limites_rpcs.sql` (mesma cota nas RPCs de importação e confirmação, inclusive chamadas diretas)
 
    O vínculo Pluggy exige `SUPABASE_SERVICE_ROLE_KEY` somente no ambiente privado do servidor, além da configuração pessoal Pluggy. Nunca use prefixo `NEXT_PUBLIC_` nessa credencial nem a envie ao repositório. A rota valida o titular configurado, a propriedade da conta local e a conta retornada pelo provedor antes da chamada privilegiada. Sem a configuração privada, o vínculo retorna indisponibilidade; não existe fallback com a sessão do navegador.
 

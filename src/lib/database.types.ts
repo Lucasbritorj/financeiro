@@ -640,6 +640,7 @@ export type Database = {
       };
     };
     Functions: {
+      consumir_limite_servidor:{Args:{p_chave:string;p_acao:string};Returns:Json};
       consultar_eventos_caixa:{Args:{p_hoje:string};Returns:Json};
       consultar_previa_regra:{Args:{p_transacao_id:string;p_categoria_id:string;p_padrao:string;p_prioridade:number};Returns:Json};
       salvar_regra_pessoal:{Args:{p_chave:string;p_transacao_id:string;p_categoria_id:string;p_padrao:string;p_prioridade:number;p_versao:string};Returns:Json};

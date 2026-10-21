@@ -271,7 +271,7 @@ export function queixasDeGrant(privilegios: readonly Privilegio[]): QueixaRpc[] 
     if (p.tipo !== "grant") continue;
     for (const papel of p.papeis) {
       // Exceção estreita: vínculo validado pelo servidor, nunca pelo navegador.
-      const pretendidos = p.funcao === 'public.vincular_conta_pluggy_servidor'
+      const pretendidos = ['public.vincular_conta_pluggy_servidor','public.consumir_limite_servidor','public.configurar_chave_rpc_servidor'].includes(p.funcao)
         ? ['service_role'] : PAPEIS_PRETENDIDOS;
       if (pretendidos.indexOf(papel) !== -1) continue;
       queixas.push({

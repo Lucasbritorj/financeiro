@@ -3,6 +3,9 @@ import {clientePrivilegiado} from '@/lib/supabase/privilegiado';
 import {autenticarPluggy,listarContasPluggy,lerTransacoesPluggy} from '@/lib/pluggy';
 import type {Json} from '@/lib/database.types';
 import {validarMesOrcamento} from '@/lib/orcamentos-mensais';
+import {verificarLimite} from '@/lib/limite-servidor';
+import {lerJsonLimitado,origemPermitida} from '@/lib/seguranca-http';
+import {gerarAssinaturaRpc} from '@/lib/assinatura-rpc';
 
 export const runtime='nodejs';
 const responder=(body:unknown,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'private, no-store'}});
@@ -22,13 +25,16 @@ export async function GET(){
  return responder({configurada:true});
 }
 export async function POST(request:Request) {
- const origem=request.headers.get('origin');if(!origem||origem!==new URL(request.url).origin)return responder({erro:'Origem da solicitação inválida.'},403);
+ if(!origemPermitida(request))return responder({erro:'Origem da solicitação inválida.'},403);
  const c=await contexto();if(c.resposta)return c.resposta;
  if(!request.headers.get('content-type')?.startsWith('application/json')||Number(request.headers.get('content-length')??0)>4096)return responder({erro:'Solicitação inválida.'},400);
  try{
-  const texto=await request.text();if(texto.length>4096)return responder({erro:'Solicitação acima do limite.'},413);
-  const body=JSON.parse(texto) as Record<string,unknown>;
+  let body:Record<string,unknown>;
+  try{body=await lerJsonLimitado(request,4096);}catch{return responder({erro:'Solicitação inválida ou acima do limite.'},413);}
   if(!body||!['LISTAR','VINCULAR','SINCRONIZAR'].includes(String(body.acao)))return responder({erro:'Ação inválida.'},400);
+  if(body.acao!=='LISTAR'&&(typeof body.contaId!=='string'||!/^[a-f0-9-]{36}$/i.test(body.contaId)))return responder({erro:'Conta inválida.'},400);
+  if(body.acao==='SINCRONIZAR'&&(typeof body.mes!=='string'||!validarMesOrcamento(body.mes)))return responder({erro:'Selecione um mês válido.'},400);
+  const limitado=await verificarLimite('pluggy',c.userId!);if(limitado)return limitado;
   const chave=await autenticarPluggy(c.clientId!,c.secret!);const contas=await listarContasPluggy(chave,c.itens!);
   if(body.acao==='LISTAR')return responder({contas});
   if(typeof body.contaId!=='string'||!/^[a-f0-9-]{36}$/i.test(body.contaId))return responder({erro:'Conta inválida.'},400);
@@ -46,7 +52,11 @@ export async function POST(request:Request) {
   const de=body.mes+'-01';const ate=new Date(Date.UTC(Number(body.mes.slice(0,4)),Number(body.mes.slice(5,7)),0)).toISOString().slice(0,10);
   const {linhas,pendentes}=await lerTransacoesPluggy(chave,conta.id,de,ate);
   let resultado:Json={novas:0,repetidas:0};
-  if(linhas.length){const r=await c.db!.rpc('importar_extrato_conta',{p_conta_id:body.contaId,p_origem:'PLUGGY',p_linhas:linhas as unknown as Json});if(r.error)return responder({erro:'Não foi possível receber as linhas. Confira saldo inicial, períodos fechados e dados alterados na origem.'},409);resultado=r.data;}
+  if(linhas.length){
+   const pedido=c.db!.rpc('importar_extrato_conta',{p_conta_id:body.contaId,p_origem:'PLUGGY',p_linhas:linhas as unknown as Json});
+   for(const [k,v] of Object.entries(gerarAssinaturaRpc(process.env.FINANCEIRO_RPC_SIGNING_KEY,c.userId!,'importar_extrato_conta')))pedido.setHeader(k,v);
+   const r=await pedido;if(r.error)return responder({erro:'Não foi possível receber as linhas. Confira saldo inicial, períodos fechados e dados alterados na origem.'},409);resultado=r.data;
+  }
   return responder({resultado,pendentes,saldoInformadoPeloProvedor:conta.saldo,atualizadaEm:conta.atualizadaEm,mensagem:'Dados recebidos para revisão. Nenhum gasto foi confirmado automaticamente.'});
  }catch{return responder({erro:'Conexão bancária indisponível ou resposta inválida. Seus lançamentos foram preservados.'},502);}
 }
