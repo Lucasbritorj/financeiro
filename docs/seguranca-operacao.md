@@ -13,7 +13,11 @@ Verificação em 21/10/2026. Esta entrega foi desenvolvida na pasta central do p
 - Erros internos são substituídos por mensagens genéricas. Códigos de negócio FW4xx mantêm mensagens orientativas. Eventos têm enum fechado e não carregam payload financeiro, usuário, senha ou token.
 - CSP com nonce e os limites de expansão XLSX já existentes foram mantidos.
 
-## Instalação: não realizada em produção nesta entrega
+## Instalação concluída em produção em 21/10/2026
+
+As duas migrações abaixo estão instaladas. A configuração privada foi criada como Sensitive na Vercel, a chave foi configurada pela RPC exclusiva do servidor e o domínio principal foi promovido para o deployment `dpl_AtrKcYCZRjCnYsEeG9df93EbXeik` (código da aplicação em `3e9c57b`). A comparação das 24 tabelas públicas anteriores confirmou preservação dos dados; RLS e ausência de acesso do cliente à chave/cota foram conferidos.
+
+A prévia real passou no navegador em 1440 e 320 pixels. A produção foi verificada por HTTP autenticado da CLI, preservando a proteção de acesso da Vercel: página e rotas autenticadas200, redirecionamento HTTP→HTTPS, headers com nonce, login/cookies protegidos, lote pela API200, CSRF403, RPC direta sem assinatura FW403 e cookie antigo recusado401 após logout. Contas sintéticas de verificação foram removidas. Não foi feita sincronização bancária real pelo Pluggy.
 
 Migrações incrementais:
 
@@ -22,9 +26,9 @@ Migrações incrementais:
 
 Variáveis privadas necessárias: `SUPABASE_SERVICE_ROLE_KEY` e `FINANCEIRO_RPC_SIGNING_KEY` (32 bytes aleatórios representados por 64 caracteres hexadecimais). Nunca usar prefixo `NEXT_PUBLIC_`, gravar valores em documentação ou enviá-los pelo chat. As variáveis públicas Supabase continuam sendo apenas URL e chave pública.
 
-Antes da instalação, fazer uma nova cópia e testar a restauração. Preparar a chave no gerenciador privado da hospedagem. Instalar a primeira migração, publicar a API e o cliente novos em janela controlada e instalar a segunda migração junto da configuração da chave via RPC `configurar_chave_rpc_servidor`, chamada exclusivamente pelo servidor com service_role. Validar login, saída, importação e sincronização antes de encerrar a janela. Instalar a segunda migração isoladamente bloqueia clientes antigos e chamadas sem assinatura; não executar sem coordenar a publicação. Solicitar atualização das abas antigas.
+A instalação seguiu a sequência: nova cópia restaurada (58 tabelas), primeira migração, prévia validada, promoção da API/cliente e segunda migração com configuração privada pela RPC `configurar_chave_rpc_servidor`. Para futuras intervenções, fazer nova cópia e preparar os segredos no gerenciador privado antes da janela. Instalar a segunda migração isoladamente bloqueia clientes antigos e chamadas sem assinatura; não executar sem coordenar a publicação. Atualizar abas antigas após a mudança.
 
-Para voltar à versão anterior, coordenar a restauração das definições anteriores das cinco funções com a promoção do deployment anterior. Não apagar lançamentos nem restaurar um dump antigo sobre dados novos como procedimento padrão de rollback. Configurar a chave em produção e preview com separação de ambientes; não compartilhar banco de produção em testes automatizados.
+Para voltar à versão anterior, coordenar a restauração das definições anteriores das cinco funções com a promoção do deployment anterior. Não apagar lançamentos nem restaurar um dump antigo sobre dados novos como procedimento padrão de rollback. Produção e prévia receberam configuração privada separada na hospedagem, apontando ao mesmo banco desta aplicação pessoal; a chave precisa coincidir com a configuração desse banco. As provas remotas usaram exclusivamente contas sintéticas isoladas e removidas ao final. Os testes completos do CI continuam usando Supabase local descartável, sem credenciais nem dados de produção.
 
 ## Backup instalado e comprovado
 
@@ -39,11 +43,11 @@ Limites: a tarefa depende deste computador ligado, do usuário conectado, Docker
 | Item | Evidência atual | Próximo passo |
 |---|---|---|
 | Backups gerenciados Supabase | API de backups retornou zero cópias e PITR desativado | Conferir Database → Backups e plano; manter rotina local e configurar cópia externa privada com restauração independente |
-| TLS obrigatório no Postgres direto | CLI ssl-enforcement: database=false, appliedSuccessfully=true | Ativar enforcement em janela de manutenção; a documentação do provedor informa reinício breve. Isso é diferente do HTTPS da aplicação, já existente |
+| TLS obrigatório no Postgres direto | Ativado: CLI ssl-enforcement database=true, appliedSuccessfully=true | Conferência posterior confirmou a aplicação; HTTPS/API também verificados após a mudança |
 | Auth | JWT 3.600s; senha mínima8; confirmação de e-mail ativa; CAPTCHA desativado; sem tempo máximo/inatividade de sessão | Rever política no painel Authentication → Settings/Security; confirmar compatibilidade do fluxo antes de mudar; proteger também Auth público com limites do provedor |
 | Alertas | Eventos estruturados locais/servidor implementados; canal externo não definido | Definir canal privado e testar entrega/falha sem anexar dados financeiros ou credenciais |
 | Cópia externa e chave de recuperação | Hostinger sem acesso validado nesta execução; chave DPAPI local | Validar conexão Hostinger e destino privado; guardar recuperação da chave em cofre independente |
-| Publicação | Mudanças locais; nenhuma migração nova aplicada ao banco remoto | Instalar e publicar de forma coordenada conforme ordem acima, depois testar domínio real |
+| Publicação | Duas migrações instaladas, configuração privada conferida e domínio principal promovido | Verificações remotas acima aprovadas; atualizar abas antigas; GitHub na branch do PR17, sem merge em master |
 
 ## Dependências e verificação
 

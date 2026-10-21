@@ -1,6 +1,6 @@
 # Obra atual — Correções da auditoria de segurança
 Spec: docs/specs/correcoes-auditoria-seguranca.md. Plano aprovado em21/10/2026.
-Estado: implementação local validada; backup automático local instalado e executado. CA2 (3 dependências dev sem versão corrigida), CA9/Fase4 (Hostinger e alertas) e instalação/publicação remotas permanecem pendentes. Procedimento e limites em docs/seguranca-operacao.md.
+Estado: duas migrações instaladas, configuração privada e TLS conferidos, aplicação publicada e verificada remotamente; dados anteriores preservados. Backup automático local instalado e executado. CA2 (3 dependências dev sem versão corrigida) e CA9/Fase4 (Hostinger e alertas) permanecem pendentes. Procedimento e limites em docs/seguranca-operacao.md.
 1. Inventário/compatibilidade: preservar worktree antigo, confirmar docs Next e testes, atualizar dependências vulneráveis com consulta atual.
 2. Fronteira de sessão: cookies/rotas de autenticação e dados, origem/inputs, logout e recuperação; testes vermelhos antes do código.
 3. Limites persistentes e diagnóstico seguro: migração incremental, Pluggy/exportação, mensagens e eventos; SQL somente Postgres17 descartável.

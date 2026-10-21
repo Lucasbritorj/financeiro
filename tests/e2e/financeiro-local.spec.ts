@@ -679,7 +679,9 @@ test("relatórios e CSV incluem mais de mil transações sem truncamento", async
   if (!/^[0-9a-f-]{36}$/.test(uid)) throw new Error("ID de fixture inválido.");
   // Massa gerada pelas mesmas RPCs, sob role authenticated, dentro do container
   // local. A leitura exercitada pela tela continua pela API com teto de 1.000.
-  execFileSync("docker", ["exec", "-i", "supabase_db_financeiro-web", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-q"], {
+  const bancoLocal = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).port === '25321'
+    ? 'supabase_db_financeiro-receitas-20' : 'supabase_db_financeiro-web';
+  execFileSync("docker", ["exec", "-i", bancoLocal, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-q"], {
     input: `begin; select set_config('request.jwt.claims','{"sub":"${uid}"}',true); set local role authenticated;
       select public.processar_transacao_completa('VOLUME ' || n,100,'DESPESA','PIX',null,'${hojeSaoPaulo()}',1) from generate_series(1,1203) n; commit;`,
     stdio: ["pipe", "pipe", "pipe"], timeout: 30000,
@@ -688,9 +690,14 @@ test("relatórios e CSV incluem mais de mil transações sem truncamento", async
   await expect(page.getByRole("heading", { name: /^Você já gastou/ })).toContainText("1.203,00");
   await page.goto("/analise");
   await expect(page.getByText("Envelope de Volume estourou", { exact: true })).toBeVisible();
-  const resposta = await page.request.get("/transacoes/exportar?tipo=DESPESA");
-  expect(resposta.status()).toBe(200);
-  expect((await resposta.text()).trim().split("\r\n")).toHaveLength(1204);
+  // Chromium envia Secure no loopback; APIRequestContext omite o cookie em HTTP.
+  const resposta = await page.evaluate(async () => {
+    const r = await fetch('/transacoes/exportar?tipo=DESPESA');
+    return {status:r.status,tipo:r.headers.get('content-type'),texto:await r.text()};
+  });
+  expect(resposta.status).toBe(200);
+  expect(resposta.tipo).toContain('text/csv');
+  expect(resposta.texto.trim().split("\r\n")).toHaveLength(1204);
 });
 
 test("edita cadastros nas quatro telas e mantém o saldo da meta", async ({ page, conta }) => {

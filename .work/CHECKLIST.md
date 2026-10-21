@@ -9,13 +9,13 @@ Spec: docs/specs/correcoes-auditoria-seguranca.md.
 - [x] CA7: erros de infraestrutura ocultos e negócio preservado.
 - [x] CA8: backup criptografado/restaurado, rotina exclusiva e diagnóstico.
 - [ ] CA9: eventos sem segredos e destinos externos conferidos.
-- [x] CA10: infraestrutura remota verificada ou impedimentos documentados em docs/seguranca-operacao.md; não publicada.
+- [x] CA10: duas migrações/TLS/configuração privada e publicação verificadas; dados anteriores preservados. Hostinger/alertas pendentes em docs/seguranca-operacao.md.
 - [x] CA11: regressões e revisão independente; ressalvas operacionais e dependências sem patch registradas.
 - [x] Fase1: inventário/dependências disponíveis; CA2 pendente dos mantenedores (3 pacotes dev).
 - [x] Fase2: sessão e autenticação.
 - [x] Fase3: limites/erros/eventos; alerta externo pendente em CA9.
 - [ ] Fase4: backup/rotina.
-- [x] Fase5: verificações/entrega local; instalação/publicação remotas pendentes.
+- [x] Fase5: instalação e publicação no domínio principal; prévia browser/produção HTTP aprovadas. Teste de CSV corrigido para sessão Secure local.
 
 # Histórico — Previsão, reservas e regras pessoais
 Spec: docs/specs/previsao-reservas-e-regras-pessoais.md. Instalada e publicada com autorização em20/10/2026; fonte2b8994b. Provas no LOG.
