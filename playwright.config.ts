@@ -55,8 +55,8 @@ export default defineConfig({
     // `tsc` do build está vermelho por trabalho em andamento em outro arquivo.
     // CI nunca usa esse caminho: lá o build tem de passar.
     command: process.env.E2E_DEV
-      ? `npm run dev -- --port ${PORT}`
-      : `npm run start -- --port ${PORT}`,
+      ? `npm run dev -- --hostname 127.0.0.1 --port ${PORT}`
+      : `npm run start -- --hostname 127.0.0.1 --port ${PORT}`,
     url: baseURL,
     timeout: 120_000,
     // Porta ocupada deve falhar: outro servidor pode servir uma versão diferente.

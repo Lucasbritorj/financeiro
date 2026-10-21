@@ -20,7 +20,7 @@
   ],
   "ci": {
     "collect": {
-      "startServerCommand": "npm run start -- --port 3101",
+      "startServerCommand": "npm run start -- --hostname 127.0.0.1 --port 3101",
       "startServerReadyPattern": "Ready in|started server on|Local:",
       "startServerReadyTimeout": 120000,
       "url": ["http://127.0.0.1:3101/login"],
